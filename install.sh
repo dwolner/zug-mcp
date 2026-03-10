@@ -45,7 +45,7 @@ if [[ "$1" != "--configure-only" ]]; then
     warn "Server already installed. Pulling latest..."
     git -C "$SERVER_DIR" pull
   else
-    git clone https://github.com/YOUR_USERNAME/zug-mcp "$SERVER_DIR"
+    git clone https://github.com/dwolner/zug-mcp "$SERVER_DIR"
   fi
 fi
 

@@ -32,13 +32,13 @@ Your data lives at `~/.zug/`:
 ## Quick Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/zug-mcp/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/dwolner/zug-mcp/main/install.sh | bash
 ```
 
 Or manually:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/zug-mcp ~/.zug/server
+git clone https://github.com/dwolner/zug-mcp ~/.zug/server
 cd ~/.zug/server
 pnpm install
 ./install.sh --configure-only
