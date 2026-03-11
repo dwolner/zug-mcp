@@ -75,34 +75,24 @@ EOF
   success "Created $ZUG_DIR/PLAYBOOK.md"
 fi
 
-# ── Register with VS Code (Claude Code extension) ─────────────────────────────
-if [[ -n "$VSCODE_MCP" ]]; then
-  info "Configuring VS Code MCP..."
-  mkdir -p "$(dirname "$VSCODE_MCP")"
-
-  if [[ -f "$VSCODE_MCP" ]] && python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$VSCODE_MCP" 2>/dev/null; then
-    # Merge into existing config
-    python3 - "$VSCODE_MCP" "$SERVER_DIR" << 'PYEOF'
+# ── Register with Claude Code (~/.claude.json) ────────────────────────────────
+CLAUDE_JSON="$HOME/.claude.json"
+if [[ -f "$CLAUDE_JSON" ]]; then
+  info "Configuring Claude Code MCP (~/.claude.json)..."
+  python3 - "$CLAUDE_JSON" "$SERVER_DIR" << 'PYEOF'
 import json, sys
 path, server_dir = sys.argv[1], sys.argv[2]
 config = json.load(open(path))
-config.setdefault("servers", {})["zug"] = {
+config.setdefault("mcpServers", {})["zug"] = {
   "type": "stdio",
   "command": "npx",
   "args": ["tsx", f"{server_dir}/src/stdio.ts"]
 }
 json.dump(config, open(path, "w"), indent=2)
-print("  Merged zug into existing mcp.json")
 PYEOF
-  else
-    # Create fresh
-    python3 - "$VSCODE_MCP" "$SERVER_DIR" << 'PYEOF'
-import json, sys
-path, server_dir = sys.argv[1], sys.argv[2]
-json.dump({"servers": {"zug": {"type": "stdio", "command": "npx", "args": ["tsx", f"{server_dir}/src/stdio.ts"]}}}, open(path, "w"), indent=2)
-PYEOF
-  fi
-  success "VS Code MCP configured"
+  success "Claude Code MCP configured"
+else
+  warn "~/.claude.json not found — Claude Code may not be installed yet"
 fi
 
 # ── Register with Claude desktop ──────────────────────────────────────────────
