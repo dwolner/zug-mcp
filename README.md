@@ -106,6 +106,40 @@ Next session
 
 ---
 
+## Synthesis
+
+When a session ends, Zug calls Claude Haiku to intelligently rewrite PERSONA.md and PLAYBOOK.md — integrating new observations into existing sections rather than just appending dated entries.
+
+Requires an API key at `~/.zug/.env`:
+```bash
+echo "ANTHROPIC_API_KEY=sk-ant-your-key-here" > ~/.zug/.env
+```
+
+If no key is set or the API call fails, Zug falls back to simple append behavior. The `zug_end_session` response reports `synthesized` or `appended` so you can tell which path ran.
+
+Cost: ~$0.001–0.003 per session end in Haiku tokens.
+
+---
+
+## Merging Data from Another Machine
+
+If you run Zug on multiple machines, you can merge their data:
+
+```bash
+# Copy the other machine's ~/.zug/ somewhere accessible, then:
+cd ~/.zug/server
+pnpm merge ~/path/to/external-zug-dir
+```
+
+This will:
+1. **observations.jsonl** — deduplicate by timestamp+text, merge, sort chronologically
+2. **sessions/** — copy any session files that don't already exist locally
+3. **PERSONA.md + PLAYBOOK.md** — call Haiku to synthesize both versions into one unified fingerprint (backs up originals before overwriting)
+
+If no API key is set, steps 1 and 2 still run — only the PERSONA/PLAYBOOK synthesis is skipped.
+
+---
+
 ## Phases
 
 See [ROADMAP.md](ROADMAP.md) for the full development plan.
@@ -137,4 +171,4 @@ The long-term goal: you start asking the questions Zug would have asked. That's 
 
 ## Contributing
 
-Built for personal use first, extensible by design. PRs welcome — especially for Phase 2 (Haiku synthesis) and Phase 3 (HTTP transport).
+Built for personal use first, extensible by design. PRs welcome — especially for Phase 3 (HTTP transport) and Phase 4 (onboarding + CLI).
