@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/stdio.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "merge": "tsx src/merge.ts"
   },
   "packageManager": "pnpm@10.31.0",
   "dependencies": {
