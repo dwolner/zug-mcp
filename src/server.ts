@@ -4,6 +4,7 @@ import {
   readPersona,
   readPlaybook,
   writePersona,
+  writePlaybook,
   appendObservation,
   getObservationsBySession,
   writeSession,
@@ -11,6 +12,7 @@ import {
   getStats,
   type ObservationType,
 } from "./storage.js";
+import { synthesize } from "./synthesize.js";
 
 export function createServer(): McpServer {
   const server = new McpServer({ name: "zug", version: "1.0.0" });
@@ -66,6 +68,7 @@ export function createServer(): McpServer {
     async ({ session_id, summary }) => {
       const observations = getObservationsBySession(session_id);
       const persona = readPersona();
+      const playbook = readPlaybook();
       const today = new Date().toISOString().slice(0, 10);
 
       const obsText =
@@ -73,26 +76,55 @@ export function createServer(): McpServer {
           ? observations.map((o) => `- [${o.type}/${o.confidence}] ${o.observation}`).join("\n")
           : "*No observations saved this session.*";
 
+      // Always write the session log
       writeSession(
         session_id,
         [`# Session ${session_id}`, `Date: ${new Date().toISOString()}`, "", "## Summary", summary, "", "## Observations", obsText].join("\n")
       );
 
+      // Try Haiku synthesis, fall back to append
+      let synthesized = false;
       const meaningful = observations.filter((o) => o.confidence !== "low");
+
       if (meaningful.length > 0) {
-        const newEntries = meaningful.map((o) => `- [${o.type}] ${o.observation} *(${today})*`).join("\n");
-        writePersona(
-          persona
-            ? `${persona}\n\n### ${today}\n${newEntries}`
-            : `# Cognitive Fingerprint\n\n### ${today}\n${newEntries}`
-        );
+        try {
+          const result = await synthesize({
+            currentPersona: persona,
+            currentPlaybook: playbook,
+            sessionSummary: summary,
+            observations: meaningful.map((o) => ({
+              type: o.type,
+              observation: o.observation,
+              confidence: o.confidence,
+            })),
+          });
+
+          if (result) {
+            writePersona(result.persona);
+            writePlaybook(result.playbook);
+            synthesized = true;
+          }
+        } catch {
+          // Synthesis failed — fall through to append
+        }
+
+        // Fallback: append like Phase 1
+        if (!synthesized) {
+          const newEntries = meaningful.map((o) => `- [${o.type}] ${o.observation} *(${today})*`).join("\n");
+          writePersona(
+            persona
+              ? `${persona}\n\n### ${today}\n${newEntries}`
+              : `# Cognitive Fingerprint\n\n### ${today}\n${newEntries}`
+          );
+        }
       }
 
       const stats = getStats();
+      const method = synthesized ? "synthesized" : "appended";
       return {
         content: [{
           type: "text" as const,
-          text: `Session saved. ${observations.length} observations. Total: ${stats.sessions} sessions, ${stats.observations} observations.`,
+          text: `Session saved (${method}). ${observations.length} observations. Total: ${stats.sessions} sessions, ${stats.observations} observations.`,
         }],
       };
     }
