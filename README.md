@@ -96,7 +96,8 @@ During session
 Session end
   └── Claude calls zug_end_session() with a summary
   └── Session log written to ~/.zug/sessions/
-  └── High-confidence observations appended to PERSONA.md
+  └── Haiku synthesizes observations into PERSONA.md + PLAYBOOK.md
+  └── Falls back to append if no API key
 
 Next session
   └── zug_get_context() loads the updated fingerprint
@@ -112,9 +113,9 @@ See [ROADMAP.md](ROADMAP.md) for the full development plan.
 | Phase | Status | What it adds |
 |---|---|---|
 | 1 — Local stdio | ✅ Done | Claude Code gets persistent memory |
-| 2 — Haiku synthesis | 🔜 Next | AI rewrites PERSONA/PLAYBOOK from session data |
-| 3 — HTTP + tunnel | 📋 Planned | Claude.ai web connects, all surfaces share memory |
-| 4 — Polish | 📋 Planned | Auto-start, CLI, trim logic |
+| 2 — Haiku synthesis | ✅ Done | AI synthesizes PERSONA/PLAYBOOK from session data + merge command |
+| 3 — HTTP + tunnel | 📋 Next | Claude.ai web connects, all surfaces share memory |
+| 4 — Polish | 📋 Planned | Onboarding flow, CLI, tests |
 
 ---
 
