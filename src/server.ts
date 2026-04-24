@@ -106,7 +106,7 @@ export function createServer(): McpServer {
           if (result) {
             writePersona(result.persona);
             writePlaybook(result.playbook);
-            writeActive(result.active);
+            if (result.active) writeActive(result.active);
             synthesized = true;
           }
         } catch {

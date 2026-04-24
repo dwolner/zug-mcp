@@ -137,7 +137,7 @@ async function main() {
 
     fs.writeFileSync(path.join(ZUG_DIR, "PERSONA.md"), result.persona, "utf-8");
     fs.writeFileSync(path.join(ZUG_DIR, "PLAYBOOK.md"), result.playbook, "utf-8");
-    writeActive(result.active);
+    if (result.active) writeActive(result.active);
     console.log("PERSONA.md: synthesized (backup saved)");
     console.log("PLAYBOOK.md: synthesized (backup saved)");
     console.log("ACTIVE.md: updated");
