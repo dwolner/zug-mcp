@@ -34,6 +34,7 @@ export interface SynthesisInput {
 export interface SynthesisResult {
   persona: string;
   playbook: string;
+  active: string;
 }
 
 export async function synthesize(input: SynthesisInput): Promise<SynthesisResult | null> {
@@ -53,11 +54,26 @@ export async function synthesize(input: SynthesisInput): Promise<SynthesisResult
 
   const prompt = `You are maintaining a cognitive fingerprint for a person you work with as a learning companion (havruta). You have two files to update based on a new session.
 
-## Rules
-- Add only what you have direct evidence for from this session
-- Do not remove existing observations unless you have contradicting evidence from this session
-- Be conservative — it's better to miss an update than to add something wrong
-- Integrate new observations into existing sections rather than just appending dated entries
+## Before adding anything new to PERSONA:
+→ Quote the exact text from this session's observations that supports it
+→ Is that a direct observation, or an inference?
+→ Only if direct: add it
+
+## Before removing or significantly rewording an existing PERSONA line:
+→ Quote the exact observation from this session that contradicts it
+→ Only if you have an explicit contradiction: remove or reword it
+→ If uncertain: leave it and add a dated note below it
+
+## Before adding to PLAYBOOK:
+→ Is this a universal pattern across sessions, or specific to this session?
+→ Only if universal: add it
+
+## Before updating PLAYBOOK:
+→ Does this session's evidence strengthen, weaken, or nuance the existing entry?
+→ Only if it changes the meaning: update it
+
+## Always:
+- Integrate new observations into existing sections rather than appending dated entries
 - Keep the tone direct and observational, not flattering
 - PERSONA.md is about THIS PERSON — how they think, what they do, where they get stuck
 - PLAYBOOK.md is about WHAT WORKS — universal patterns for effective learning sessions${trimInstruction}
@@ -75,7 +91,7 @@ ${input.sessionSummary}
 ${obsBlock}
 
 ## Your Task
-Return the updated files. Use exactly this format:
+Return three outputs in exactly this format:
 
 <PERSONA>
 (full updated PERSONA.md content)
@@ -83,7 +99,18 @@ Return the updated files. Use exactly this format:
 
 <PLAYBOOK>
 (full updated PLAYBOOK.md content)
-</PLAYBOOK>`;
+</PLAYBOOK>
+
+Then write 3-5 active patterns for the NEXT session. Before each pattern:
+→ Is this directly supported by an observation from PERSONA or this session?
+→ Is this specific enough to change behavior, or is it generic advice?
+→ Only if both: include it
+
+Format each as a direct behavioral instruction: "when X → do Y" or "don't Z until W"
+
+<ACTIVE>
+(active patterns, one per line)
+</ACTIVE>`;
 
   const response = await client.messages.create({
     model: "claude-haiku-4-5-20251001",
@@ -98,11 +125,13 @@ Return the updated files. Use exactly this format:
 
   const personaMatch = text.match(/<PERSONA>\n?([\s\S]*?)\n?<\/PERSONA>/);
   const playbookMatch = text.match(/<PLAYBOOK>\n?([\s\S]*?)\n?<\/PLAYBOOK>/);
+  const activeMatch = text.match(/<ACTIVE>\n?([\s\S]*?)\n?<\/ACTIVE>/);
 
-  if (!personaMatch || !playbookMatch) return null;
+  if (!personaMatch || !playbookMatch || !activeMatch) return null;
 
   return {
     persona: personaMatch[1].trim(),
     playbook: playbookMatch[1].trim(),
+    active: activeMatch[1].trim(),
   };
 }
