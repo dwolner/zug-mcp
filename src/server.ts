@@ -3,8 +3,10 @@ import { z } from "zod";
 import {
   readPersona,
   readPlaybook,
+  readActive,
   writePersona,
   writePlaybook,
+  writeActive,
   appendObservation,
   getObservationsBySession,
   writeSession,
@@ -23,10 +25,12 @@ export function createServer(): McpServer {
     async () => {
       const persona = readPersona();
       const playbook = readPlaybook();
+      const active = readActive();
       const stats = getStats();
 
       const parts = [
         `# Zug Context\nSessions: ${stats.sessions} | Observations: ${stats.observations}\n`,
+        active ? `## Active Patterns\n${active}` : "",
         persona
           ? `## Cognitive Fingerprint\n${persona}`
           : "## Cognitive Fingerprint\n*Not yet built. This is an early session.*",
@@ -102,6 +106,7 @@ export function createServer(): McpServer {
           if (result) {
             writePersona(result.persona);
             writePlaybook(result.playbook);
+            writeActive(result.active);
             synthesized = true;
           }
         } catch {
