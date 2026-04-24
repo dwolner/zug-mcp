@@ -55,7 +55,7 @@ Only if both: include it.
 
 ### 2. `zug_get_context` Response Structure
 
-The tool returns the active patterns block at the top, full PERSONA below:
+The tool returns the active patterns block at the top, full PERSONA below. If `ACTIVE.md` doesn't exist (first session, or synthesis hasn't run yet), the active patterns section is omitted — same graceful handling as empty PERSONA.
 
 ```
 # Zug Context
