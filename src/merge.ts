@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import { synthesize } from "./synthesize.js";
+import { writeActive } from "./storage.js";
 
 const ZUG_DIR = path.join(os.homedir(), ".zug");
 
@@ -136,8 +137,10 @@ async function main() {
 
     fs.writeFileSync(path.join(ZUG_DIR, "PERSONA.md"), result.persona, "utf-8");
     fs.writeFileSync(path.join(ZUG_DIR, "PLAYBOOK.md"), result.playbook, "utf-8");
+    writeActive(result.active);
     console.log("PERSONA.md: synthesized (backup saved)");
     console.log("PLAYBOOK.md: synthesized (backup saved)");
+    console.log("ACTIVE.md: updated");
   } else {
     console.error("Synthesis failed — is ANTHROPIC_API_KEY set in ~/.zug/.env or environment?");
     console.log("PERSONA.md and PLAYBOOK.md were NOT modified.");
