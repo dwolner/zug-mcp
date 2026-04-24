@@ -7,6 +7,7 @@ const SESSIONS_DIR = path.join(ZUG_DIR, "sessions");
 const PERSONA_FILE = path.join(ZUG_DIR, "PERSONA.md");
 const PLAYBOOK_FILE = path.join(ZUG_DIR, "PLAYBOOK.md");
 const OBSERVATIONS_FILE = path.join(ZUG_DIR, "observations.jsonl");
+const ACTIVE_FILE = path.join(ZUG_DIR, "ACTIVE.md");
 
 export type ObservationType =
   | "cognitive_pattern"
@@ -48,6 +49,17 @@ export function writePersona(content: string): void {
 export function writePlaybook(content: string): void {
   ensureDirs();
   fs.writeFileSync(PLAYBOOK_FILE, content, "utf-8");
+}
+
+export function readActive(): string {
+  ensureDirs();
+  if (!fs.existsSync(ACTIVE_FILE)) return "";
+  return fs.readFileSync(ACTIVE_FILE, "utf-8");
+}
+
+export function writeActive(content: string): void {
+  ensureDirs();
+  fs.writeFileSync(ACTIVE_FILE, content, "utf-8");
 }
 
 export function appendObservation(obs: Observation): void {
