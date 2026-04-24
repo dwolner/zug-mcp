@@ -72,7 +72,7 @@ export async function synthesize(input: SynthesisInput): Promise<SynthesisResult
 → Does this session's evidence strengthen, weaken, or nuance the existing entry?
 → Only if it changes the meaning: update it
 
-## Always:
+## Structural rules:
 - Integrate new observations into existing sections rather than appending dated entries
 - Keep the tone direct and observational, not flattering
 - PERSONA.md is about THIS PERSON — how they think, what they do, where they get stuck
@@ -101,12 +101,14 @@ Return three outputs in exactly this format:
 (full updated PLAYBOOK.md content)
 </PLAYBOOK>
 
-Then write 3-5 active patterns for the NEXT session. Before each pattern:
+Now write 3-5 active patterns for the NEXT session. These are instructions for Zug — how to adapt its approach in the next session based on what worked and didn't in this one.
+
+Before each pattern:
 → Is this directly supported by an observation from PERSONA or this session?
-→ Is this specific enough to change behavior, or is it generic advice?
+→ Is this specific enough to change Zug's behavior, or is it generic advice?
 → Only if both: include it
 
-Format each as a direct behavioral instruction: "when X → do Y" or "don't Z until W"
+Format each as a direct behavioral instruction to Zug: "when X → do Y" or "don't Z until W"
 
 <ACTIVE>
 (active patterns, one per line)
@@ -127,11 +129,11 @@ Format each as a direct behavioral instruction: "when X → do Y" or "don't Z un
   const playbookMatch = text.match(/<PLAYBOOK>\n?([\s\S]*?)\n?<\/PLAYBOOK>/);
   const activeMatch = text.match(/<ACTIVE>\n?([\s\S]*?)\n?<\/ACTIVE>/);
 
-  if (!personaMatch || !playbookMatch || !activeMatch) return null;
+  if (!personaMatch || !playbookMatch) return null;
 
   return {
     persona: personaMatch[1].trim(),
     playbook: playbookMatch[1].trim(),
-    active: activeMatch[1].trim(),
+    active: activeMatch ? activeMatch[1].trim() : "",
   };
 }
