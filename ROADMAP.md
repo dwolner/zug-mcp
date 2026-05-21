@@ -40,7 +40,7 @@
 
 ---
 
-## Phase 3 — HTTP Transport + Claude.ai Web 📋
+## Phase 3 — HTTP Transport + Claude.ai Web ✅
 
 **Goal:** All Claude surfaces (Claude Code, Claude desktop, Claude.ai web on any account) share the same memory.
 
@@ -62,6 +62,8 @@
 - [ ] PERSONA.md never exposed without auth
 - [ ] Tunnel URL configured (not random)
 - [ ] Token stored in `~/.zug/.env`, never in the repo
+
+**Note:** Deployed on fly.io free tier (machines sleep after inactivity, cold start ~2-3s on first request). Upgrade to paid `shared-cpu-1x` with `min_machines_running = 1` when cold starts become disruptive — see Phase 4.
 
 ---
 
