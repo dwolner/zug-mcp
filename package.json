@@ -6,8 +6,11 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/stdio.ts",
+    "start:http": "node dist/http.js",
     "typecheck": "tsc --noEmit",
-    "merge": "tsx src/merge.ts"
+    "merge": "tsx src/merge.ts",
+    "synthesize": "tsx src/synthesize-cli.ts",
+    "migrate": "bash scripts/migrate.sh"
   },
   "packageManager": "pnpm@10.31.0",
   "dependencies": {
