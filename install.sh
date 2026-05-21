@@ -75,6 +75,68 @@ EOF
   success "Created $ZUG_DIR/PLAYBOOK.md"
 fi
 
+# ── HTTP mode: configure all clients for remote fly.io server ────────────────
+if [[ "$1" == "--configure-http" ]]; then
+  HTTP_URL="$2"
+  HTTP_TOKEN="$3"
+
+  if [[ -z "$HTTP_URL" || -z "$HTTP_TOKEN" ]]; then
+    echo "Usage: install.sh --configure-http <url> <token>"
+    echo "Example: install.sh --configure-http https://zug-mcp.fly.dev test-token-abc"
+    exit 1
+  fi
+
+  info "Configuring clients for HTTP transport: $HTTP_URL"
+
+  # Claude Code (~/.claude.json)
+  CLAUDE_JSON="$HOME/.claude.json"
+  if [[ -f "$CLAUDE_JSON" ]]; then
+    python3 - "$CLAUDE_JSON" "$HTTP_URL" "$HTTP_TOKEN" << 'PYEOF'
+import json, sys
+path, url, token = sys.argv[1], sys.argv[2], sys.argv[3]
+config = json.load(open(path))
+config.setdefault("mcpServers", {})["zug"] = {
+  "type": "http",
+  "url": f"{url}/mcp",
+  "headers": { "X-Zug-Token": token }
+}
+json.dump(config, open(path, "w"), indent=2)
+PYEOF
+    success "Claude Code configured for HTTP ($CLAUDE_JSON)"
+  else
+    warn "~/.claude.json not found — skipping Claude Code config"
+  fi
+
+  # Claude desktop
+  if [[ -n "$CLAUDE_DESKTOP" && -f "$CLAUDE_DESKTOP" ]]; then
+    python3 - "$CLAUDE_DESKTOP" "$HTTP_URL" "$HTTP_TOKEN" << 'PYEOF'
+import json, sys
+path, url, token = sys.argv[1], sys.argv[2], sys.argv[3]
+config = json.load(open(path))
+config.setdefault("mcpServers", {})["zug"] = {
+  "type": "http",
+  "url": f"{url}/mcp",
+  "headers": { "X-Zug-Token": token }
+}
+json.dump(config, open(path, "w"), indent=2)
+PYEOF
+    success "Claude desktop configured for HTTP ($CLAUDE_DESKTOP)"
+  else
+    warn "Claude desktop config not found — skipping"
+  fi
+
+  echo ""
+  success "HTTP configuration complete!"
+  echo ""
+  echo "Restart Claude Code and Claude desktop to pick up the changes."
+  echo ""
+  echo "For Claude.ai web: Settings → Integrations → Add MCP Server"
+  echo "  URL:   $HTTP_URL/mcp"
+  echo "  Token: (paste your ZUG_TOKEN when prompted, or add X-Zug-Token header)"
+  echo ""
+  exit 0
+fi
+
 # ── Register with Claude Code (~/.claude.json) ────────────────────────────────
 CLAUDE_JSON="$HOME/.claude.json"
 if [[ -f "$CLAUDE_JSON" ]]; then
