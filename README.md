@@ -69,12 +69,19 @@ Edit `~/.zug/PERSONA.md` — write a few paragraphs about how you think. Don't o
 
 ### 3. Add the system prompt to Claude
 
-**Claude.ai Projects** (web + desktop):
-- Create a new Project called "Zug" (or anything)
-- Go to Project Settings → paste the contents of `prompts/system-prompt.md`
+**Claude Code CLI** (recommended):
+- The system prompt and session gates are automatically active via `~/.claude/rules/zug.md` (installed by the setup script)
+- No further action needed — Zug calls `zug_get_context` automatically at every session start
 
-**Claude Code** (VS Code extension):
-- The system prompt is automatically active via `~/.claude/rules/zug.md` (installed by the setup script)
+**Claude Desktop** (remote/HTTP mode):
+- Run `install.sh --configure-http <url> <token>` to configure the `mcp-remote` proxy (Claude Desktop only supports stdio, not HTTP directly)
+- Create a new Project in Claude Desktop called "Zug"
+- Go to Project Settings → paste the contents of `prompts/system-prompt-desktop.md`
+- This merged prompt includes the persona AND the session gates that trigger automatic `zug_get_context` calls
+
+**Claude.ai web**:
+- Requires OAuth — raw token headers are not supported
+- Create a Project and paste `prompts/system-prompt-desktop.md` as the system prompt for persona-only mode (no MCP tool calls)
 
 ### 4. Restart Claude
 
