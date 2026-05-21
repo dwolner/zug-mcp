@@ -75,6 +75,9 @@
 
 **Goal:** Zug is reliable, maintainable, and easy to hand to someone else.
 
+**Completed:**
+- ✅ Context tagging — optional `context` field on observations and sessions; `zug_get_recent_sessions` filterable by context
+
 **What to build:**
 - OAuth support for the HTTP server — unblocks Claude.ai web integration
 - `zug_status` extended: last session date, PERSONA.md excerpt, growth trend
