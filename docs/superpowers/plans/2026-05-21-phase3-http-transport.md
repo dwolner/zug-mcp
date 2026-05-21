@@ -32,7 +32,16 @@
 **Files:**
 - Modify: `src/storage.ts:6-9`
 
-- [ ] **Step 1: Update ZUG_DIR to read from env var**
+- [ ] **Step 1: Snapshot current state before modifying**
+
+```bash
+cd ~/.zug/server
+head -10 src/storage.ts
+```
+
+Expected: `const ZUG_DIR = path.join(os.homedir(), ".zug");` on line 5 or 6. Confirm this before editing.
+
+- [ ] **Step 2: Update ZUG_DIR to read from env var**
 
 Replace the top constants block:
 
@@ -45,21 +54,32 @@ const OBSERVATIONS_FILE = path.join(ZUG_DIR, "observations.jsonl");
 const ACTIVE_FILE = path.join(ZUG_DIR, "ACTIVE.md");
 ```
 
-- [ ] **Step 2: Verify local dev still works**
+- [ ] **Step 3: Verify default path still works (no env var)**
 
 ```bash
-cd ~/.zug/server
 npx tsx src/stdio.ts &
 sleep 1 && kill %1
-echo "Exit code: $?"
+echo "Exit: $?"
 ```
 
-Expected: server starts without error, exits cleanly.
+Expected: server starts without error, exits cleanly (exit 0).
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 4: Verify ZUG_DATA_DIR override is respected**
 
 ```bash
-cd ~/.zug/server
+TMPDIR=$(mktemp -d)
+ZUG_DATA_DIR="$TMPDIR" npx tsx -e "
+import { readPersona } from './src/storage.js';
+const p = readPersona();
+console.log('persona length:', p.length);
+" && ls "$TMPDIR"
+```
+
+Expected: `persona length: 0` (empty — new dir), and `$TMPDIR` now contains a `sessions/` subdirectory created by `ensureDirs()`.
+
+- [ ] **Step 5: Commit**
+
+```bash
 git add src/storage.ts
 git commit -m "feat: read ZUG_DATA_DIR env var for data directory"
 ```
@@ -88,22 +108,24 @@ export function isRateLimited(ip: string): boolean {
 }
 ```
 
-- [ ] **Step 2: Smoke test**
+- [ ] **Step 2: Verify rate limiter behavior**
 
 ```bash
 cd ~/.zug/server
 npx tsx -e "
 import { isRateLimited } from './src/rate-limit.js';
 for (let i = 0; i < 60; i++) isRateLimited('test');
-console.log('60th:', isRateLimited('test'));
-console.log('61st:', isRateLimited('test'));
+console.log('60th request allowed:', !isRateLimited('test'));
+console.log('61st request blocked:', isRateLimited('test'));
+console.log('different IP allowed:', !isRateLimited('other-ip'));
 "
 ```
 
-Expected output:
+Expected:
 ```
-60th: false
-61st: true
+60th request allowed: false
+61st request blocked: true
+different IP allowed: true
 ```
 
 - [ ] **Step 3: Commit**
@@ -226,28 +248,70 @@ server.listen(PORT, () => {
 });
 ```
 
-- [ ] **Step 2: Smoke test — server starts**
+- [ ] **Step 2: Typecheck before running**
+
+```bash
+cd ~/.zug/server
+pnpm typecheck
+```
+
+Expected: no errors. If errors appear, fix before continuing.
+
+- [ ] **Step 3: Verify missing ZUG_TOKEN exits with error**
+
+```bash
+npx tsx src/http.ts
+echo "Exit code: $?"
+```
+
+Expected: prints `ZUG_TOKEN env var is required` and exits non-zero.
+
+- [ ] **Step 4: Start server and verify auth**
 
 ```bash
 ZUG_TOKEN=test123 PORT=8787 npx tsx src/http.ts &
 sleep 1
 
-# Auth check — should 401
-curl -s http://localhost:8787/mcp -X POST | cat
+# No token — should 401
+curl -s -o /dev/null -w "%{http_code}" http://localhost:8787/mcp -X POST
+echo ""
 
-# Token check — should get MCP response or 400 (no session yet)
+# Wrong token — should 401
+curl -s -o /dev/null -w "%{http_code}" http://localhost:8787/mcp -X POST -H "X-Zug-Token: wrong"
+echo ""
+```
+
+Expected: two lines of `401`.
+
+- [ ] **Step 5: Verify MCP initialize handshake**
+
+```bash
 curl -s http://localhost:8787/mcp \
   -X POST \
   -H "X-Zug-Token: test123" \
   -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","method":"initialize","id":1,"params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1"}}}' | cat
+  -d '{"jsonrpc":"2.0","method":"initialize","id":1,"params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1"}}}' | python3 -m json.tool
+```
 
+Expected: JSON with `result.serverInfo.name` = `"zug"` and a `Mcp-Session-Id` response header.
+
+- [ ] **Step 6: Verify rate limiting**
+
+```bash
+for i in $(seq 1 62); do
+  curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8787/mcp -X POST -H "X-Zug-Token: test123"
+done | sort | uniq -c
+```
+
+Expected: ~60 lines of `200` (or `400` for missing session) and ~2 lines of `429`.
+
+- [ ] **Step 7: Stop server**
+
+```bash
 kill %1
 ```
 
-Expected: first curl returns `{"error":"Unauthorized"}`, second returns a JSON response with `result.serverInfo.name = "zug"`.
-
-- [ ] **Step 3: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add src/http.ts
@@ -262,7 +326,15 @@ git commit -m "feat: add HTTP/SSE MCP server with auth and rate limiting"
 - Create: `Dockerfile`
 - Create: `.dockerignore`
 
-- [ ] **Step 1: Create Dockerfile**
+- [ ] **Step 1: Verify Docker is available**
+
+```bash
+docker --version
+```
+
+Expected: `Docker version 2x.x.x` or similar. If not installed, install Docker Desktop before continuing.
+
+- [ ] **Step 2: Create Dockerfile**
 
 ```dockerfile
 FROM node:22-alpine
@@ -276,7 +348,7 @@ RUN pnpm build
 CMD ["node", "dist/http.js"]
 ```
 
-- [ ] **Step 2: Create .dockerignore**
+- [ ] **Step 3: Create .dockerignore**
 
 ```
 node_modules
@@ -289,19 +361,35 @@ templates/
 prompts/
 ```
 
-- [ ] **Step 3: Verify build locally**
+- [ ] **Step 4: Build image and verify no build errors**
 
 ```bash
 cd ~/.zug/server
-docker build -t zug-mcp-test .
-docker run --rm -e ZUG_TOKEN=test -e PORT=8080 -p 8080:8080 zug-mcp-test &
-sleep 2
-curl -s http://localhost:8080/mcp -X POST | cat
-# Expected: {"error":"Unauthorized"}
-docker stop $(docker ps -q --filter ancestor=zug-mcp-test)
+docker build -t zug-mcp-test . 2>&1 | tail -5
 ```
 
-- [ ] **Step 4: Commit**
+Expected: last line is `Successfully built <id>` or `=> exporting to image`. No red errors.
+
+- [ ] **Step 5: Run container and verify it responds**
+
+```bash
+docker run --rm -d --name zug-test -e ZUG_TOKEN=test -e PORT=8080 -p 8080:8080 zug-mcp-test
+sleep 2
+
+curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/mcp -X POST
+echo ""
+```
+
+Expected: `401` — container is up, auth is enforced.
+
+- [ ] **Step 6: Stop and clean up test container**
+
+```bash
+docker stop zug-test
+docker rmi zug-mcp-test
+```
+
+- [ ] **Step 7: Commit**
 
 ```bash
 git add Dockerfile .dockerignore
@@ -338,9 +426,17 @@ primary_region = "iad"
   destination = "/data/.zug"
 ```
 
-`auto_stop_machines = "stop"` + `min_machines_running = 0` = free tier sleep/wake behavior. Cold starts are acceptable per design.
+`auto_stop_machines = "stop"` + `min_machines_running = 0` = free tier sleep/wake behavior. Cold starts acceptable per design.
 
-- [ ] **Step 2: Commit**
+- [ ] **Step 2: Verify flyctl is installed**
+
+```bash
+fly version
+```
+
+Expected: `fly v0.x.x ...`. If not installed: `brew install flyctl && fly auth login`.
+
+- [ ] **Step 3: Commit**
 
 ```bash
 git add fly.toml
@@ -354,11 +450,13 @@ git commit -m "feat: add fly.toml for fly.io deployment"
 **Files:**
 - Create: `scripts/migrate.sh`
 
-- [ ] **Step 1: Create the script**
+- [ ] **Step 1: Create scripts/ directory**
 
 ```bash
 mkdir -p ~/.zug/server/scripts
 ```
+
+- [ ] **Step 2: Create the script**
 
 ```bash
 #!/usr/bin/env bash
@@ -415,13 +513,26 @@ echo "[migrate] Done. Verify with:"
 echo "  fly ssh console -a $APP -C 'ls -la $REMOTE'"
 ```
 
-- [ ] **Step 2: Make executable**
+- [ ] **Step 3: Make executable and verify syntax**
 
 ```bash
 chmod +x ~/.zug/server/scripts/migrate.sh
+bash -n ~/.zug/server/scripts/migrate.sh
+echo "Syntax OK: $?"
 ```
 
-- [ ] **Step 3: Commit**
+Expected: `Syntax OK: 0`
+
+- [ ] **Step 4: Verify local source files exist before committing**
+
+```bash
+ls -la ~/.zug/{PERSONA.md,PLAYBOOK.md,ACTIVE.md,observations.jsonl} 2>&1
+ls ~/.zug/sessions/ | wc -l
+```
+
+Expected: all 4 files listed, session count > 0. These are what will be migrated later.
+
+- [ ] **Step 5: Commit**
 
 ```bash
 git add scripts/migrate.sh
@@ -451,16 +562,24 @@ In `package.json`, update the `scripts` block to:
 }
 ```
 
-- [ ] **Step 2: Typecheck**
+- [ ] **Step 2: Run full typecheck across all source files**
 
 ```bash
 cd ~/.zug/server
-pnpm typecheck
+pnpm typecheck 2>&1
 ```
 
-Expected: no errors.
+Expected: no errors. This validates storage.ts, http.ts, rate-limit.ts, and all existing files compile cleanly together.
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 3: Verify build produces dist/http.js**
+
+```bash
+pnpm build && ls dist/
+```
+
+Expected: `dist/` contains `http.js`, `server.js`, `storage.js`, `stdio.js`, etc.
+
+- [ ] **Step 4: Commit**
 
 ```bash
 git add package.json
@@ -474,9 +593,17 @@ git commit -m "chore: add start:http and migrate scripts"
 **Files:**
 - Modify: `install.sh`
 
-- [ ] **Step 1: Add --configure-http block after the existing Claude Code config section**
+- [ ] **Step 1: Snapshot current ~/.claude.json zug entry before modifying install.sh**
 
-Find the line `# ── Register with Claude Code (~/.claude.json) ────` and add the following new block immediately before it (before the existing stdio config block):
+```bash
+python3 -c "import json; c=json.load(open('$HOME/.claude.json')); print(json.dumps(c.get('mcpServers',{}).get('zug'), indent=2))"
+```
+
+Save this output — it's the stdio entry you're replacing. If something goes wrong, you can restore it manually.
+
+- [ ] **Step 2: Add --configure-http block to install.sh**
+
+Find the line `# ── Register with Claude Code (~/.claude.json) ────` and add the following new block immediately before it:
 
 ```bash
 # ── HTTP mode: configure all clients for remote fly.io server ────────────────
@@ -542,24 +669,58 @@ PYEOF
 fi
 ```
 
-- [ ] **Step 2: Verify the script syntax**
+- [ ] **Step 3: Verify syntax**
 
 ```bash
 bash -n ~/.zug/server/install.sh
+echo "Syntax OK: $?"
 ```
 
-Expected: no output (no syntax errors).
+Expected: `Syntax OK: 0`
 
-- [ ] **Step 3: Dry-run test**
+- [ ] **Step 4: Dry-run against a temp copy of ~/.claude.json**
 
 ```bash
-# Simulate --configure-http call (won't modify anything since ~/.claude.json path is checked)
-bash ~/.zug/server/install.sh --configure-http https://zug-mcp.fly.dev badtoken 2>&1 | head -20
+cp ~/.claude.json /tmp/claude-test.json
+
+# Run against the temp copy by temporarily overriding HOME
+HOME_BACKUP=$HOME
+(HOME=/tmp python3 -c "
+import json, sys
+path = '/tmp/claude-test.json'
+url = 'https://zug-mcp.fly.dev'
+token = 'test-token'
+config = json.load(open(path))
+config.setdefault('mcpServers', {})['zug'] = {
+  'type': 'http',
+  'url': f'{url}/mcp',
+  'headers': { 'X-Zug-Token': token }
+}
+json.dump(config, open(path, 'w'), indent=2)
+")
+
+# Inspect result
+python3 -c "import json; c=json.load(open('/tmp/claude-test.json')); print(json.dumps(c['mcpServers']['zug'], indent=2))"
 ```
 
-Expected: prints "Configuring clients for HTTP transport" and either success or "not found" messages.
+Expected:
+```json
+{
+  "type": "http",
+  "url": "https://zug-mcp.fly.dev/mcp",
+  "headers": {
+    "X-Zug-Token": "test-token"
+  }
+}
+```
 
-- [ ] **Step 4: Commit**
+If the output looks correct, the install.sh logic is sound. Clean up:
+
+```bash
+rm /tmp/claude-test.json
+```
+
+- [ ] **Step 5: Commit**
 
 ```bash
 git add install.sh
@@ -604,10 +765,19 @@ git commit -m "docs: mark Phase 3 complete, note cold-start upgrade path"
 
 ## Task 10: Push to GitHub
 
-- [ ] **Step 1: Push all commits**
+- [ ] **Step 1: Verify git log looks clean before pushing**
 
 ```bash
 cd ~/.zug/server
+git log --oneline -10
+git status
+```
+
+Expected: clean working tree, 8–10 new commits since the last push, no untracked files.
+
+- [ ] **Step 2: Push**
+
+```bash
 git push origin main
 ```
 
@@ -615,33 +785,58 @@ git push origin main
 
 ## Task 11: Deploy to fly.io
 
-> Requires `flyctl` installed: `brew install flyctl` + `fly auth login`
+> Requires `flyctl` installed: `brew install flyctl && fly auth login`
 
-- [ ] **Step 1: Create fly.io app**
+- [ ] **Step 1: Verify flyctl auth**
+
+```bash
+fly auth whoami
+```
+
+Expected: your fly.io email address. If not logged in: `fly auth login`.
+
+- [ ] **Step 2: Create fly.io app**
 
 ```bash
 cd ~/.zug/server
 fly launch --no-deploy --name zug-mcp --region iad
 ```
 
-When prompted "would you like to copy its configuration to the new app?" — say **no** (we have our own `fly.toml`).
+When asked "would you like to copy its configuration to the new app?" — say **no** (we have our own `fly.toml`).
 
-- [ ] **Step 2: Create persistent volume**
+- [ ] **Step 3: Verify app was created**
+
+```bash
+fly status -a zug-mcp
+```
+
+Expected: app listed with `No machines` (not yet deployed). If it errors, the app name may be taken — try `zug-mcp-<yourname>` and update `fly.toml` to match.
+
+- [ ] **Step 4: Create persistent volume**
 
 ```bash
 fly volumes create zug_data --size 1 --region iad -a zug-mcp
 ```
 
-Expected: `ID: vol_xxxxxxxx ... state: created`
+Expected: output includes `state: created` and `Volume 'zug_data' created successfully`.
 
-- [ ] **Step 3: Set secrets**
+- [ ] **Step 5: Verify volume exists**
+
+```bash
+fly volumes list -a zug-mcp
+```
+
+Expected: one volume named `zug_data`, state `created`, size `1GB`, region `iad`.
+
+- [ ] **Step 6: Set secrets**
 
 Generate a strong token:
 ```bash
 openssl rand -hex 32
 ```
 
-Set secrets (replace values):
+Copy the output. Then set secrets (replace `<token>` and `<api-key>`):
+
 ```bash
 fly secrets set \
   ZUG_TOKEN=<paste-generated-token> \
@@ -650,76 +845,155 @@ fly secrets set \
   -a zug-mcp
 ```
 
-Save the `ZUG_TOKEN` value — you'll need it for client configuration.
+**Save the ZUG_TOKEN value now** — you'll need it in Task 12. Store it in your password manager.
 
-- [ ] **Step 4: Deploy**
+- [ ] **Step 7: Verify secrets are set (names only — values are write-only)**
+
+```bash
+fly secrets list -a zug-mcp
+```
+
+Expected: three entries — `ZUG_TOKEN`, `ANTHROPIC_API_KEY`, `ZUG_DATA_DIR`.
+
+- [ ] **Step 8: Deploy**
 
 ```bash
 fly deploy -a zug-mcp
 ```
 
-Expected: build completes, machine starts, health checks pass.
+Watch the output. Expected: Docker build completes, machine starts, health checks pass. Final line: `✓ Machine ... is healthy`.
 
-- [ ] **Step 5: Verify server is running**
+- [ ] **Step 9: Verify server is live and auth is enforced**
 
 ```bash
-curl -s https://zug-mcp.fly.dev/mcp -X POST | cat
+# No token — should return 401
+curl -s https://zug-mcp.fly.dev/mcp -X POST
 ```
 
-Expected: `{"error":"Unauthorized"}` — server is up and auth is working.
+Expected: `{"error":"Unauthorized"}`. If you get a connection error or 5xx, check logs:
 
-- [ ] **Step 6: Migrate data**
+```bash
+fly logs -a zug-mcp
+```
+
+- [ ] **Step 10: Verify volume is mounted**
+
+```bash
+fly ssh console -a zug-mcp -C "ls /data/.zug/ 2>/dev/null && echo 'mount OK' || echo 'mount MISSING'"
+```
+
+Expected: `mount OK` (directory exists, may be empty). If `mount MISSING`, the volume isn't attached — check `fly.toml` mounts section and redeploy.
+
+- [ ] **Step 11: Migrate data**
+
+> Only proceed if Step 10 confirmed the mount is working.
 
 ```bash
 cd ~/.zug/server
 pnpm migrate
 ```
 
-Expected: files uploaded, ends with "Done."
+Expected: files queued and uploaded, ends with `[migrate] Done.`
 
-Verify:
+- [ ] **Step 12: Verify data arrived on the volume**
+
 ```bash
-fly ssh console -a zug-mcp -C "ls -la /data/.zug/"
+fly ssh console -a zug-mcp -C "ls -la /data/.zug/ && echo '---' && ls /data/.zug/sessions/ | wc -l"
 ```
 
-Expected: PERSONA.md, PLAYBOOK.md, ACTIVE.md, observations.jsonl, sessions/ all present.
+Expected: PERSONA.md, PLAYBOOK.md, ACTIVE.md, observations.jsonl all present. Session count matches your local `~/.zug/sessions/` count.
 
 ---
 
 ## Task 12: Configure clients
 
-- [ ] **Step 1: Configure this machine (primary laptop)**
+> Only proceed once Task 11 Step 9 confirms `{"error":"Unauthorized"}` from the live server.
+
+- [ ] **Step 1: Snapshot current ~/.claude.json zug entry (backup)**
+
+```bash
+python3 -c "import json; c=json.load(open('$HOME/.claude.json')); print(json.dumps(c.get('mcpServers',{}).get('zug'), indent=2))" | tee /tmp/zug-stdio-backup.json
+```
+
+Keep `/tmp/zug-stdio-backup.json` — it's your rollback if Claude Code can't connect.
+
+- [ ] **Step 2: Run the HTTP configure script**
 
 ```bash
 ~/.zug/server/install.sh --configure-http https://zug-mcp.fly.dev <ZUG_TOKEN>
 ```
 
-- [ ] **Step 2: Restart Claude Code**
+- [ ] **Step 3: Verify ~/.claude.json was updated correctly**
 
-Quit and relaunch Claude Code. Open a new session and run:
+```bash
+python3 -c "import json; c=json.load(open('$HOME/.claude.json')); print(json.dumps(c.get('mcpServers',{}).get('zug'), indent=2))"
+```
+
+Expected:
+```json
+{
+  "type": "http",
+  "url": "https://zug-mcp.fly.dev/mcp",
+  "headers": {
+    "X-Zug-Token": "<your-token>"
+  }
+}
+```
+
+If the output is wrong, restore from backup before restarting Claude Code:
+```bash
+# Rollback if needed:
+python3 -c "
+import json
+with open('$HOME/.claude.json') as f: c = json.load(f)
+with open('/tmp/zug-stdio-backup.json') as f: old = json.load(f)
+c['mcpServers']['zug'] = old
+with open('$HOME/.claude.json', 'w') as f: json.dump(c, f, indent=2)
+print('Rolled back')
+"
+```
+
+- [ ] **Step 4: Restart Claude Code and verify MCP connection**
+
+Quit and relaunch Claude Code. In a new session run:
 ```
 /mcp
 ```
-Expected: `zug` server listed as connected.
 
-- [ ] **Step 3: Configure work laptop**
+Expected: `zug` listed as connected. If it shows as disconnected or errors, check `fly logs -a zug-mcp` for server-side errors.
 
-On the work laptop, pull the latest server:
+- [ ] **Step 5: Verify Zug actually reads from fly.io (not local files)**
+
+```bash
+# Rename local PERSONA.md temporarily
+mv ~/.zug/PERSONA.md ~/.zug/PERSONA.md.local-backup
+```
+
+In Claude Code, call `zug_get_context` (or start a new session which triggers it automatically). The PERSONA content should still appear — it's coming from the fly.io volume, not local files.
+
+```bash
+# Restore local backup
+mv ~/.zug/PERSONA.md.local-backup ~/.zug/PERSONA.md
+```
+
+- [ ] **Step 6: Configure work laptop**
+
+On the work laptop, pull the latest server and configure:
 ```bash
 cd ~/.zug/server && git pull
 ./install.sh --configure-http https://zug-mcp.fly.dev <ZUG_TOKEN>
 ```
 
-Restart Claude Code on the work laptop and verify `/mcp` shows `zug` connected.
+Verify `~/.claude.json` on that machine shows the HTTP entry (same Step 3 check), then restart Claude Code.
 
-- [ ] **Step 4: Configure Claude desktop (this machine)**
+- [ ] **Step 7: Configure Claude desktop**
 
-Restart Claude desktop. Open a conversation and verify Zug tools are available.
+Restart Claude desktop. Open a conversation and verify the Zug tools (`zug_get_context`, `zug_save_observation`, etc.) appear in the tools list.
 
-- [ ] **Step 5: Configure Claude.ai web (manual)**
+- [ ] **Step 8: Configure Claude.ai web (manual)**
 
 In Claude.ai: Settings → Integrations → Add MCP Server
 - URL: `https://zug-mcp.fly.dev/mcp`
 - Add header: `X-Zug-Token: <ZUG_TOKEN>`
 
-Test by starting a conversation and calling `zug_get_context`.
+Test: start a conversation and run `zug_get_context`. Expected: your PERSONA content loads from fly.io.
