@@ -12,15 +12,13 @@ echo "[migrate] Source: $ZUG_DIR"
 echo "[migrate] Destination: $REMOTE"
 echo ""
 
+# Create remote directories via SSH (fly sftp shell doesn't support mkdir)
+echo "[migrate] Creating remote directories..."
+fly ssh console -a "$APP" -C "mkdir -p $REMOTE/sessions" 2>/dev/null || true
+
 # Build SFTP batch file
 BATCH=$(mktemp)
 trap "rm -f $BATCH" EXIT
-
-# Create remote directories (- prefix ignores "already exists" errors)
-cat >> "$BATCH" << EOF
--mkdir $REMOTE
--mkdir $REMOTE/sessions
-EOF
 
 # Upload top-level data files
 for file in PERSONA.md PLAYBOOK.md ACTIVE.md observations.jsonl; do
