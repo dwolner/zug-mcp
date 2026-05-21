@@ -155,8 +155,8 @@ See [ROADMAP.md](ROADMAP.md) for the full development plan.
 |---|---|---|
 | 1 — Local stdio | ✅ Done | Claude Code gets persistent memory |
 | 2 — Haiku synthesis | ✅ Done | AI synthesizes PERSONA/PLAYBOOK from session data + merge command |
-| 3 — HTTP + tunnel | 📋 Next | Claude.ai web connects, all surfaces share memory |
-| 4 — Polish | 📋 Planned | Onboarding flow, CLI, tests |
+| 3 — HTTP + fly.io | ✅ Done | CLI + Desktop share memory via remote server |
+| 4 — Polish | 📋 Next | OAuth (unblocks web), onboarding flow, CLI, tests |
 
 ---
 

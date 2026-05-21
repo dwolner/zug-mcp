@@ -40,30 +40,34 @@
 
 ---
 
-## Phase 3 — HTTP Transport + Claude.ai Web ✅
+## Phase 3 — HTTP Transport ✅
 
-**Goal:** All Claude surfaces (Claude Code, Claude desktop, Claude.ai web on any account) share the same memory.
+**Goal:** All Claude surfaces share the same memory via a persistent remote server.
 
-**What to build:**
-- `src/http.ts` — Express server wrapping the same tools with HTTP/SSE transport
-- Auth middleware: shared secret header (`X-Zug-Token`) validated before MCP handshake
-- Tunnel options (pick one):
-  - Cloudflare Tunnel (free, stable URL, data stays local)
-  - Tailscale Funnel (free if already using Tailscale)
-  - fly.io (~$3/mo, always-on, good for multi-device)
-- Register HTTP URL in Claude.ai Settings → Integrations → MCP
+**What was built:**
+- `src/http.ts` — Express server wrapping the same tools with HTTP/Streamable transport
+- Auth middleware: `X-Zug-Token` header validated before MCP handshake
+- Deployed on fly.io with persistent volume at `/data/.zug/` (data survives redeploys)
+- `install.sh --configure-http <url> <token>` configures all clients automatically
 - npm scripts: `start:stdio`, `start:http`
-- `launchd` plist for macOS auto-start (if tunnel approach)
 
-**Multi-account note:** Multiple Claude.ai accounts point at the same HTTP endpoint and share one PERSONA.md. Same person, same fingerprint. If separation is needed later, a `?context=work` query param can partition the data.
+**Client support (actual state):**
+| Surface | Transport | Status |
+|---|---|---|
+| Claude Code CLI | HTTP native | ✅ Works |
+| Claude Desktop | `mcp-remote` stdio proxy → HTTP | ✅ Works |
+| Claude.ai web | OAuth required — raw headers not supported | ❌ Blocked |
 
-**Security checklist:**
-- [ ] Auth header required on all requests
-- [ ] PERSONA.md never exposed without auth
-- [ ] Tunnel URL configured (not random)
-- [ ] Token stored in `~/.zug/.env`, never in the repo
+**Claude Desktop setup:**
+- Claude Desktop only supports stdio — HTTP type is rejected
+- `install.sh --configure-http` writes an `mcp-remote` proxy config automatically
+- Create a Desktop Project and paste `prompts/system-prompt-desktop.md` as the system prompt to enable automatic `zug_get_context` calls
 
-**Note:** Deployed on fly.io free tier (machines sleep after inactivity, cold start ~2-3s on first request). Upgrade to paid `shared-cpu-1x` with `min_machines_running = 1` when cold starts become disruptive — see Phase 4.
+**Claude.ai web:**
+- Settings → Integrations only supports OAuth-based connectors
+- No path forward without adding OAuth to the server (Phase 4 candidate)
+
+**fly.io note:** Machines sleep after inactivity, cold start ~2-3s. Upgrade to `min_machines_running = 1` when cold starts become disruptive.
 
 ---
 
@@ -72,6 +76,7 @@
 **Goal:** Zug is reliable, maintainable, and easy to hand to someone else.
 
 **What to build:**
+- OAuth support for the HTTP server — unblocks Claude.ai web integration
 - `zug_status` extended: last session date, PERSONA.md excerpt, growth trend
 - CLI: `zug status`, `zug tail` (recent observations), `zug persona` (print fingerprint)
 - Onboarding flow: new user runs install, answers 5 questions, Haiku writes their seed PERSONA.md
