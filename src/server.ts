@@ -49,16 +49,19 @@ export function createServer(): McpServer {
       type: z.enum(["cognitive_pattern", "preference", "mistake", "breakthrough", "context"]).describe("Type of observation"),
       session_id: z.string().describe("Current session identifier"),
       confidence: z.enum(["low", "medium", "high"]).describe("How confident you are"),
+      context: z.string().optional().describe('Session context tag, e.g. "work" or "personal"'),
     },
-    async ({ observation, type, session_id, confidence }) => {
+    async ({ observation, type, session_id, confidence, context }) => {
       appendObservation({
         timestamp: new Date().toISOString(),
         type: type as ObservationType,
         observation,
         session_id,
         confidence,
+        context,
       });
-      return { content: [{ type: "text" as const, text: `Saved: [${type}/${confidence}] ${observation}` }] };
+      const contextLabel = context ? ` [${context}]` : "";
+      return { content: [{ type: "text" as const, text: `Saved: [${type}/${confidence}]${contextLabel} ${observation}` }] };
     }
   );
 
@@ -68,8 +71,9 @@ export function createServer(): McpServer {
     {
       session_id: z.string().describe("Session identifier used during this session"),
       summary: z.string().describe("What was explored, decided, or worked on — and any notable moments"),
+      context: z.string().optional().describe('Session context tag, e.g. "work" or "personal"'),
     },
-    async ({ session_id, summary }) => {
+    async ({ session_id, summary, context }) => {
       const observations = getObservationsBySession(session_id);
       const persona = readPersona();
       const playbook = readPlaybook();
@@ -80,11 +84,19 @@ export function createServer(): McpServer {
           ? observations.map((o) => `- [${o.type}/${o.confidence}] ${o.observation}`).join("\n")
           : "*No observations saved this session.*";
 
-      // Always write the session log
-      writeSession(
-        session_id,
-        [`# Session ${session_id}`, `Date: ${new Date().toISOString()}`, "", "## Summary", summary, "", "## Observations", obsText].join("\n")
-      );
+      const sessionLines = [
+        `# Session ${session_id}`,
+        `Date: ${new Date().toISOString()}`,
+        ...(context ? [`Context: ${context}`] : []),
+        "",
+        "## Summary",
+        summary,
+        "",
+        "## Observations",
+        obsText,
+      ];
+
+      writeSession(session_id, sessionLines.join("\n"));
 
       // Try Haiku synthesis, fall back to append
       let synthesized = false;
@@ -113,7 +125,6 @@ export function createServer(): McpServer {
           // Synthesis failed — fall through to append
         }
 
-        // Fallback: append like Phase 1
         if (!synthesized) {
           const newEntries = meaningful.map((o) => `- [${o.type}] ${o.observation} *(${today})*`).join("\n");
           writePersona(
@@ -126,10 +137,11 @@ export function createServer(): McpServer {
 
       const stats = getStats();
       const method = synthesized ? "synthesized" : "appended";
+      const contextLabel = context ? ` context=${context}` : "";
       return {
         content: [{
           type: "text" as const,
-          text: `Session saved (${method}). ${observations.length} observations. Total: ${stats.sessions} sessions, ${stats.observations} observations.`,
+          text: `Session saved (${method}${contextLabel}). ${observations.length} observations. Total: ${stats.sessions} sessions, ${stats.observations} observations.`,
         }],
       };
     }
@@ -140,9 +152,10 @@ export function createServer(): McpServer {
     "Returns recent session summaries. Useful for re-establishing context after a gap.",
     {
       limit: z.number().int().min(1).max(20).describe("Number of recent sessions to return (1–20)"),
+      context: z.string().optional().describe('Filter by context tag, e.g. "work" or "personal"'),
     },
-    async ({ limit }) => {
-      const sessions = getRecentSessions(limit);
+    async ({ limit, context }) => {
+      const sessions = getRecentSessions(limit, context);
       return {
         content: [{
           type: "text" as const,
