@@ -18,6 +18,18 @@ Zug exposes five tools Claude can call during any session:
 | `zug_get_recent_sessions` | After a gap — re-establishes context from past sessions |
 | `zug_status` | Anytime — shows session count, observation count, fingerprint size |
 
+### Context Tagging
+
+`zug_save_observation` and `zug_end_session` accept an optional `context` field (e.g. `"work"`, `"personal"`, `"augur"`). Tagged data stays in the unified fingerprint — PERSONA.md is never partitioned — but can be filtered later by agents or scripts.
+
+`zug_get_recent_sessions` accepts an optional `context` filter to return only matching sessions:
+
+```json
+{ "limit": 20, "context": "work" }
+```
+
+Sessions are tagged via a `Context: <value>` header line in each session file. Observations carry `context` in `observations.jsonl`.
+
 Your data lives at `~/.zug/`:
 ```
 ~/.zug/
