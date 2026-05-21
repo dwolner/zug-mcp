@@ -91,7 +91,7 @@ ${input.sessionSummary}
 ${obsBlock}
 
 ## Your Task
-Return three outputs in exactly this format:
+Return three outputs in exactly this format. You MUST always produce the full XML output even if nothing changes — return the existing content verbatim if no updates are warranted.
 
 <PERSONA>
 (full updated PERSONA.md content)
@@ -116,20 +116,29 @@ Format each as a direct behavioral instruction to Zug: "when X → do Y" or "don
 
   const response = await client.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 4096,
-    messages: [{ role: "user", content: prompt }],
+    max_tokens: 8192,
+    system: "You output only the requested XML blocks. No preamble, no questions, no commentary. If nothing changes, return the existing content verbatim inside the XML tags.",
+    messages: [
+      { role: "user", content: prompt },
+      { role: "assistant", content: "<PERSONA>" },
+    ],
   });
 
-  const text = response.content
+  // Prepend the prefilled assistant turn so regex can match the full XML
+  const raw = response.content
     .filter((b): b is Anthropic.TextBlock => b.type === "text")
     .map((b) => b.text)
     .join("");
+  const text = "<PERSONA>" + raw;
 
   const personaMatch = text.match(/<PERSONA>\n?([\s\S]*?)\n?<\/PERSONA>/);
   const playbookMatch = text.match(/<PLAYBOOK>\n?([\s\S]*?)\n?<\/PLAYBOOK>/);
   const activeMatch = text.match(/<ACTIVE>\n?([\s\S]*?)\n?<\/ACTIVE>/);
 
-  if (!personaMatch || !playbookMatch) return null;
+  if (!personaMatch || !playbookMatch) {
+    console.warn(`Synthesis skipped — model did not produce output.\n${text.slice(0, 300)}`);
+    return null;
+  }
 
   return {
     persona: personaMatch[1].trim(),
