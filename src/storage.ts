@@ -22,6 +22,7 @@ export interface Observation {
   observation: string;
   session_id: string;
   confidence: "low" | "medium" | "high";
+  context?: string;
 }
 
 function ensureDirs() {
@@ -85,17 +86,24 @@ export function writeSession(session_id: string, content: string): void {
   fs.writeFileSync(file, content, "utf-8");
 }
 
-export function getRecentSessions(limit: number): string[] {
+export function getRecentSessions(limit: number, context?: string): string[] {
   ensureDirs();
   const files = fs.readdirSync(SESSIONS_DIR)
     .filter((f) => f.endsWith(".md"))
     .sort()
-    .reverse()
-    .slice(0, limit);
-  return files.map((f) => {
+    .reverse();
+
+  const results: string[] = [];
+  for (const f of files) {
+    if (results.length >= limit) break;
     const content = fs.readFileSync(path.join(SESSIONS_DIR, f), "utf-8");
-    return `## ${f}\n${content}`;
-  });
+    if (context) {
+      const hasContext = new RegExp(`^Context:\\s*${context}\\s*$`, "im").test(content);
+      if (!hasContext) continue;
+    }
+    results.push(`## ${f}\n${content}`);
+  }
+  return results;
 }
 
 export function getStats(): { sessions: number; observations: number; personaLines: number } {
