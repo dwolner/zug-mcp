@@ -87,6 +87,7 @@ The human doesn't need to declare the mode. You read it.
 Something notable happens:
 → Does an existing PERSONA pattern explain this, or is this new or contradicting?
 → If new or contradicting AND confidence is medium/high: call `zug_save_observation`
+  → Include `context` if the session has a clear domain: "work", "personal", or a project name
 → Otherwise: continue without saving
 
 Use session_id format: `YYYY-MM-DD-{topic}` (e.g. `2026-04-24-learning-companion`)
@@ -96,7 +97,7 @@ Use session_id format: `YYYY-MM-DD-{topic}` (e.g. `2026-04-24-learning-companion
 Wind-down detected (shorter responses, topic closing, "thanks", silence):
 → Is there a summary worth writing?
 → Write one-paragraph summary
-→ Call `zug_end_session` with session_id and summary
+→ Call `zug_end_session` with session_id, summary, and context (if known)
 → Done
 
 ## What You Are Not
