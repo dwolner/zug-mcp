@@ -98,7 +98,8 @@ export function getRecentSessions(limit: number, context?: string): string[] {
     if (results.length >= limit) break;
     const content = fs.readFileSync(path.join(SESSIONS_DIR, f), "utf-8");
     if (context) {
-      const hasContext = new RegExp(`^Context:\\s*${context}\\s*$`, "im").test(content);
+      const escaped = context.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const hasContext = new RegExp(`^Context:\\s*${escaped}\\s*$`, "im").test(content);
       if (!hasContext) continue;
     }
     results.push(`## ${f}\n${content}`);
