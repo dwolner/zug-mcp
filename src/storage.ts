@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 
-const ZUG_DIR = path.join(os.homedir(), ".zug");
+const ZUG_DIR = process.env.ZUG_DATA_DIR || path.join(os.homedir(), ".zug");
 const SESSIONS_DIR = path.join(ZUG_DIR, "sessions");
 const PERSONA_FILE = path.join(ZUG_DIR, "PERSONA.md");
 const PLAYBOOK_FILE = path.join(ZUG_DIR, "PLAYBOOK.md");
