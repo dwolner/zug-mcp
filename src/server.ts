@@ -101,54 +101,45 @@ export function createServer(): McpServer {
 
       writeSession(session_id, sessionLines.join("\n"));
 
-      // Try Haiku synthesis, fall back to append
-      let synthesized = false;
+      // Append observations immediately (synchronous, always succeeds)
       const meaningful = observations.filter((o) => o.confidence !== "low");
-
       if (meaningful.length > 0) {
-        try {
-          const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 8000));
-          const result = await Promise.race([
-            synthesize({
-              currentPersona: persona,
-              currentPlaybook: playbook,
-              sessionSummary: summary,
-              observations: meaningful.map((o) => ({
-                type: o.type,
-                observation: o.observation,
-                confidence: o.confidence,
-              })),
-            }),
-            timeout,
-          ]);
+        const newEntries = meaningful.map((o) => `- [${o.type}] ${o.observation} *(${today})*`).join("\n");
+        writePersona(
+          persona
+            ? `${persona}\n\n### ${today}\n${newEntries}`
+            : `# Cognitive Fingerprint\n\n### ${today}\n${newEntries}`
+        );
+      }
 
+      // Kick off Haiku synthesis in background — rewrites PERSONA/PLAYBOOK/ACTIVE if successful
+      if (meaningful.length > 0) {
+        synthesize({
+          currentPersona: persona,
+          currentPlaybook: readPersona(), // re-read after append
+          sessionSummary: summary,
+          observations: meaningful.map((o) => ({
+            type: o.type,
+            observation: o.observation,
+            confidence: o.confidence,
+          })),
+        }).then((result) => {
           if (result) {
             writePersona(result.persona);
             writePlaybook(result.playbook);
             if (result.active) writeActive(result.active);
-            synthesized = true;
           }
-        } catch {
-          // Synthesis failed — fall through to append
-        }
-
-        if (!synthesized) {
-          const newEntries = meaningful.map((o) => `- [${o.type}] ${o.observation} *(${today})*`).join("\n");
-          writePersona(
-            persona
-              ? `${persona}\n\n### ${today}\n${newEntries}`
-              : `# Cognitive Fingerprint\n\n### ${today}\n${newEntries}`
-          );
-        }
+        }).catch(() => {
+          // Synthesis failed — appended observations remain in PERSONA
+        });
       }
 
       const stats = getStats();
-      const method = synthesized ? "synthesized" : "appended";
       const contextLabel = context ? ` context=${context}` : "";
       return {
         content: [{
           type: "text" as const,
-          text: `Session saved (${method}${contextLabel}). ${observations.length} observations. Total: ${stats.sessions} sessions, ${stats.observations} observations.`,
+          text: `Session saved${contextLabel}. ${observations.length} observations. Total: ${stats.sessions} sessions, ${stats.observations} observations. Synthesis running in background.`,
         }],
       };
     }
