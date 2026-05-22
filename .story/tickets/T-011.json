@@ -1,0 +1,12 @@
+{
+  "blockedBy": [],
+  "completedDate": null,
+  "createdDate": "2026-05-22",
+  "description": "Add unit/integration tests for src/storage.ts and src/synthesize.ts. Currently untested — risky surface since synthesis mutates the user's cognitive fingerprint.",
+  "id": "T-011",
+  "order": 60,
+  "phase": "p4",
+  "status": "open",
+  "title": "Tests for storage and synthesis layers",
+  "type": "task"
+}

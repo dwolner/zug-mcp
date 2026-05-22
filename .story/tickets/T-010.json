@@ -1,0 +1,12 @@
+{
+  "blockedBy": [],
+  "completedDate": null,
+  "createdDate": "2026-05-22",
+  "description": "install.sh currently targets macOS only. Add Linux support so Zug can be installed on remote servers and Linux dev machines.",
+  "id": "T-010",
+  "order": 50,
+  "phase": "p4",
+  "status": "open",
+  "title": "Linux support in install.sh",
+  "type": "task"
+}

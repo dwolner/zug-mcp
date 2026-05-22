@@ -1,0 +1,12 @@
+{
+  "blockedBy": [],
+  "completedDate": null,
+  "createdDate": "2026-05-22",
+  "description": "New user runs install, answers 5 questions, Haiku writes their seed PERSONA.md. Reduces cold-start problem where new users have no fingerprint.",
+  "id": "T-009",
+  "order": 40,
+  "phase": "p4",
+  "status": "open",
+  "title": "Onboarding flow — 5-question seed PERSONA.md",
+  "type": "task"
+}
