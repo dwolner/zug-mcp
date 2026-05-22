@@ -21,7 +21,7 @@ if [[ "$OS" == "Darwin" ]]; then
   CLAUDE_DESKTOP="$HOME/Library/Application Support/Claude/claude_desktop_config.json"
 elif [[ "$OS" == "Linux" ]]; then
   VSCODE_MCP="$HOME/.config/Code/User/mcp.json"
-  CLAUDE_DESKTOP="$HOME/.config/Claude/claude_desktop_config.json"
+  CLAUDE_DESKTOP=""  # Claude Desktop is not available on Linux
 else
   warn "Unsupported OS: $OS. Manual configuration required."
   VSCODE_MCP=""
@@ -33,10 +33,41 @@ info "Checking dependencies..."
 if ! command -v node &>/dev/null; then
   echo "Node.js is required. Install from https://nodejs.org" && exit 1
 fi
+if ! command -v git &>/dev/null; then
+  echo "git is required. Install it (e.g. apt install git / brew install git)." && exit 1
+fi
 if ! command -v pnpm &>/dev/null; then
   warn "pnpm not found. Installing..."
   npm install -g pnpm
 fi
+
+# ── JSON config helpers (node-based, no python3 dependency) ──────────────────
+patch_mcp_config() {
+  local config_path="$1"
+  local server_dir="$2"
+  node - "$config_path" "$server_dir" << 'JSEOF'
+const fs = require('fs');
+const [configPath, serverDir] = process.argv.slice(2);
+const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+config.mcpServers = config.mcpServers || {};
+config.mcpServers.zug = { type: 'stdio', command: 'npx', args: ['tsx', serverDir + '/src/stdio.ts'] };
+fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + '\n');
+JSEOF
+}
+
+patch_http_config() {
+  local config_path="$1"
+  local http_url="$2"
+  local http_token="$3"
+  node - "$config_path" "$http_url" "$http_token" << 'JSEOF'
+const fs = require('fs');
+const [configPath, url, token] = process.argv.slice(2);
+const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+config.mcpServers = config.mcpServers || {};
+config.mcpServers.zug = { command: 'npx', args: ['mcp-remote', url + '/mcp', '--header', 'X-Zug-Token:' + token] };
+fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + '\n');
+JSEOF
+}
 
 # ── Install server ────────────────────────────────────────────────────────────
 if [[ "$1" != "--configure-only" ]]; then
@@ -99,17 +130,7 @@ if [[ "$1" == "--configure-http" ]]; then
   # Claude Code (~/.claude.json)
   CLAUDE_JSON="$HOME/.claude.json"
   if [[ -f "$CLAUDE_JSON" ]]; then
-    python3 - "$CLAUDE_JSON" "$HTTP_URL" "$HTTP_TOKEN" << 'PYEOF'
-import json, sys
-path, url, token = sys.argv[1], sys.argv[2], sys.argv[3]
-config = json.load(open(path))
-config.setdefault("mcpServers", {})["zug"] = {
-  "type": "http",
-  "url": f"{url}/mcp",
-  "headers": { "X-Zug-Token": token }
-}
-json.dump(config, open(path, "w"), indent=2)
-PYEOF
+    patch_http_config "$CLAUDE_JSON" "$HTTP_URL" "$HTTP_TOKEN"
     success "Claude Code configured for HTTP ($CLAUDE_JSON)"
   else
     warn "~/.claude.json not found — skipping Claude Code config"
@@ -117,16 +138,7 @@ PYEOF
 
   # Claude desktop — uses mcp-remote proxy (Desktop only supports stdio, not HTTP)
   if [[ -n "$CLAUDE_DESKTOP" && -f "$CLAUDE_DESKTOP" ]]; then
-    python3 - "$CLAUDE_DESKTOP" "$HTTP_URL" "$HTTP_TOKEN" << 'PYEOF'
-import json, sys
-path, url, token = sys.argv[1], sys.argv[2], sys.argv[3]
-config = json.load(open(path))
-config.setdefault("mcpServers", {})["zug"] = {
-  "command": "npx",
-  "args": ["mcp-remote", f"{url}/mcp", "--header", f"X-Zug-Token:{token}"]
-}
-json.dump(config, open(path, "w"), indent=2)
-PYEOF
+    patch_http_config "$CLAUDE_DESKTOP" "$HTTP_URL" "$HTTP_TOKEN"
     success "Claude desktop configured via mcp-remote proxy ($CLAUDE_DESKTOP)"
   else
     warn "Claude desktop config not found — skipping"
@@ -146,17 +158,7 @@ fi
 CLAUDE_JSON="$HOME/.claude.json"
 if [[ -f "$CLAUDE_JSON" ]]; then
   info "Configuring Claude Code MCP (~/.claude.json)..."
-  python3 - "$CLAUDE_JSON" "$SERVER_DIR" << 'PYEOF'
-import json, sys
-path, server_dir = sys.argv[1], sys.argv[2]
-config = json.load(open(path))
-config.setdefault("mcpServers", {})["zug"] = {
-  "type": "stdio",
-  "command": "npx",
-  "args": ["tsx", f"{server_dir}/src/stdio.ts"]
-}
-json.dump(config, open(path, "w"), indent=2)
-PYEOF
+  patch_mcp_config "$CLAUDE_JSON" "$SERVER_DIR"
   success "Claude Code MCP configured"
 else
   warn "~/.claude.json not found — Claude Code may not be installed yet"
@@ -165,16 +167,7 @@ fi
 # ── Register with Claude desktop ──────────────────────────────────────────────
 if [[ -n "$CLAUDE_DESKTOP" && -f "$CLAUDE_DESKTOP" ]]; then
   info "Configuring Claude desktop..."
-  python3 - "$CLAUDE_DESKTOP" "$SERVER_DIR" << 'PYEOF'
-import json, sys
-path, server_dir = sys.argv[1], sys.argv[2]
-config = json.load(open(path))
-config.setdefault("mcpServers", {})["zug"] = {
-  "command": "npx",
-  "args": ["tsx", f"{server_dir}/src/stdio.ts"]
-}
-json.dump(config, open(path, "w"), indent=2)
-PYEOF
+  patch_mcp_config "$CLAUDE_DESKTOP" "$SERVER_DIR"
   success "Claude desktop configured"
 fi
 
