@@ -1,0 +1,14 @@
+{
+  "features": {
+    "handovers": true,
+    "issues": true,
+    "reviews": true,
+    "roadmap": true,
+    "tickets": true
+  },
+  "language": "unknown",
+  "project": "zug",
+  "schemaVersion": 1,
+  "type": "generic",
+  "version": 2
+}

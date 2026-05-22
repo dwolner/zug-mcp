@@ -1,0 +1,12 @@
+{
+  "blockedBy": [],
+  "completedDate": null,
+  "createdDate": "2026-05-22",
+  "description": "Enrich zug_end_session beyond a free-text summary. Add explicit optional fields: decisions (what was decided), blockers (what's blocking understanding or progress), next_steps (what to pick up next session). Makes session handovers queryable and surfaces blockers as a first-class concept.",
+  "id": "T-003",
+  "order": 30,
+  "phase": "p5",
+  "status": "open",
+  "title": "Structured end_session — typed fields for decisions, blockers, next_steps",
+  "type": "task"
+}

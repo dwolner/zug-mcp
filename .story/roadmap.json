@@ -1,0 +1,43 @@
+{
+  "blockers": [],
+  "date": "2026-05-22",
+  "phases": [
+    {
+      "description": "Initial project setup.",
+      "id": "p0",
+      "label": "PHASE 0",
+      "name": "Setup"
+    },
+    {
+      "description": "Claude Code gets persistent memory you write manually.",
+      "id": "p1",
+      "label": "PHASE 1",
+      "name": "Local stdio"
+    },
+    {
+      "description": "PERSONA.md and PLAYBOOK.md are actively maintained by AI, not just appended to.",
+      "id": "p2",
+      "label": "PHASE 2",
+      "name": "Haiku Synthesis"
+    },
+    {
+      "description": "All Claude surfaces share the same memory via a persistent remote server.",
+      "id": "p3",
+      "label": "PHASE 3",
+      "name": "HTTP Transport"
+    },
+    {
+      "description": "Zug is reliable, maintainable, and easy to hand to someone else.",
+      "id": "p4",
+      "label": "PHASE 4",
+      "name": "Polish"
+    },
+    {
+      "description": "Deeper session continuity and pattern reinforcement, informed by Storybloq analysis.",
+      "id": "p5",
+      "label": "PHASE 5",
+      "name": "Session Fidelity"
+    }
+  ],
+  "title": "zug"
+}
