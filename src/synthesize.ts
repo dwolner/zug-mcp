@@ -1,24 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
-import fs from "fs";
-import path from "path";
-import os from "os";
+import { loadApiKey, HAIKU_MODEL } from "./api-key.js";
 
-const ENV_FILE = path.join(os.homedir(), ".zug", ".env");
 const PERSONA_LINE_LIMIT = 600;
-
-function loadApiKey(): string | null {
-  // Check environment first
-  if (process.env.ANTHROPIC_API_KEY) return process.env.ANTHROPIC_API_KEY;
-
-  // Fall back to ~/.zug/.env
-  if (fs.existsSync(ENV_FILE)) {
-    const content = fs.readFileSync(ENV_FILE, "utf-8");
-    const match = content.match(/^ANTHROPIC_API_KEY=(.+)$/m);
-    if (match) return match[1].trim();
-  }
-
-  return null;
-}
 
 export interface SynthesisInput {
   currentPersona: string;
@@ -115,7 +98,7 @@ Format each as a direct behavioral instruction to Zug: "when X → do Y" or "don
 </ACTIVE>`;
 
   const response = await client.messages.create({
-    model: "claude-haiku-4-5-20251001",
+    model: HAIKU_MODEL,
     max_tokens: 8192,
     system: "You output only the requested XML blocks. No preamble, no questions, no commentary. If nothing changes, return the existing content verbatim inside the XML tags.",
     messages: [

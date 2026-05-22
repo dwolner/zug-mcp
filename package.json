@@ -12,7 +12,8 @@
     "synthesize": "tsx src/synthesize-cli.ts",
     "migrate": "bash scripts/migrate.sh",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "onboard": "tsx src/onboard.ts"
   },
   "packageManager": "pnpm@10.31.0",
   "dependencies": {

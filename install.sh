@@ -59,8 +59,11 @@ mkdir -p "$ZUG_DIR/sessions"
 
 # ── Seed PERSONA.md if missing ────────────────────────────────────────────────
 if [[ ! -f "$ZUG_DIR/PERSONA.md" ]]; then
-  cp "$SERVER_DIR/templates/PERSONA.template.md" "$ZUG_DIR/PERSONA.md"
-  success "Created $ZUG_DIR/PERSONA.md — edit this to seed your cognitive fingerprint"
+  info "Running onboarding to seed your cognitive fingerprint..."
+  npx tsx "$SERVER_DIR/src/onboard.ts" || {
+    cp "$SERVER_DIR/templates/PERSONA.template.md" "$ZUG_DIR/PERSONA.md"
+    success "Created $ZUG_DIR/PERSONA.md — edit this to customize your fingerprint"
+  }
 fi
 
 # ── Seed PLAYBOOK.md if missing ───────────────────────────────────────────────
