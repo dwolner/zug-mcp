@@ -88,6 +88,32 @@
 
 ---
 
+## Phase 5 — Session Fidelity 📋
+
+**Goal:** Deeper session continuity and pattern reinforcement. Sessions survive compaction, priming is fast and accurate, patterns accumulate weight over time.
+
+**What to build:**
+- PreCompact hook — checkpoint session state before Claude compacts context (T-001)
+- `.claude/rules/` injection — write cognitive fingerprint as always-on context, converting a behavioral gate into a structural one (T-012)
+- Triple-layer compaction survival — PreCompact hook + SessionStart hook + rules file injection, any one can fail without data loss (T-013)
+- Delta session start — surface what's new since last session, not a full context dump (T-002)
+- Session priming hybrid — fast structured MCP summaries + qualitative files, informed by Storybloq's empirical benchmark (T-014)
+- Structured end_session — typed fields: decisions, blockers, next_steps (T-003)
+- Observation reinforcement — frequency signal on repeating patterns; high-frequency patterns promoted in PERSONA.md (T-004)
+- Session priming comparison — benchmark full load vs. delta vs. hybrid (T-005)
+
+---
+
+## Phase 6 — Advanced Persistence 📋
+
+**Goal:** Structural reliability for long-running and autonomous modes; multi-agent cognitive analysis.
+
+**What to build:**
+- Multi-signal session health — compute session pressure from independent signals (observation count, topic depth, compaction proximity, open Socratic threads) rather than a single metric (T-015)
+- Multi-lens reasoning analysis — parallel specialized subagents analyzing reasoning from multiple angles (conceptual clarity, assumptions, knowledge gaps, logical consistency), merged and judged (T-016)
+
+---
+
 ## Future / Ideas
 
 - **Proactive mode:** Zug sends you a message when it thinks of something relevant to your history

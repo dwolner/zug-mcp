@@ -37,6 +37,12 @@
       "id": "p5",
       "label": "PHASE 5",
       "name": "Session Fidelity"
+    },
+    {
+      "description": "Structural reliability, proactive features, and multi-agent capabilities inspired by Storybloq's deeper architecture.",
+      "id": "p6",
+      "label": "PHASE 6",
+      "name": "Advanced Persistence"
     }
   ],
   "title": "zug"

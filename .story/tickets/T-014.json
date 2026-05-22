@@ -1,0 +1,12 @@
+{
+  "blockedBy": [],
+  "completedDate": null,
+  "createdDate": "2026-05-22",
+  "description": "Storybloq's empirical benchmark: MCP alone is 34x faster but misses qualitative context; file reading gets the nuance but is slow. Optimal is both: pre-computed structured summaries via MCP (fast path) + accumulated qualitative files (PERSONA.md, PLAYBOOK.md). Currently zug_get_context only does the slow qualitative path. Split into: (1) a fast structured summary endpoint with key stats + active patterns, (2) full qualitative load on demand. Informs T-002 and T-005.",
+  "id": "T-014",
+  "order": 80,
+  "phase": "p5",
+  "status": "open",
+  "title": "Session priming hybrid — structured MCP summaries + qualitative files",
+  "type": "task"
+}
