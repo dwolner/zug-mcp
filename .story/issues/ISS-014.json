@@ -1,0 +1,16 @@
+{
+  "components": [
+    "autonomous"
+  ],
+  "discoveredDate": "2026-05-22",
+  "id": "ISS-014",
+  "impact": "Open /register endpoint — acceptable risk given PKCE, filed as ISS-013",
+  "location": [],
+  "phase": null,
+  "relatedTickets": [],
+  "resolution": null,
+  "resolvedDate": null,
+  "severity": "medium",
+  "status": "open",
+  "title": "[security] Open /register endpoint — acceptable risk given PKCE, filed as ISS-013"
+}

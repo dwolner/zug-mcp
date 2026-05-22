@@ -1,0 +1,16 @@
+{
+  "components": [
+    "autonomous"
+  ],
+  "discoveredDate": "2026-05-22",
+  "id": "ISS-009",
+  "impact": "ZUG_DIR duplicated in cli.ts vs getPaths() — deferred",
+  "location": [],
+  "phase": null,
+  "relatedTickets": [],
+  "resolution": null,
+  "resolvedDate": null,
+  "severity": "medium",
+  "status": "open",
+  "title": "[code-quality] ZUG_DIR duplicated in cli.ts vs getPaths() — deferred"
+}
