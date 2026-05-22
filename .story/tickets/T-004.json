@@ -1,10 +1,12 @@
 {
-  "blockedBy": [],
+  "blockedBy": [
+    "T-011"
+  ],
   "completedDate": null,
   "createdDate": "2026-05-22",
   "description": "Zug accumulates observations by appending but has no frequency signal. When the same pattern appears across multiple sessions, it should carry more weight in synthesis. Add a reinforce mechanism (explicit call or auto-detection during synthesis) that promotes high-frequency patterns and marks them as load-bearing in PERSONA.md. Analogous to Storybloq's 'lesson reinforce'.",
   "id": "T-004",
-  "order": 40,
+  "order": 60,
   "phase": "p5",
   "status": "open",
   "title": "Observation reinforcement — frequency signal on repeating patterns",

@@ -78,13 +78,13 @@
 **Completed:**
 - ✅ Context tagging — optional `context` field on observations and sessions; `zug_get_recent_sessions` filterable by context
 
-**What to build:**
-- OAuth support for the HTTP server — unblocks Claude.ai web integration
-- `zug_status` extended: last session date, PERSONA.md excerpt, growth trend
-- CLI: `zug status`, `zug tail` (recent observations), `zug persona` (print fingerprint)
-- Onboarding flow: new user runs install, answers 5 questions, Haiku writes their seed PERSONA.md
-- Linux support in install.sh
-- Tests for storage and synthesis layers
+**What to build (ordered by value/safety):**
+- Tests for storage and synthesis layers (T-011) — first: synthesis mutates PERSONA.md; tests must exist before Phase 5 changes
+- Onboarding flow: new user runs install, answers 5 questions, Haiku writes their seed PERSONA.md (T-009)
+- `zug_status` extended: last session date, PERSONA.md excerpt, growth trend (T-007)
+- CLI: `zug status`, `zug tail` (recent observations), `zug persona` (print fingerprint) (T-008) — blocked by T-007
+- Linux support in install.sh (T-010)
+- OAuth support for the HTTP server — unblocks Claude.ai web integration (T-006) — last: high effort, one surface
 
 ---
 
@@ -92,15 +92,15 @@
 
 **Goal:** Deeper session continuity and pattern reinforcement. Sessions survive compaction, priming is fast and accurate, patterns accumulate weight over time.
 
-**What to build:**
-- PreCompact hook — checkpoint session state before Claude compacts context (T-001)
-- `.claude/rules/` injection — write cognitive fingerprint as always-on context, converting a behavioral gate into a structural one (T-012)
-- Triple-layer compaction survival — PreCompact hook + SessionStart hook + rules file injection, any one can fail without data loss (T-013)
-- Delta session start — surface what's new since last session, not a full context dump (T-002)
-- Session priming hybrid — fast structured MCP summaries + qualitative files, informed by Storybloq's empirical benchmark (T-014)
-- Structured end_session — typed fields: decisions, blockers, next_steps (T-003)
-- Observation reinforcement — frequency signal on repeating patterns; high-frequency patterns promoted in PERSONA.md (T-004)
-- Session priming comparison — benchmark full load vs. delta vs. hybrid (T-005)
+**What to build (ordered by prerequisite chain):**
+- `.claude/rules/` injection — write cognitive fingerprint as always-on structural gate; no hook or tool call required (T-012) — no deps, highest value
+- PreCompact hook — checkpoint session state before Claude compacts context (T-001) — no deps
+- Structured end_session — typed fields: decisions, blockers, next_steps (T-003) — no deps; enriches data for T-005
+- Triple-layer compaction survival — PreCompact + SessionStart hook + rules file; any one can fail without data loss (T-013) — blocked by T-001, T-012
+- Delta session start — surface what's new since last session, not a full context dump (T-002) — no deps
+- Observation reinforcement — frequency signal on repeating patterns; promotes load-bearing patterns in PERSONA.md (T-004) — blocked by T-011
+- Session priming comparison — benchmark full load vs. delta vs. hybrid (T-005) — blocked by T-002, T-003
+- Session priming hybrid — fast structured MCP summaries + qualitative files (T-014) — blocked by T-005
 
 ---
 
@@ -109,8 +109,8 @@
 **Goal:** Structural reliability for long-running and autonomous modes; multi-agent cognitive analysis.
 
 **What to build:**
-- Multi-signal session health — compute session pressure from independent signals (observation count, topic depth, compaction proximity, open Socratic threads) rather than a single metric (T-015)
-- Multi-lens reasoning analysis — parallel specialized subagents analyzing reasoning from multiple angles (conceptual clarity, assumptions, knowledge gaps, logical consistency), merged and judged (T-016)
+- Multi-lens reasoning analysis — parallel specialized subagents analyzing reasoning from multiple angles (conceptual clarity, assumptions, knowledge gaps, logical consistency), merged and judged (T-016) — independent, no deps
+- Multi-signal session health — compute session pressure from independent signals (observation count, topic depth, compaction proximity, open Socratic threads) (T-015) — needs a proactive mode ticket to anchor it
 
 ---
 

@@ -4,7 +4,7 @@
   "createdDate": "2026-05-22",
   "description": "Register a PreCompact hook that calls zug_end_session (or saves a checkpoint observation) before Claude compacts context. Without this, in-flight observations and session state evaporate silently during long sessions. Storybloq solves this with 'storybloq snapshot --quiet' on PreCompact.",
   "id": "T-001",
-  "order": 10,
+  "order": 20,
   "phase": "p5",
   "status": "open",
   "title": "PreCompact hook — checkpoint session before context compaction",

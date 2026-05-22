@@ -4,7 +4,7 @@
   "createdDate": "2026-05-22",
   "description": "For proactive and autonomous modes: track session health from multiple independent signals rather than a single metric (e.g. just time elapsed). Signals: observation count, session length, topic depth, compaction proximity, unanswered Socratic threads. Multi-signal avoids single-metric failure modes — a single metric gets gamed or fails silently. Modeled on Storybloq's context-pressure.ts with configurable thresholds.",
   "id": "T-015",
-  "order": 10,
+  "order": 20,
   "phase": "p6",
   "status": "open",
   "title": "Multi-signal session health — compute pressure from independent signals",

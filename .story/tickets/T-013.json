@@ -1,12 +1,13 @@
 {
   "blockedBy": [
-    "T-001"
+    "T-001",
+    "T-012"
   ],
   "completedDate": null,
   "createdDate": "2026-05-22",
   "description": "Extend T-001 (PreCompact hook) into a three-layer redundancy system: (1) PreCompact hook calls zug_end_session or checkpoint, (2) SessionStart hook injects resume context after compaction, (3) .claude/rules/zug-context.md (from T-012) provides always-on fingerprint injection as fallback. Any one layer can fail without losing session state. Storybloq uses all three; Zug currently has zero.",
   "id": "T-013",
-  "order": 70,
+  "order": 40,
   "phase": "p5",
   "status": "open",
   "title": "Triple-layer compaction survival — redundancy by design",

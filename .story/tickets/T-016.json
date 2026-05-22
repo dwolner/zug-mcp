@@ -4,7 +4,7 @@
   "createdDate": "2026-05-22",
   "description": "Spawn parallel specialized subagents to analyze a user's reasoning from multiple angles: conceptual clarity, assumption identification, logical consistency, knowledge gaps, analogical reasoning, meta-cognitive awareness. Each lens produces structured findings; a merger synthesizes; a judge produces a final verdict. Pattern directly from Storybloq's review-lenses system adapted for cognitive analysis instead of code review. Enables deeper havruta engagement than a single-perspective response.",
   "id": "T-016",
-  "order": 20,
+  "order": 10,
   "phase": "p6",
   "status": "open",
   "title": "Multi-lens reasoning analysis — parallel specialized agents",
