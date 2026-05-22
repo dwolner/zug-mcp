@@ -53,6 +53,11 @@ info "Installing dependencies..."
 cd "$SERVER_DIR"
 pnpm install --frozen-lockfile
 
+# ── Install zug CLI globally ──────────────────────────────────────────────────
+info "Installing zug CLI..."
+pnpm link --global 2>/dev/null && success "zug CLI installed (run 'zug status' to verify)" || \
+  warn "Could not install zug CLI globally — run 'pnpm link --global' in $SERVER_DIR manually."
+
 # ── Create data directories ────────────────────────────────────────────────────
 info "Creating data directories..."
 mkdir -p "$ZUG_DIR/sessions"

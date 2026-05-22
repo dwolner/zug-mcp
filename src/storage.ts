@@ -175,8 +175,8 @@ export function getObservationTrend(weeks = 4): number[] {
       const obs = JSON.parse(line) as { timestamp: string };
       const ts = new Date(obs.timestamp).getTime();
       if (ts < windowStart || ts > now) continue;
-      const weekIndex = Math.floor((ts - windowStart) / msPerWeek);
-      if (weekIndex >= 0 && weekIndex < weeks) counts[weekIndex]++;
+      const weekIndex = Math.min(Math.floor((ts - windowStart) / msPerWeek), weeks - 1);
+      if (weekIndex >= 0) counts[weekIndex]++;
     } catch {
       // skip malformed lines
     }

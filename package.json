@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Zug — persistent memory MCP server for a havruta learning companion",
   "main": "dist/stdio.js",
+  "bin": { "zug": "src/cli.ts" },
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/stdio.ts",
@@ -13,7 +14,8 @@
     "migrate": "bash scripts/migrate.sh",
     "test": "vitest run",
     "test:watch": "vitest",
-    "onboard": "tsx src/onboard.ts"
+    "onboard": "tsx src/onboard.ts",
+    "cli": "tsx src/cli.ts"
   },
   "packageManager": "pnpm@10.31.0",
   "dependencies": {
