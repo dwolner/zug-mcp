@@ -119,6 +119,7 @@ export const zugOAuthProvider: OAuthServerProvider = {
   verifyAccessToken: async (token: string): Promise<AuthInfo> => {
     const stored = accessTokens.get(token);
     if (!stored || stored.expiresAt < Date.now()) {
+      accessTokens.delete(token); // lazy cleanup of expired tokens
       throw new Error("Invalid or expired access token");
     }
     return {
