@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "description": "Zug — persistent memory MCP server for a havruta learning companion",
   "main": "dist/stdio.js",
-  "bin": { "zug": "src/cli.ts" },
+  "bin": {
+    "zug": "src/cli.ts"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/stdio.ts",
@@ -21,9 +23,11 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
     "@modelcontextprotocol/sdk": "^1.10.2",
+    "express": "^5.2.1",
     "zod": "^3.24.0"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "@types/node": "^22.0.0",
     "tsx": "^4.0.0",
     "typescript": "^5.0.0",

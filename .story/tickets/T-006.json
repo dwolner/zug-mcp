@@ -1,12 +1,13 @@
 {
   "blockedBy": [],
-  "completedDate": null,
+  "claimedBySession": "f7daddf8-847b-418d-a063-2e6acde48e08",
+  "completedDate": "2026-05-22",
   "createdDate": "2026-05-22",
   "description": "Claude.ai Settings → Integrations only supports OAuth-based connectors. Add OAuth to the Zug HTTP server to unblock Claude.ai web integration.",
   "id": "T-006",
   "order": 60,
   "phase": "p4",
-  "status": "open",
+  "status": "complete",
   "title": "OAuth support for HTTP server — unblock Claude.ai web",
   "type": "task"
 }
