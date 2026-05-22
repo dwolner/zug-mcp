@@ -10,7 +10,9 @@
     "typecheck": "tsc --noEmit",
     "merge": "tsx src/merge.ts",
     "synthesize": "tsx src/synthesize-cli.ts",
-    "migrate": "bash scripts/migrate.sh"
+    "migrate": "bash scripts/migrate.sh",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "packageManager": "pnpm@10.31.0",
   "dependencies": {
@@ -21,6 +23,7 @@
   "devDependencies": {
     "@types/node": "^22.0.0",
     "tsx": "^4.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vitest": "^4.1.7"
   }
 }
