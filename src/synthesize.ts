@@ -99,7 +99,7 @@ Format each as a direct behavioral instruction to Zug: "when X → do Y" or "don
 
   const response = await client.messages.create({
     model: HAIKU_MODEL,
-    max_tokens: 8192,
+    max_tokens: 4096,
     system: "You output only the requested XML blocks. No preamble, no questions, no commentary. If nothing changes, return the existing content verbatim inside the XML tags.",
     messages: [
       { role: "user", content: prompt },
