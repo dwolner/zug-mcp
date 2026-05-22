@@ -9,6 +9,9 @@ import {
   appendObservation, getObservationsBySession,
   writeSession, getRecentSessions,
   getStats,
+  getLastSessionDate,
+  getPersonaExcerpt,
+  getObservationTrend,
   type Observation,
 } from "./storage";
 
@@ -185,5 +188,74 @@ describe("getStats", () => {
     expect(stats.sessions).toBe(2);
     expect(stats.observations).toBe(1);
     expect(stats.personaLines).toBe(3);
+  });
+});
+
+describe("getLastSessionDate", () => {
+  it("returns null when no sessions exist", () => {
+    expect(getLastSessionDate()).toBeNull();
+  });
+
+  it("returns the date of the most recent session", () => {
+    writeSession("alpha", "content");
+    writeSession("beta", "content");
+    const date = getLastSessionDate();
+    // date is today's date since writeSession uses new Date()
+    expect(date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+});
+
+describe("getPersonaExcerpt", () => {
+  it("returns empty string when PERSONA.md does not exist", () => {
+    expect(getPersonaExcerpt()).toBe("");
+  });
+
+  it("skips blank lines and heading lines", () => {
+    writePersona("# Cognitive Fingerprint\n\n## How you think\n\nThinks in systems.\nMoves top-down.");
+    expect(getPersonaExcerpt(2)).toBe("Thinks in systems. Moves top-down.");
+  });
+
+  it("skips all levels of markdown headings", () => {
+    writePersona("### 2026-05-22\n- [cognitive_pattern] Some observation\nActual content here.");
+    expect(getPersonaExcerpt(1)).toBe("- [cognitive_pattern] Some observation");
+  });
+
+  it("respects maxLines parameter", () => {
+    writePersona("Line one\nLine two\nLine three");
+    expect(getPersonaExcerpt(1)).toBe("Line one");
+    expect(getPersonaExcerpt(3)).toBe("Line one Line two Line three");
+  });
+});
+
+describe("getObservationTrend", () => {
+  it("returns zeros array of length=weeks when no observations exist", () => {
+    expect(getObservationTrend(4)).toEqual([0, 0, 0, 0]);
+    expect(getObservationTrend(2)).toEqual([0, 0]);
+  });
+
+  it("counts observations in the current week", () => {
+    appendObservation({
+      timestamp: new Date().toISOString(),
+      type: "cognitive_pattern",
+      observation: "Recent observation",
+      session_id: "s1",
+      confidence: "high",
+    });
+    const trend = getObservationTrend(4);
+    // The most recent week is the last bucket (index 3)
+    expect(trend[3]).toBe(1);
+    expect(trend.reduce((a, b) => a + b, 0)).toBe(1);
+  });
+
+  it("excludes observations outside the rolling window", () => {
+    appendObservation({
+      timestamp: "2020-01-01T00:00:00.000Z", // far in the past
+      type: "preference",
+      observation: "Old observation",
+      session_id: "s2",
+      confidence: "medium",
+    });
+    const trend = getObservationTrend(4);
+    expect(trend.reduce((a, b) => a + b, 0)).toBe(0);
   });
 });

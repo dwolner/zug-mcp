@@ -137,3 +137,49 @@ export function getStats(): { sessions: number; observations: number; personaLin
     : 0;
   return { sessions, observations, personaLines };
 }
+
+export function getLastSessionDate(): string | null {
+  ensureDirs();
+  const { sessionsDir } = getPaths();
+  const files = fs.readdirSync(sessionsDir)
+    .filter((f) => f.endsWith(".md"))
+    .sort()
+    .reverse();
+  if (files.length === 0) return null;
+  return files[0].slice(0, 10);
+}
+
+export function getPersonaExcerpt(maxLines = 2): string {
+  ensureDirs();
+  const { personaFile } = getPaths();
+  if (!fs.existsSync(personaFile)) return "";
+  const lines = fs.readFileSync(personaFile, "utf-8")
+    .split("\n")
+    .filter((l) => l.trim().length > 0 && !l.trimStart().startsWith("#"));
+  return lines.slice(0, maxLines).join(" ").trim();
+}
+
+export function getObservationTrend(weeks = 4): number[] {
+  ensureDirs();
+  const { observationsFile } = getPaths();
+  const counts = Array(weeks).fill(0);
+  if (!fs.existsSync(observationsFile)) return counts;
+
+  const now = Date.now();
+  const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+  const windowStart = now - weeks * msPerWeek;
+
+  const lines = fs.readFileSync(observationsFile, "utf-8").split("\n").filter(Boolean);
+  for (const line of lines) {
+    try {
+      const obs = JSON.parse(line) as { timestamp: string };
+      const ts = new Date(obs.timestamp).getTime();
+      if (ts < windowStart || ts > now) continue;
+      const weekIndex = Math.floor((ts - windowStart) / msPerWeek);
+      if (weekIndex >= 0 && weekIndex < weeks) counts[weekIndex]++;
+    } catch {
+      // skip malformed lines
+    }
+  }
+  return counts;
+}

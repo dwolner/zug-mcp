@@ -1,12 +1,13 @@
 {
   "blockedBy": [],
-  "completedDate": null,
+  "claimedBySession": "f7daddf8-847b-418d-a063-2e6acde48e08",
+  "completedDate": "2026-05-22",
   "createdDate": "2026-05-22",
   "description": "Current zug_status is minimal. Add: last session date, a short excerpt from PERSONA.md, and a growth trend (observations over time).",
   "id": "T-007",
   "order": 30,
   "phase": "p4",
-  "status": "open",
+  "status": "complete",
   "title": "Extend zug_status — last session date, PERSONA excerpt, growth trend",
   "type": "task"
 }

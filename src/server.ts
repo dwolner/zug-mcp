@@ -12,6 +12,9 @@ import {
   writeSession,
   getRecentSessions,
   getStats,
+  getLastSessionDate,
+  getPersonaExcerpt,
+  getObservationTrend,
   type ObservationType,
 } from "./storage.js";
 import { synthesize } from "./synthesize.js";
@@ -167,14 +170,23 @@ export function createServer(): McpServer {
 
   server.tool(
     "zug_status",
-    "Returns Zug stats — session count, observation count, persona size.",
+    "Returns Zug stats — session count, observation count, persona size, last session date, excerpt, and weekly trend.",
     async () => {
       const { sessions, observations, personaLines } = getStats();
+      const lastDate = getLastSessionDate();
+      const excerpt = getPersonaExcerpt(2);
+      const trend = getObservationTrend(4);
+
+      const lines = [
+        `- Sessions: ${sessions}${lastDate ? ` | Last: ${lastDate}` : ""}`,
+        `- Observations: ${observations}`,
+        `- Persona lines: ${personaLines}`,
+        excerpt ? `- Excerpt: ${excerpt}` : null,
+        `- Trend (obs/week, last 4): ${trend.join(" → ")}`,
+      ].filter(Boolean).join("\n");
+
       return {
-        content: [{
-          type: "text" as const,
-          text: `Zug status:\n- Sessions: ${sessions}\n- Observations: ${observations}\n- Persona lines: ${personaLines}`,
-        }],
+        content: [{ type: "text" as const, text: `Zug status:\n${lines}` }],
       };
     }
   );
