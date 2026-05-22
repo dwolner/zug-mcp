@@ -4,10 +4,13 @@ import type { OAuthServerProvider } from "@modelcontextprotocol/sdk/server/auth/
 import type { OAuthClientInformationFull, OAuthTokenRevocationRequest, OAuthTokens } from "@modelcontextprotocol/sdk/shared/auth.js";
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 
+const AUTH_CODE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
 interface StoredCode {
   clientId: string;
   codeChallenge: string;
   redirectUri: string;
+  expiresAt: number;
 }
 
 interface StoredToken {
@@ -49,6 +52,7 @@ export const zugOAuthProvider: OAuthServerProvider = {
       clientId: client.client_id,
       codeChallenge: params.codeChallenge,
       redirectUri: params.redirectUri,
+      expiresAt: Date.now() + AUTH_CODE_TTL_MS,
     });
     const redirectUrl = new URL(params.redirectUri);
     redirectUrl.searchParams.set("code", code);
@@ -61,8 +65,9 @@ export const zugOAuthProvider: OAuthServerProvider = {
     authorizationCode: string
   ): Promise<string> => {
     const stored = authCodes.get(authorizationCode);
-    if (!stored || stored.clientId !== client.client_id) {
-      throw new Error("Invalid authorization code");
+    if (!stored || stored.clientId !== client.client_id || stored.expiresAt < Date.now()) {
+      authCodes.delete(authorizationCode); // lazy cleanup of expired codes
+      throw new Error("Invalid or expired authorization code");
     }
     return stored.codeChallenge;
   },
@@ -72,11 +77,11 @@ export const zugOAuthProvider: OAuthServerProvider = {
     authorizationCode: string
   ): Promise<OAuthTokens> => {
     const stored = authCodes.get(authorizationCode);
-    if (!stored || stored.clientId !== client.client_id) {
-      throw new Error("Invalid authorization code");
-    }
-    // Delete first — single use
+    // Delete first — single use (even on validation failure to prevent timing oracle)
     authCodes.delete(authorizationCode);
+    if (!stored || stored.clientId !== client.client_id || stored.expiresAt < Date.now()) {
+      throw new Error("Invalid or expired authorization code");
+    }
 
     const access_token = randomUUID();
     const refresh_token = randomUUID();
@@ -95,16 +100,20 @@ export const zugOAuthProvider: OAuthServerProvider = {
     refreshToken: string
   ): Promise<OAuthTokens> => {
     const stored = refreshTokens.get(refreshToken);
+    // Rotate: delete old refresh token immediately (OAuth 2.1 §6)
+    refreshTokens.delete(refreshToken);
     if (!stored || stored.clientId !== client.client_id) {
       throw new Error("Invalid refresh token");
     }
     const access_token = randomUUID();
+    const new_refresh_token = randomUUID();
     accessTokens.set(access_token, {
       clientId: client.client_id,
       scopes: [],
       expiresAt: Date.now() + TOKEN_TTL_MS,
     });
-    return { access_token, token_type: "bearer", expires_in: TOKEN_TTL_MS / 1000 };
+    refreshTokens.set(new_refresh_token, { clientId: client.client_id });
+    return { access_token, refresh_token: new_refresh_token, token_type: "bearer", expires_in: TOKEN_TTL_MS / 1000 };
   },
 
   verifyAccessToken: async (token: string): Promise<AuthInfo> => {

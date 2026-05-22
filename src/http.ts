@@ -47,7 +47,12 @@ app.use("/mcp", (req, res, next) => {
 
 // Auth middleware: Bearer token (OAuth) OR X-Zug-Token header (legacy)
 app.use("/mcp", (req, res, next) => {
-  if (req.headers.authorization?.startsWith("Bearer ")) {
+  if (req.headers.authorization) {
+    // Any Authorization header must be Bearer — reject others immediately
+    if (!req.headers.authorization.startsWith("Bearer ")) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
     requireBearerAuth({ provider: zugOAuthProvider })(req, res, next);
     return;
   }

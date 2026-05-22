@@ -1,0 +1,21 @@
+{
+  "components": [
+    "oauth-provider.ts",
+    "http.ts"
+  ],
+  "discoveredDate": "2026-05-22",
+  "id": "ISS-013",
+  "impact": "Dynamic client registration is unauthenticated. Any network-adjacent peer can register a client with a https://claude.ai/* redirect_uri and initiate an auth flow. PKCE prevents actual token theft, but this is unintended attack surface. Fix: add initialAccessToken to mcpAuthRouter to restrict registration.",
+  "location": [
+    "src/http.ts"
+  ],
+  "phase": null,
+  "relatedTickets": [
+    "T-006"
+  ],
+  "resolution": null,
+  "resolvedDate": null,
+  "severity": "medium",
+  "status": "open",
+  "title": "OAuth /register endpoint is open — any peer can register a claude.ai client"
+}
