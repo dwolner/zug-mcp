@@ -1,0 +1,20 @@
+{
+  "components": [
+    "api-key.ts"
+  ],
+  "discoveredDate": "2026-05-22",
+  "id": "ISS-001",
+  "impact": "If ZUG_DATA_DIR is set to a custom path, loadApiKey still reads ~/.zug/.env instead of $ZUG_DATA_DIR/.env, creating an inconsistency with storage.ts which fully respects ZUG_DATA_DIR.",
+  "location": [
+    "src/api-key.ts"
+  ],
+  "phase": null,
+  "relatedTickets": [
+    "T-009"
+  ],
+  "resolution": null,
+  "resolvedDate": null,
+  "severity": "low",
+  "status": "open",
+  "title": "loadApiKey ignores ZUG_DATA_DIR for .env file lookup"
+}

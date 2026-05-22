@@ -1,0 +1,16 @@
+{
+  "components": [
+    "autonomous"
+  ],
+  "discoveredDate": "2026-05-22",
+  "id": "ISS-005",
+  "impact": "whitespace-only PERSONA.md edge case in existing-content check — acceptable risk",
+  "location": [],
+  "phase": null,
+  "relatedTickets": [],
+  "resolution": null,
+  "resolvedDate": null,
+  "severity": "medium",
+  "status": "open",
+  "title": "[correctness] whitespace-only PERSONA.md edge case in existing-content check — acceptable risk"
+}

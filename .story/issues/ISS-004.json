@@ -1,0 +1,16 @@
+{
+  "components": [
+    "autonomous"
+  ],
+  "discoveredDate": "2026-05-22",
+  "id": "ISS-004",
+  "impact": "synthesizePersona catch block swallows errors silently — filed as ISS-002",
+  "location": [],
+  "phase": null,
+  "relatedTickets": [],
+  "resolution": null,
+  "resolvedDate": null,
+  "severity": "medium",
+  "status": "open",
+  "title": "[error-handling] synthesizePersona catch block swallows errors silently — filed as ISS-002"
+}

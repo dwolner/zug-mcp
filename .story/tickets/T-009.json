@@ -1,12 +1,13 @@
 {
   "blockedBy": [],
-  "completedDate": null,
+  "claimedBySession": "f7daddf8-847b-418d-a063-2e6acde48e08",
+  "completedDate": "2026-05-22",
   "createdDate": "2026-05-22",
   "description": "New user runs install, answers 5 questions, Haiku writes their seed PERSONA.md. Reduces cold-start problem where new users have no fingerprint.",
   "id": "T-009",
   "order": 20,
   "phase": "p4",
-  "status": "open",
+  "status": "complete",
   "title": "Onboarding flow — 5-question seed PERSONA.md",
   "type": "task"
 }

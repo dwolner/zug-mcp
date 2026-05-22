@@ -1,0 +1,20 @@
+{
+  "components": [
+    "onboard.ts"
+  ],
+  "discoveredDate": "2026-05-22",
+  "id": "ISS-002",
+  "impact": "Network errors, auth failures, and rate limits all produce silent fallback to plain-markdown with no user-visible explanation. A console.warn would make debugging easier without changing UX.",
+  "location": [
+    "src/onboard.ts"
+  ],
+  "phase": null,
+  "relatedTickets": [
+    "T-009"
+  ],
+  "resolution": null,
+  "resolvedDate": null,
+  "severity": "low",
+  "status": "open",
+  "title": "synthesizePersona swallows errors silently during onboarding"
+}
