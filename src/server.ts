@@ -107,16 +107,20 @@ export function createServer(): McpServer {
 
       if (meaningful.length > 0) {
         try {
-          const result = await synthesize({
-            currentPersona: persona,
-            currentPlaybook: playbook,
-            sessionSummary: summary,
-            observations: meaningful.map((o) => ({
-              type: o.type,
-              observation: o.observation,
-              confidence: o.confidence,
-            })),
-          });
+          const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 8000));
+          const result = await Promise.race([
+            synthesize({
+              currentPersona: persona,
+              currentPlaybook: playbook,
+              sessionSummary: summary,
+              observations: meaningful.map((o) => ({
+                type: o.type,
+                observation: o.observation,
+                confidence: o.confidence,
+              })),
+            }),
+            timeout,
+          ]);
 
           if (result) {
             writePersona(result.persona);
