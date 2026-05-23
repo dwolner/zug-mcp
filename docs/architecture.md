@@ -67,11 +67,4 @@ Full session log: summary + all observations from that session. Source of truth 
 
 ## Phase 2: Haiku Synthesis
 
-When implemented, `zug_end_session` will:
-1. Collect session observations from `observations.jsonl`
-2. Read current PERSONA.md and PLAYBOOK.md
-3. Call `claude-haiku-4-5-20251001` with a conservative synthesis prompt
-4. Write updated files (add-only policy, trim if over threshold)
-5. Fall back to the Phase 1 append behavior if the API call fails
-
-The synthesis prompt must include: "Update only what you have direct evidence for from this session. Do not remove existing observations unless you have contradicting evidence. Be conservative."
+`zug_end_session` collects session observations, reads current PERSONA.md and PLAYBOOK.md, and calls `claude-haiku-4-5-20251001` with a conservative synthesis prompt. The call runs in the background (non-blocking), with a 30s timeout and 2 retries. On failure, raw observations appended in Phase 1 remain in PERSONA.md as the fallback. See `src/synthesize.ts` and ADR-002.

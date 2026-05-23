@@ -25,7 +25,7 @@ export async function synthesize(input: SynthesisInput): Promise<SynthesisResult
   const apiKey = loadApiKey();
   if (!apiKey) return null;
 
-  const client = new Anthropic({ apiKey });
+  const client = new Anthropic({ apiKey, timeout: 30_000, maxRetries: 2 });
 
   const personaLineCount = input.currentPersona.split("\n").length;
   const trimInstruction = personaLineCount > PERSONA_LINE_LIMIT
