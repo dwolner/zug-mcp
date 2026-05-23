@@ -77,8 +77,11 @@ export function createServer(): McpServer {
       session_id: z.string().describe("Session identifier used during this session"),
       summary: z.string().describe("What was explored, decided, or worked on — and any notable moments"),
       context: z.string().optional().describe('Session context tag, e.g. "work" or "personal"'),
+      decisions: z.array(z.string()).optional().describe("Key decisions made this session"),
+      blockers: z.array(z.string()).optional().describe("What is blocking understanding or progress"),
+      next_steps: z.array(z.string()).optional().describe("What to pick up at the start of the next session"),
     },
-    async ({ session_id, summary, context }) => {
+    async ({ session_id, summary, context, decisions, blockers, next_steps }) => {
       const observations = getObservationsBySession(session_id);
       const persona = readPersona();
       const playbook = readPlaybook();
@@ -96,6 +99,9 @@ export function createServer(): McpServer {
         "",
         "## Summary",
         summary,
+        ...(decisions?.length ? ["", "## Decisions", ...decisions.map((d) => `- ${d}`)] : []),
+        ...(blockers?.length ? ["", "## Blockers", ...blockers.map((b) => `- ${b}`)] : []),
+        ...(next_steps?.length ? ["", "## Next Steps", ...next_steps.map((s) => `- ${s}`)] : []),
         "",
         "## Observations",
         obsText,
@@ -138,10 +144,17 @@ export function createServer(): McpServer {
 
       const stats = getStats();
       const contextLabel = context ? ` context=${context}` : "";
+      const structuredParts = [
+        decisions?.length ? `${decisions.length} decision${decisions.length > 1 ? "s" : ""}` : null,
+        blockers?.length ? `${blockers.length} blocker${blockers.length > 1 ? "s" : ""}` : null,
+        next_steps?.length ? `${next_steps.length} next step${next_steps.length > 1 ? "s" : ""}` : null,
+      ].filter(Boolean);
+      const structuredLabel = structuredParts.length ? ` (${structuredParts.join(", ")})` : "";
+
       return {
         content: [{
           type: "text" as const,
-          text: `Session saved${contextLabel}. ${observations.length} observations. Total: ${stats.sessions} sessions, ${stats.observations} observations. Synthesis running in background.`,
+          text: `Session saved${contextLabel}${structuredLabel}. ${observations.length} observations. Total: ${stats.sessions} sessions, ${stats.observations} observations. Synthesis running in background.`,
         }],
       };
     }
