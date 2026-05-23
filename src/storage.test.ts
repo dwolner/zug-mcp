@@ -13,6 +13,9 @@ import {
   getPersonaExcerpt,
   getObservationTrend,
   syncRulesContext,
+  getLastSessionSummary,
+  getLastSessionTimestamp,
+  getObservationsSince,
   type Observation,
 } from "./storage";
 
@@ -322,5 +325,62 @@ describe("syncRulesContext", () => {
     const content = fs.readFileSync(path.join(rulesDir, "zug-context.md"), "utf-8");
     expect(content).toContain("New pattern");
     expect(content).not.toContain("Old pattern");
+  });
+});
+
+describe("getLastSessionSummary", () => {
+  it("returns null when no sessions exist", () => {
+    expect(getLastSessionSummary()).toBeNull();
+  });
+
+  it("extracts summary section from most recent session file", () => {
+    writeSession("alpha", "# Session alpha\nDate: 2026-01-01T10:00:00.000Z\n\n## Summary\nWorked on X\n\n## Observations\n*none*");
+    expect(getLastSessionSummary()).toBe("Worked on X");
+  });
+
+  it("returns null when session has no summary section", () => {
+    writeSession("nosummary", "# Session nosummary\nDate: 2026-01-01T10:00:00.000Z\n\n## Observations\n*none*");
+    expect(getLastSessionSummary()).toBeNull();
+  });
+});
+
+describe("getLastSessionTimestamp", () => {
+  it("returns null when no sessions exist", () => {
+    expect(getLastSessionTimestamp()).toBeNull();
+  });
+
+  it("extracts Date header from most recent session file", () => {
+    writeSession("ts-session", "# Session ts-session\nDate: 2026-05-22T14:30:00.000Z\n\n## Summary\nDone");
+    const ts = getLastSessionTimestamp();
+    expect(ts).toBe("2026-05-22T14:30:00.000Z");
+  });
+});
+
+describe("getObservationsSince", () => {
+  it("returns empty array when no observations file exists", () => {
+    expect(getObservationsSince("2026-01-01T00:00:00.000Z")).toEqual([]);
+  });
+
+  it("returns only observations after the given timestamp", () => {
+    appendObservation({ timestamp: "2026-01-01T10:00:00.000Z", type: "preference", observation: "Old obs", session_id: "s1", confidence: "high" });
+    appendObservation({ timestamp: "2026-01-02T10:00:00.000Z", type: "cognitive_pattern", observation: "New obs", session_id: "s2", confidence: "high" });
+
+    const results = getObservationsSince("2026-01-01T12:00:00.000Z");
+    expect(results).toHaveLength(1);
+    expect(results[0].observation).toBe("New obs");
+  });
+
+  it("returns results newest-first", () => {
+    appendObservation({ timestamp: "2026-01-01T08:00:00.000Z", type: "preference", observation: "Earlier", session_id: "s1", confidence: "medium" });
+    appendObservation({ timestamp: "2026-01-01T09:00:00.000Z", type: "preference", observation: "Later", session_id: "s1", confidence: "medium" });
+
+    const results = getObservationsSince("2026-01-01T00:00:00.000Z");
+    expect(results[0].observation).toBe("Later");
+    expect(results[1].observation).toBe("Earlier");
+  });
+
+  it("returns empty array for invalid since timestamp", () => {
+    appendObservation({ timestamp: "2026-01-01T10:00:00.000Z", type: "preference", observation: "obs", session_id: "s1", confidence: "high" });
+    expect(getObservationsSince("not-a-date")).toEqual([]);
   });
 });

@@ -1,12 +1,13 @@
 {
   "blockedBy": [],
-  "completedDate": null,
+  "claimedBySession": "ddeb3e77-572d-46c8-bfe0-c1e36f3de400",
+  "completedDate": "2026-05-22",
   "createdDate": "2026-05-22",
   "description": "zug_get_context currently loads the full cognitive fingerprint every session. Add a delta mode that surfaces only what changed since the last session: new observations, updated patterns, session summary. Reduces noise and focuses attention on what matters now. Analogous to Storybloq's 'recap' command.",
   "id": "T-002",
   "order": 50,
   "phase": "p5",
-  "status": "open",
+  "status": "complete",
   "title": "Delta session start — surface what's new, not full context dump",
   "type": "task"
 }

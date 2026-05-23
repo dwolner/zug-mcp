@@ -211,3 +211,55 @@ export function syncRulesContext(): void {
     // Best-effort — silently skip if rules dir is not writable
   }
 }
+
+export function getLastSessionSummary(): string | null {
+  ensureDirs();
+  const { sessionsDir } = getPaths();
+  const files = fs.readdirSync(sessionsDir)
+    .filter((f) => f.endsWith(".md"))
+    .sort()
+    .reverse();
+  if (files.length === 0) return null;
+
+  const content = fs.readFileSync(path.join(sessionsDir, files[0]), "utf-8");
+  const match = content.match(/^## Summary\n([\s\S]*?)(?=\n## |\n?$)/m);
+  return match ? match[1].trim() : null;
+}
+
+export function getLastSessionTimestamp(): string | null {
+  ensureDirs();
+  const { sessionsDir } = getPaths();
+  const files = fs.readdirSync(sessionsDir)
+    .filter((f) => f.endsWith(".md"))
+    .sort()
+    .reverse();
+  if (files.length === 0) return null;
+
+  const content = fs.readFileSync(path.join(sessionsDir, files[0]), "utf-8");
+  const match = content.match(/^Date:\s*(.+)$/m);
+  return match ? match[1].trim() : null;
+}
+
+export function getObservationsSince(since: string): Observation[] {
+  ensureDirs();
+  const { observationsFile } = getPaths();
+  if (!fs.existsSync(observationsFile)) return [];
+
+  const sinceMs = new Date(since).getTime();
+  if (isNaN(sinceMs)) return [];
+
+  const lines = fs.readFileSync(observationsFile, "utf-8").split("\n").filter(Boolean);
+  const results: Observation[] = [];
+  for (const line of lines) {
+    try {
+      const obs = JSON.parse(line) as Observation;
+      if (new Date(obs.timestamp).getTime() > sinceMs) {
+        results.push(obs);
+      }
+    } catch {
+      // skip malformed lines
+    }
+  }
+  // Newest first
+  return results.reverse();
+}

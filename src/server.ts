@@ -16,6 +16,9 @@ import {
   getPersonaExcerpt,
   getObservationTrend,
   syncRulesContext,
+  getLastSessionSummary,
+  getLastSessionTimestamp,
+  getObservationsSince,
   type ObservationType,
 } from "./storage.js";
 import { synthesize } from "./synthesize.js";
@@ -26,7 +29,33 @@ export function createServer(): McpServer {
   server.tool(
     "zug_get_context",
     "Load Zug context — call this at the start of every session to get the current cognitive fingerprint and playbook.",
-    async () => {
+    {
+      delta: z.boolean().optional().describe("Return only what changed since the last session instead of the full fingerprint (default: false)"),
+    },
+    async ({ delta }) => {
+      syncRulesContext();
+
+      if (delta) {
+        const active = readActive();
+        const stats = getStats();
+        const lastDate = getLastSessionDate();
+        const lastSummary = getLastSessionSummary();
+        const lastTimestamp = getLastSessionTimestamp();
+        const recentObs = lastTimestamp ? getObservationsSince(lastTimestamp) : [];
+
+        const parts = [
+          `# Zug Context (delta)\nSessions: ${stats.sessions} | Last: ${lastDate ?? "none"} | Observations: ${stats.observations}\n`,
+          active ? `## Active Patterns\n${active}` : "",
+          lastSummary ? `## Last session\n${lastSummary}` : "",
+          recentObs.length > 0
+            ? `## New since last session (${recentObs.length})\n${recentObs.map((o) => `- [${o.type}/${o.confidence}] ${o.observation}`).join("\n")}`
+            : "*No new observations since last session.*",
+          "*(Full fingerprint: call zug_get_context without delta)*",
+        ].filter(Boolean);
+
+        return { content: [{ type: "text" as const, text: parts.join("\n\n") }] };
+      }
+
       const persona = readPersona();
       const playbook = readPlaybook();
       const active = readActive();
@@ -41,7 +70,6 @@ export function createServer(): McpServer {
         playbook ? `## Playbook\n${playbook}` : "",
       ].filter(Boolean);
 
-      syncRulesContext();
       return { content: [{ type: "text" as const, text: parts.join("\n\n") }] };
     }
   );
