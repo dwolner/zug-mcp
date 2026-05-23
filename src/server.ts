@@ -211,12 +211,13 @@ export function createServer(): McpServer {
 
   server.tool(
     "zug_status",
-    "Returns Zug stats — session count, observation count, persona size, last session date, excerpt, and weekly trend.",
+    "Returns Zug stats — session count, observation count, persona size, last session date, excerpt, weekly trend, and active patterns.",
     async () => {
       const { sessions, observations, personaLines } = getStats();
       const lastDate = getLastSessionDate();
       const excerpt = getPersonaExcerpt(2);
       const trend = getObservationTrend(4);
+      const active = readActive();
 
       const lines = [
         `- Sessions: ${sessions}${lastDate ? ` | Last: ${lastDate}` : ""}`,
@@ -226,8 +227,13 @@ export function createServer(): McpServer {
         `- Trend (obs/week, last 4): ${trend.join(" → ")}`,
       ].filter(Boolean).join("\n");
 
+      const parts = [
+        `Zug status:\n${lines}`,
+        active ? `\n\n## Active Patterns\n${active}` : "",
+      ].filter(Boolean);
+
       return {
-        content: [{ type: "text" as const, text: `Zug status:\n${lines}` }],
+        content: [{ type: "text" as const, text: parts.join("") }],
       };
     }
   );
