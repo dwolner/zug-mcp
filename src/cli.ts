@@ -8,6 +8,7 @@ import {
   getPersonaExcerpt,
   getObservationTrend,
   readPersona,
+  readActive,
 } from "./storage.js";
 
 const ZUG_DIR = process.env.ZUG_DATA_DIR || path.join(os.homedir(), ".zug");
@@ -74,11 +75,39 @@ function cmdPersona() {
   console.log(content);
 }
 
+function cmdCompact() {
+  const { sessions, observations } = getStats();
+  const lastDate = getLastSessionDate();
+  const active = readActive();
+
+  if (sessions === 0 && !active) {
+    console.log("# Zug — no data yet");
+    return;
+  }
+
+  const parts: string[] = ["# Zug Checkpoint (pre-compact)", ""];
+
+  const statLine = `Sessions: ${sessions}${lastDate ? ` | Last: ${lastDate}` : ""} | Observations: ${observations}`;
+  parts.push(statLine, "");
+
+  if (active) {
+    parts.push("## Active Patterns", "", active, "");
+  }
+
+  parts.push(
+    "## Note",
+    "Observations are persisted to observations.jsonl. Call zug_get_context at the start of the next turn to reload full context.",
+  );
+
+  console.log(parts.join("\n"));
+}
+
 function printUsage() {
   console.error(`Usage: zug <command>
   zug status          Show sessions, observations, persona size, and trend
   zug tail [n]        Show recent observations (default: 10)
-  zug persona         Print full PERSONA.md`);
+  zug persona         Print full PERSONA.md
+  zug compact         Print pre-compaction checkpoint (used by PreCompact hook)`);
   process.exit(1);
 }
 
@@ -93,6 +122,13 @@ switch (cmd) {
     break;
   case "persona":
     cmdPersona();
+    break;
+  case "compact":
+    cmdCompact();
+    break;
+  case "--version":
+  case "version":
+    console.log("1.0.0");
     break;
   default:
     printUsage();

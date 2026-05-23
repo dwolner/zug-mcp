@@ -99,6 +99,31 @@ else
   warn "  echo 'alias zug=\"pnpm --prefix $SERVER_DIR cli\"' >> ~/.zshrc"
 fi
 
+# ── Register PreCompact hook ──────────────────────────────────────────────────
+SETTINGS_JSON="$HOME/.claude/settings.json"
+ZUG_BIN="$(command -v zug 2>/dev/null)"
+if [[ -n "$ZUG_BIN" && -f "$SETTINGS_JSON" ]] && "$ZUG_BIN" --version > /dev/null 2>&1; then
+  info "Registering PreCompact hook..."
+  node - "$SETTINGS_JSON" "$ZUG_BIN" << 'JSEOF'
+const fs = require('fs');
+const [settingsPath, zugBin] = process.argv.slice(2);
+const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+settings.hooks = settings.hooks || {};
+settings.hooks.PreCompact = (settings.hooks.PreCompact || []).filter(
+  h => !h.hooks?.some(e => e.command?.includes('zug compact'))
+);
+settings.hooks.PreCompact.push({
+  matcher: "",
+  hooks: [{ type: "command", command: zugBin + " compact" }]
+});
+fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n');
+JSEOF
+  success "PreCompact hook registered ($ZUG_BIN compact)"
+else
+  warn "Could not register PreCompact hook — add manually to ~/.claude/settings.json:"
+  warn '  { "hooks": { "PreCompact": [{ "matcher": "", "hooks": [{ "type": "command", "command": "zug compact" }] }] } }'
+fi
+
 # ── Create data directories ────────────────────────────────────────────────────
 info "Creating data directories..."
 mkdir -p "$ZUG_DIR/sessions"
