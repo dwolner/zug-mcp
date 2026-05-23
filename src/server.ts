@@ -239,7 +239,9 @@ export function createServer(): McpServer {
       text: z.string().describe("The observation text to reinforce — ideally matching a previous observation"),
     },
     async ({ text }) => {
-      const result = reinforcePattern(text.trim());
+      const trimmed = text.trim();
+      if (!trimmed) return { content: [{ type: "text" as const, text: "Error: text cannot be empty" }] };
+      const result = reinforcePattern(trimmed);
       return {
         content: [{ type: "text" as const, text: `Reinforced (${result.count}x): ${result.text}` }],
       };
