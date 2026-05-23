@@ -19,6 +19,8 @@ import {
   getLastSessionSummary,
   getLastSessionTimestamp,
   getObservationsSince,
+  reinforcePattern,
+  getTopPatterns,
   type ObservationType,
 } from "./storage.js";
 import { synthesize } from "./synthesize.js";
@@ -159,6 +161,7 @@ export function createServer(): McpServer {
             observation: o.observation,
             confidence: o.confidence,
           })),
+          reinforcedPatterns: getTopPatterns(10),
         }).then((result) => {
           if (result) {
             writePersona(result.persona);
@@ -225,6 +228,20 @@ export function createServer(): McpServer {
 
       return {
         content: [{ type: "text" as const, text: `Zug status:\n${lines}` }],
+      };
+    }
+  );
+
+  server.tool(
+    "zug_reinforce_observation",
+    "Mark a pattern as recurring across sessions. Call this when you notice the same observation appearing again. Reinforced patterns get elevated weight in synthesis.",
+    {
+      text: z.string().describe("The observation text to reinforce — ideally matching a previous observation"),
+    },
+    async ({ text }) => {
+      const result = reinforcePattern(text.trim());
+      return {
+        content: [{ type: "text" as const, text: `Reinforced (${result.count}x): ${result.text}` }],
       };
     }
   );

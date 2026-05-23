@@ -16,6 +16,8 @@ import {
   getLastSessionSummary,
   getLastSessionTimestamp,
   getObservationsSince,
+  reinforcePattern,
+  getTopPatterns,
   type Observation,
 } from "./storage";
 
@@ -382,5 +384,51 @@ describe("getObservationsSince", () => {
   it("returns empty array for invalid since timestamp", () => {
     appendObservation({ timestamp: "2026-01-01T10:00:00.000Z", type: "preference", observation: "obs", session_id: "s1", confidence: "high" });
     expect(getObservationsSince("not-a-date")).toEqual([]);
+  });
+});
+
+describe("reinforcePattern / getTopPatterns", () => {
+  it("creates a new pattern with count 1 on first reinforce", () => {
+    const result = reinforcePattern("Thinks in systems");
+    expect(result.count).toBe(1);
+    expect(result.text).toBe("Thinks in systems");
+  });
+
+  it("increments count on subsequent reinforcements", () => {
+    reinforcePattern("Thinks in systems");
+    reinforcePattern("Thinks in systems");
+    const result = reinforcePattern("Thinks in systems");
+    expect(result.count).toBe(3);
+  });
+
+  it("tracks separate patterns independently", () => {
+    reinforcePattern("Pattern A");
+    reinforcePattern("Pattern A");
+    reinforcePattern("Pattern B");
+    const top = getTopPatterns(10);
+    expect(top.find((p) => p.text === "Pattern A")?.count).toBe(2);
+    expect(top.find((p) => p.text === "Pattern B")?.count).toBe(1);
+  });
+
+  it("returns top patterns sorted by count descending", () => {
+    reinforcePattern("Low freq");
+    reinforcePattern("High freq");
+    reinforcePattern("High freq");
+    reinforcePattern("High freq");
+    const top = getTopPatterns(2);
+    expect(top[0].text).toBe("High freq");
+    expect(top[0].count).toBe(3);
+    expect(top[1].text).toBe("Low freq");
+  });
+
+  it("returns empty array when no reinforcements file exists", () => {
+    expect(getTopPatterns(10)).toEqual([]);
+  });
+
+  it("respects limit parameter", () => {
+    reinforcePattern("A");
+    reinforcePattern("B");
+    reinforcePattern("C");
+    expect(getTopPatterns(2)).toHaveLength(2);
   });
 });

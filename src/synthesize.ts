@@ -12,6 +12,7 @@ export interface SynthesisInput {
     observation: string;
     confidence: string;
   }>;
+  reinforcedPatterns?: Array<{ text: string; count: number }>;
 }
 
 export interface SynthesisResult {
@@ -64,7 +65,9 @@ export async function synthesize(input: SynthesisInput): Promise<SynthesisResult
 ## Current PERSONA.md
 ${input.currentPersona || "*Empty — this is the first synthesis.*"}
 
-## Current PLAYBOOK.md
+${input.reinforcedPatterns?.length
+  ? `## Reinforced patterns (observed across multiple sessions — treat these as load-bearing)\n${input.reinforcedPatterns.map((p) => `- [${p.count}x] ${p.text}`).join("\n")}\n`
+  : ""}## Current PLAYBOOK.md
 ${input.currentPlaybook || "*Empty — no playbook yet.*"}
 
 ## Session Summary

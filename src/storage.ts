@@ -11,6 +11,7 @@ function getPaths() {
     playbookFile: path.join(zugDir, "PLAYBOOK.md"),
     observationsFile: path.join(zugDir, "observations.jsonl"),
     activeFile: path.join(zugDir, "ACTIVE.md"),
+    reinforcementsFile: path.join(zugDir, "reinforcements.jsonl"),
   };
 }
 
@@ -262,4 +263,51 @@ export function getObservationsSince(since: string): Observation[] {
   }
   // Newest first
   return results.reverse();
+}
+
+export interface ReinforcedPattern {
+  text: string;
+  count: number;
+  lastSeen: string;
+}
+
+export function reinforcePattern(text: string): ReinforcedPattern {
+  ensureDirs();
+  const { reinforcementsFile } = getPaths();
+
+  const patterns: ReinforcedPattern[] = fs.existsSync(reinforcementsFile)
+    ? fs.readFileSync(reinforcementsFile, "utf-8")
+        .split("\n")
+        .filter(Boolean)
+        .map((l) => { try { return JSON.parse(l) as ReinforcedPattern; } catch { return null; } })
+        .filter((p): p is ReinforcedPattern => p !== null)
+    : [];
+
+  const idx = patterns.findIndex((p) => p.text === text);
+  const updated: ReinforcedPattern = idx >= 0
+    ? { ...patterns[idx], count: patterns[idx].count + 1, lastSeen: new Date().toISOString() }
+    : { text, count: 1, lastSeen: new Date().toISOString() };
+
+  if (idx >= 0) {
+    patterns[idx] = updated;
+  } else {
+    patterns.push(updated);
+  }
+
+  fs.writeFileSync(reinforcementsFile, patterns.map((p) => JSON.stringify(p)).join("\n") + "\n", "utf-8");
+  return updated;
+}
+
+export function getTopPatterns(limit: number): ReinforcedPattern[] {
+  ensureDirs();
+  const { reinforcementsFile } = getPaths();
+  if (!fs.existsSync(reinforcementsFile)) return [];
+
+  return fs.readFileSync(reinforcementsFile, "utf-8")
+    .split("\n")
+    .filter(Boolean)
+    .map((l) => { try { return JSON.parse(l) as ReinforcedPattern; } catch { return null; } })
+    .filter((p): p is ReinforcedPattern => p !== null)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit);
 }
