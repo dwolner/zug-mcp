@@ -10,6 +10,7 @@ primary_region = 'iad'
 
 [env]
   PORT = '8080'
+  ZUG_DATA_DIR = '/data/.zug'
 
 [[mounts]]
   source = 'zug_data'

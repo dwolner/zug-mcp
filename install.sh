@@ -86,8 +86,18 @@ pnpm install --frozen-lockfile
 
 # ── Install zug CLI globally ──────────────────────────────────────────────────
 info "Installing zug CLI..."
-pnpm link --global 2>/dev/null && success "zug CLI installed (run 'zug status' to verify)" || \
-  warn "Could not install zug CLI globally — run 'pnpm link --global' in $SERVER_DIR manually."
+if pnpm link --global 2>/dev/null; then
+  success "zug CLI installed (run 'zug status' to verify)"
+  # Ensure pnpm global bin is in PATH
+  PNPM_BIN="$(pnpm bin -g 2>/dev/null)"
+  if [[ -n "$PNPM_BIN" ]] && [[ ":$PATH:" != *":$PNPM_BIN:"* ]]; then
+    warn "Add pnpm global bin to your PATH to use 'zug' from anywhere:"
+    warn "  echo 'export PATH=\"$PNPM_BIN:\$PATH\"' >> ~/.zshrc  # or ~/.bashrc"
+  fi
+else
+  warn "Could not link zug CLI globally. Using alias fallback:"
+  warn "  echo 'alias zug=\"pnpm --prefix $SERVER_DIR cli\"' >> ~/.zshrc"
+fi
 
 # ── Create data directories ────────────────────────────────────────────────────
 info "Creating data directories..."
