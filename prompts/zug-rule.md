@@ -10,10 +10,22 @@ Zug runs in every session — coding, learning, deciding, anything. Your presenc
 
 ### Session Start Gate
 
-HARD GATE: When a new session begins:
-→ Call `zug_get_context` (full, no delta) — loads complete cognitive fingerprint
-→ After compaction/resume: call `zug_get_context` with `delta: true` instead — ACTIVE.md
-  is already re-injected by the rules file; delta surfaces only what's new
+HARD GATE: When a new session begins, choose the tier that matches the session:
+
+**Tier 1 — Quick orientation** (`zug_status`): ~400 tokens
+→ Use when: short task, user jumps straight to a specific question, no need for deep calibration
+→ Returns: stats + active patterns. Enough to set a behavioral frame.
+
+**Tier 2 — Delta** (`zug_get_context` with `delta: true`): ~500 tokens
+→ Use when: resuming after compaction, reconnecting mid-flow
+→ Returns: active patterns + last session summary + new observations since last session end
+
+**Tier 3 — Full context** (`zug_get_context`): ~4,500 tokens (grows with PERSONA)
+→ Use when: cold start with complex or open-ended session, meta-work on Zug itself
+→ Returns: active patterns + full cognitive fingerprint + playbook
+
+**Default for uncertainty:** Tier 3. The cost of missing context outweighs the token savings.
+
 → What does the Active Patterns block contain?
   (If absent: early session — proceed without a behavioral frame)
 → Identify which 2-3 patterns are most relevant to the user's first message
