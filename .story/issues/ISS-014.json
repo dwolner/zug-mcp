@@ -8,9 +8,9 @@
   "location": [],
   "phase": null,
   "relatedTickets": [],
-  "resolution": null,
-  "resolvedDate": null,
+  "resolution": "Duplicate of ISS-013. Accepted risk tracked in ISS-013.",
+  "resolvedDate": "2026-05-23",
   "severity": "medium",
-  "status": "open",
+  "status": "resolved",
   "title": "[security] Open /register endpoint — acceptable risk given PKCE, filed as ISS-013"
 }

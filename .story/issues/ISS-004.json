@@ -8,9 +8,9 @@
   "location": [],
   "phase": null,
   "relatedTickets": [],
-  "resolution": null,
-  "resolvedDate": null,
+  "resolution": "Duplicate of ISS-002. Fixed in ISS-002.",
+  "resolvedDate": "2026-05-23",
   "severity": "medium",
-  "status": "open",
+  "status": "resolved",
   "title": "[error-handling] synthesizePersona catch block swallows errors silently — filed as ISS-002"
 }

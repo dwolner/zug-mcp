@@ -1,0 +1,16 @@
+{
+  "components": [
+    "autonomous"
+  ],
+  "discoveredDate": "2026-05-22",
+  "id": "ISS-016",
+  "impact": "Current structure is clear and correct — deferred",
+  "location": [],
+  "phase": null,
+  "relatedTickets": [],
+  "resolution": null,
+  "resolvedDate": null,
+  "severity": "medium",
+  "status": "open",
+  "title": "[code-quality] Current structure is clear and correct — deferred"
+}

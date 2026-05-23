@@ -12,9 +12,9 @@
   "relatedTickets": [
     "T-009"
   ],
-  "resolution": null,
-  "resolvedDate": null,
+  "resolution": "loadApiKey now reads ZUG_DATA_DIR env var to locate .env file. synthesize-cli.ts fixed same way.",
+  "resolvedDate": "2026-05-23",
   "severity": "low",
-  "status": "open",
+  "status": "resolved",
   "title": "loadApiKey ignores ZUG_DATA_DIR for .env file lookup"
 }

@@ -168,8 +168,8 @@ export function createServer(): McpServer {
             writePlaybook(result.playbook);
             if (result.active) writeActive(result.active);
           }
-        }).catch(() => {
-          // Synthesis failed — appended observations remain in PERSONA
+        }).catch((err: unknown) => {
+          console.error("[zug] synthesis failed:", err instanceof Error ? err.message : err);
         });
       }
 

@@ -1,0 +1,16 @@
+{
+  "components": [
+    "autonomous"
+  ],
+  "discoveredDate": "2026-05-22",
+  "id": "ISS-018",
+  "impact": "getLastSessionSummary() is a needed separate function — deferred",
+  "location": [],
+  "phase": null,
+  "relatedTickets": [],
+  "resolution": null,
+  "resolvedDate": null,
+  "severity": "medium",
+  "status": "open",
+  "title": "[design] getLastSessionSummary() is a needed separate function — deferred"
+}

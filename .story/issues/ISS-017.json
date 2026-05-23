@@ -1,0 +1,16 @@
+{
+  "components": [
+    "autonomous"
+  ],
+  "discoveredDate": "2026-05-22",
+  "id": "ISS-017",
+  "impact": "note omitted in no-data case — acceptable, fresh install has no context to restore",
+  "location": [],
+  "phase": null,
+  "relatedTickets": [],
+  "resolution": null,
+  "resolvedDate": null,
+  "severity": "medium",
+  "status": "open",
+  "title": "[clarity] note omitted in no-data case — acceptable, fresh install has no context to resto"
+}

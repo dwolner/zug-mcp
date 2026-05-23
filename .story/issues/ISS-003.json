@@ -8,9 +8,9 @@
   "location": [],
   "phase": null,
   "relatedTickets": [],
-  "resolution": null,
-  "resolvedDate": null,
+  "resolution": "Duplicate of ISS-001. Fixed in ISS-001.",
+  "resolvedDate": "2026-05-23",
   "severity": "medium",
-  "status": "open",
+  "status": "resolved",
   "title": "[correctness] loadApiKey hardcodes ~/.zug/.env, ignoring ZUG_DATA_DIR — filed as ISS-001"
 }

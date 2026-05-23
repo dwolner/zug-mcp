@@ -10,9 +10,9 @@
   ],
   "phase": null,
   "relatedTickets": [],
-  "resolution": null,
-  "resolvedDate": null,
+  "resolution": "synthesize-cli.ts ZUG_DIR and .env check now respect ZUG_DATA_DIR env var.",
+  "resolvedDate": "2026-05-23",
   "severity": "low",
-  "status": "open",
+  "status": "resolved",
   "title": "synthesize-cli.ts hardcodes ~/.zug path, ignores ZUG_DATA_DIR"
 }

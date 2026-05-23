@@ -13,7 +13,7 @@ import os from "os";
 import { readPersona, readPlaybook, writePersona, writePlaybook, writeActive } from "./storage.js";
 import { synthesize } from "./synthesize.js";
 
-const ZUG_DIR = path.join(os.homedir(), ".zug");
+const ZUG_DIR = process.env.ZUG_DATA_DIR || path.join(os.homedir(), ".zug");
 const OBSERVATIONS_FILE = path.join(ZUG_DIR, "observations.jsonl");
 
 function readAllObservations() {
@@ -71,7 +71,7 @@ async function main() {
   });
 
   if (!result) {
-    const hasKey = !!process.env.ANTHROPIC_API_KEY || fs.existsSync(path.join(os.homedir(), ".zug", ".env"));
+    const hasKey = !!process.env.ANTHROPIC_API_KEY || fs.existsSync(path.join(ZUG_DIR, ".env"));
     if (!hasKey) console.error("Synthesis failed — check ANTHROPIC_API_KEY in ~/.zug/.env");
     else console.log("Nothing to write.");
     process.exit(0);

@@ -1,0 +1,16 @@
+{
+  "components": [
+    "autonomous"
+  ],
+  "discoveredDate": "2026-05-22",
+  "id": "ISS-019",
+  "impact": "Concurrent write risk — acceptable for single-user personal tool",
+  "location": [],
+  "phase": null,
+  "relatedTickets": [],
+  "resolution": null,
+  "resolvedDate": null,
+  "severity": "medium",
+  "status": "open",
+  "title": "[concurrency] Concurrent write risk — acceptable for single-user personal tool"
+}

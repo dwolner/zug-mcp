@@ -12,9 +12,9 @@
   "relatedTickets": [
     "T-009"
   ],
-  "resolution": null,
-  "resolvedDate": null,
+  "resolution": "Synthesis catch block now logs error to stderr via console.error instead of silently swallowing it.",
+  "resolvedDate": "2026-05-23",
   "severity": "low",
-  "status": "open",
+  "status": "resolved",
   "title": "synthesizePersona swallows errors silently during onboarding"
 }
