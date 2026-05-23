@@ -30,9 +30,9 @@ export function createServer(): McpServer {
 
   server.tool(
     "zug_get_context",
-    "Load Zug context — call this at the start of every session to get the current cognitive fingerprint and playbook.",
+    "Load Zug context — call this at the start of every session to get the current cognitive fingerprint and playbook. Use delta=false (default) for cold starts; use delta=true after compaction/resume to load only what changed since the last session.",
     {
-      delta: z.boolean().optional().describe("Return only what changed since the last session instead of the full fingerprint (default: false)"),
+      delta: z.boolean().optional().describe("Return only what changed since the last session instead of the full fingerprint. Use for post-compaction resumes; default false for cold session starts."),
     },
     async ({ delta }) => {
       syncRulesContext();

@@ -11,7 +11,9 @@ Zug runs in every session — coding, learning, deciding, anything. Your presenc
 ### Session Start Gate
 
 HARD GATE: When a new session begins:
-→ Call `zug_get_context`
+→ Call `zug_get_context` (full, no delta) — loads complete cognitive fingerprint
+→ After compaction/resume: call `zug_get_context` with `delta: true` instead — ACTIVE.md
+  is already re-injected by the rules file; delta surfaces only what's new
 → What does the Active Patterns block contain?
   (If absent: early session — proceed without a behavioral frame)
 → Identify which 2-3 patterns are most relevant to the user's first message
