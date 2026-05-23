@@ -183,3 +183,31 @@ export function getObservationTrend(weeks = 4): number[] {
   }
   return counts;
 }
+
+export function syncRulesContext(): void {
+  const rulesDir = process.env.CLAUDE_RULES_DIR ||
+    path.join(os.homedir(), ".claude", "rules");
+  if (!fs.existsSync(rulesDir)) return;
+
+  const active = readActive();
+  const excerpt = getPersonaExcerpt(3);
+  if (!active && !excerpt) return;
+
+  const sections: string[] = [
+    "<!-- Zug context — auto-updated at session start. Do not edit manually. -->",
+    "",
+  ];
+
+  if (active) {
+    sections.push("## Active Patterns", "", active, "");
+  }
+  if (excerpt) {
+    sections.push("## Who you're working with", "", excerpt, "");
+  }
+
+  try {
+    fs.writeFileSync(path.join(rulesDir, "zug-context.md"), sections.join("\n"), "utf-8");
+  } catch {
+    // Best-effort — silently skip if rules dir is not writable
+  }
+}

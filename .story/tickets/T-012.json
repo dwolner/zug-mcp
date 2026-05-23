@@ -1,12 +1,13 @@
 {
   "blockedBy": [],
-  "completedDate": null,
+  "claimedBySession": "ddeb3e77-572d-46c8-bfe0-c1e36f3de400",
+  "completedDate": "2026-05-22",
   "createdDate": "2026-05-22",
   "description": "At session start, write a compact version of the user's cognitive fingerprint to .claude/rules/zug-context.md. Claude Code auto-injects everything in .claude/rules/ every turn — no hook, no tool call, no behavioral gate required. This converts the current 'call zug_get_context at start' behavioral rule into a structural gate. The file should be lightweight: active patterns only, not the full PERSONA.md. Inspired by Storybloq's autonomous-resume.md pattern.",
   "id": "T-012",
   "order": 10,
   "phase": "p5",
-  "status": "open",
+  "status": "complete",
   "title": ".claude/rules/ injection — write cognitive fingerprint as always-on context",
   "type": "task"
 }

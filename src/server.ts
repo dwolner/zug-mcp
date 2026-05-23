@@ -15,6 +15,7 @@ import {
   getLastSessionDate,
   getPersonaExcerpt,
   getObservationTrend,
+  syncRulesContext,
   type ObservationType,
 } from "./storage.js";
 import { synthesize } from "./synthesize.js";
@@ -40,6 +41,7 @@ export function createServer(): McpServer {
         playbook ? `## Playbook\n${playbook}` : "",
       ].filter(Boolean);
 
+      syncRulesContext();
       return { content: [{ type: "text" as const, text: parts.join("\n\n") }] };
     }
   );

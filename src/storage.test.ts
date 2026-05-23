@@ -12,6 +12,7 @@ import {
   getLastSessionDate,
   getPersonaExcerpt,
   getObservationTrend,
+  syncRulesContext,
   type Observation,
 } from "./storage";
 
@@ -257,5 +258,69 @@ describe("getObservationTrend", () => {
     });
     const trend = getObservationTrend(4);
     expect(trend.reduce((a, b) => a + b, 0)).toBe(0);
+  });
+});
+
+describe("syncRulesContext", () => {
+  let rulesDir: string;
+  let origRulesDir: string | undefined;
+
+  beforeEach(() => {
+    rulesDir = fs.mkdtempSync(path.join(os.tmpdir(), "zug-rules-test-"));
+    origRulesDir = process.env.CLAUDE_RULES_DIR;
+    process.env.CLAUDE_RULES_DIR = rulesDir;
+  });
+
+  afterEach(() => {
+    if (origRulesDir !== undefined) {
+      process.env.CLAUDE_RULES_DIR = origRulesDir;
+    } else {
+      delete process.env.CLAUDE_RULES_DIR;
+    }
+    fs.rmSync(rulesDir, { recursive: true, force: true });
+  });
+
+  it("does nothing when ACTIVE.md and PERSONA.md are both empty", () => {
+    syncRulesContext();
+    expect(fs.existsSync(path.join(rulesDir, "zug-context.md"))).toBe(false);
+  });
+
+  it("writes active patterns when ACTIVE.md has content", () => {
+    writeActive("When X → do Y\nWhen Z → do W");
+    syncRulesContext();
+    const content = fs.readFileSync(path.join(rulesDir, "zug-context.md"), "utf-8");
+    expect(content).toContain("## Active Patterns");
+    expect(content).toContain("When X → do Y");
+  });
+
+  it("writes persona excerpt when PERSONA.md has content", () => {
+    writePersona("# Title\n\nThinks in systems. Moves top-down.");
+    syncRulesContext();
+    const content = fs.readFileSync(path.join(rulesDir, "zug-context.md"), "utf-8");
+    expect(content).toContain("## Who you're working with");
+    expect(content).toContain("Thinks in systems.");
+  });
+
+  it("includes auto-generation comment", () => {
+    writeActive("Pattern 1");
+    syncRulesContext();
+    const content = fs.readFileSync(path.join(rulesDir, "zug-context.md"), "utf-8");
+    expect(content).toContain("Do not edit manually");
+  });
+
+  it("silently skips when rules directory does not exist", () => {
+    process.env.CLAUDE_RULES_DIR = "/nonexistent/path/that/does/not/exist";
+    writeActive("Pattern 1");
+    expect(() => syncRulesContext()).not.toThrow();
+  });
+
+  it("overwrites the file on each call", () => {
+    writeActive("Old pattern");
+    syncRulesContext();
+    writeActive("New pattern");
+    syncRulesContext();
+    const content = fs.readFileSync(path.join(rulesDir, "zug-context.md"), "utf-8");
+    expect(content).toContain("New pattern");
+    expect(content).not.toContain("Old pattern");
   });
 });
