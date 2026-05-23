@@ -77,3 +77,15 @@ For post-compaction: the SessionStart hook fires `storybloq session resume-promp
 PERSONA.md grows ~10–20 lines per session with meaningful observations. At current growth rate (~2 lines/session), it will reach 200 lines (~5,000 tokens) within ~45 more sessions. Delta remains stable at ~400–600 tokens regardless of PERSONA size.
 
 The case for defaulting cold starts to full context remains valid. The case for defaulting post-compaction to delta becomes stronger as PERSONA grows.
+
+## Completed three-tier system (post T-014)
+
+After T-002 (delta mode), T-005 (comparison doc), and T-014 (zug_status active patterns):
+
+| Tier | Call | Tokens | When |
+|------|------|--------|------|
+| 1 — Quick | `zug_status` | ~400 | Short tasks, direct questions |
+| 2 — Delta | `zug_get_context(delta: true)` | ~500 | Post-compaction, mid-flow reconnect |
+| 3 — Full | `zug_get_context()` | ~4,500+ | Cold starts, complex sessions, meta-work |
+
+Default: Tier 3. The cost of missing context outweighs the ~4k token savings in most sessions.
