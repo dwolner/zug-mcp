@@ -12,31 +12,38 @@ Zug exposes five tools Claude can call during any session:
 
 | Tool | When it's called |
 |---|---|
-| `zug_get_context` | Session start — loads your cognitive fingerprint and playbook |
+| `zug_get_context` | Session start — loads your cognitive fingerprint, playbook, and active patterns |
 | `zug_save_observation` | Mid-session — saves a pattern, preference, breakthrough, or mistake |
-| `zug_end_session` | Session end — writes the session log, updates your fingerprint |
+| `zug_end_session` | Session end — writes the session log, updates your fingerprint in the background |
 | `zug_get_recent_sessions` | After a gap — re-establishes context from past sessions |
-| `zug_status` | Anytime — shows session count, observation count, fingerprint size |
+| `zug_status` | Anytime — shows sessions, observations, persona size, excerpt, and weekly trend |
+
+### CLI
+
+After install, `zug` is available as a global command:
+
+```bash
+zug status        # sessions, observations, trend, persona excerpt
+zug tail [n]      # last N observations (default 10)
+zug persona       # print full PERSONA.md
+```
 
 ### Context Tagging
 
-`zug_save_observation` and `zug_end_session` accept an optional `context` field (e.g. `"work"`, `"personal"`, `"augur"`). Tagged data stays in the unified fingerprint — PERSONA.md is never partitioned — but can be filtered later by agents or scripts.
-
-`zug_get_recent_sessions` accepts an optional `context` filter to return only matching sessions:
+`zug_save_observation` and `zug_end_session` accept an optional `context` field (e.g. `"work"`, `"personal"`). Tagged data stays in the unified fingerprint but can be filtered:
 
 ```json
 { "limit": 20, "context": "work" }
 ```
 
-Sessions are tagged via a `Context: <value>` header line in each session file. Observations carry `context` in `observations.jsonl`.
-
 Your data lives at `~/.zug/`:
 ```
 ~/.zug/
-├── PERSONA.md        ← your cognitive fingerprint (grows over time)
-├── PLAYBOOK.md       ← what works universally (updated each session)
+├── PERSONA.md         ← your cognitive fingerprint (grows over time)
+├── PLAYBOOK.md        ← what works universally (updated each session)
+├── ACTIVE.md          ← active patterns for the next session
 ├── observations.jsonl ← structured observation log
-└── sessions/         ← full session logs by date
+└── sessions/          ← full session logs by date
 ```
 
 ---
@@ -44,7 +51,7 @@ Your data lives at `~/.zug/`:
 ## Quick Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/dwolner/zug-mcp/main/install.sh | bash
+bash <(curl -fsSL https://raw.githubusercontent.com/dwolner/zug-mcp/main/install.sh)
 ```
 
 Or manually:
@@ -61,6 +68,7 @@ pnpm install
 ## Requirements
 
 - Node.js 18+
+- git
 - pnpm (`npm install -g pnpm`)
 - Claude Code (VS Code extension) and/or Claude desktop app
 
@@ -70,32 +78,32 @@ pnpm install
 
 ### 1. Install the server (above)
 
-### 2. Seed your persona
+The install script will:
+- Clone the repo and install dependencies
+- Run an interactive onboarding flow — 5 questions to seed your `PERSONA.md` via Haiku
+- Register the MCP server with Claude Code and Claude Desktop
+- Install `~/.claude/rules/zug.md` (activates Zug in every Claude Code session)
+- Link `zug` as a global CLI command
 
-Copy the template and fill it in:
-```bash
-cp ~/.zug/server/templates/PERSONA.template.md ~/.zug/PERSONA.md
-```
+If `PERSONA.md` already exists with real content, onboarding is skipped automatically.
 
-Edit `~/.zug/PERSONA.md` — write a few paragraphs about how you think. Don't overthink it. Zug will refine it from real sessions. This is just a starting point.
-
-### 3. Add the system prompt to Claude
+### 2. Add the system prompt to Claude
 
 **Claude Code CLI** (recommended):
-- The system prompt and session gates are automatically active via `~/.claude/rules/zug.md` (installed by the setup script)
+- The session gates are automatically active via `~/.claude/rules/zug.md`
 - No further action needed — Zug calls `zug_get_context` automatically at every session start
 
 **Claude Desktop** (remote/HTTP mode):
-- Run `install.sh --configure-http <url> <token>` to configure the `mcp-remote` proxy (Claude Desktop only supports stdio, not HTTP directly)
+- Run `install.sh --configure-http <url> <token>` to configure the `mcp-remote` proxy
 - Create a new Project in Claude Desktop called "Zug"
 - Go to Project Settings → paste the contents of `prompts/system-prompt-desktop.md`
-- This merged prompt includes the persona AND the session gates that trigger automatic `zug_get_context` calls
 
-**Claude.ai web**:
-- Requires OAuth — raw token headers are not supported
-- Create a Project and paste `prompts/system-prompt-desktop.md` as the system prompt for persona-only mode (no MCP tool calls)
+**Claude.ai web** (OAuth):
+- Deploy the HTTP server (see fly.io section below)
+- Go to Claude.ai Settings → Integrations → Add integration
+- Enter your server URL — Claude.ai handles the OAuth flow automatically
 
-### 4. Restart Claude
+### 3. Restart Claude
 
 The MCP server starts automatically when Claude connects. You'll see Zug tools available in your session.
 
@@ -106,7 +114,7 @@ The MCP server starts automatically when Claude connects. You'll see Zug tools a
 ```
 Session start
   └── Claude calls zug_get_context()
-  └── Your PERSONA.md + PLAYBOOK.md are loaded into context
+  └── Your PERSONA.md + PLAYBOOK.md + active patterns loaded into context
 
 During session
   └── Claude calls zug_save_observation() when it notices something
@@ -114,9 +122,9 @@ During session
 
 Session end
   └── Claude calls zug_end_session() with a summary
-  └── Session log written to ~/.zug/sessions/
-  └── Haiku synthesizes observations into PERSONA.md + PLAYBOOK.md
-  └── Falls back to append if no API key
+  └── Session log written to ~/.zug/sessions/ immediately
+  └── Observations appended to PERSONA.md immediately (fallback)
+  └── Haiku synthesis runs in background — rewrites PERSONA/PLAYBOOK/ACTIVE if successful
 
 Next session
   └── zug_get_context() loads the updated fingerprint
@@ -127,25 +135,48 @@ Next session
 
 ## Synthesis
 
-When a session ends, Zug calls Claude Haiku to intelligently rewrite PERSONA.md and PLAYBOOK.md — integrating new observations into existing sections rather than just appending dated entries.
+When a session ends, Zug immediately appends new observations to `PERSONA.md`, then kicks off a background call to Claude Haiku to intelligently rewrite `PERSONA.md`, `PLAYBOOK.md`, and `ACTIVE.md` — integrating new observations into existing sections rather than appending dated entries.
+
+If synthesis succeeds, it overwrites the appended entries with the integrated version. If it fails or times out, the raw append remains as the fallback.
 
 Requires an API key at `~/.zug/.env`:
 ```bash
 echo "ANTHROPIC_API_KEY=sk-ant-your-key-here" > ~/.zug/.env
 ```
 
-If no key is set or the API call fails, Zug falls back to simple append behavior. The `zug_end_session` response reports `synthesized` or `appended` so you can tell which path ran.
-
 Cost: ~$0.001–0.003 per session end in Haiku tokens.
+
+---
+
+## HTTP Server (fly.io)
+
+For Claude.ai web and multi-machine sync, deploy the HTTP server:
+
+```bash
+fly launch   # first time
+fly deploy   # subsequent deploys
+```
+
+Set the following secrets:
+```bash
+fly secrets set ZUG_TOKEN=your-secret-token
+```
+
+The fly.toml already configures:
+- Persistent volume at `/data/.zug/` mapped via `ZUG_DATA_DIR`
+- Auto-sleep when idle, auto-wake on request
+- `ZUG_URL` for OAuth issuer metadata (set to your fly app URL)
+
+Configure clients for HTTP:
+```bash
+./install.sh --configure-http https://your-app.fly.dev your-secret-token
+```
 
 ---
 
 ## Merging Data from Another Machine
 
-If you run Zug on multiple machines, you can merge their data:
-
 ```bash
-# Copy the other machine's ~/.zug/ somewhere accessible, then:
 cd ~/.zug/server
 pnpm merge ~/path/to/external-zug-dir
 ```
@@ -154,8 +185,6 @@ This will:
 1. **observations.jsonl** — deduplicate by timestamp+text, merge, sort chronologically
 2. **sessions/** — copy any session files that don't already exist locally
 3. **PERSONA.md + PLAYBOOK.md** — call Haiku to synthesize both versions into one unified fingerprint (backs up originals before overwriting)
-
-If no API key is set, steps 1 and 2 still run — only the PERSONA/PLAYBOOK synthesis is skipped.
 
 ---
 
@@ -166,15 +195,16 @@ See [ROADMAP.md](ROADMAP.md) for the full development plan.
 | Phase | Status | What it adds |
 |---|---|---|
 | 1 — Local stdio | ✅ Done | Claude Code gets persistent memory |
-| 2 — Haiku synthesis | ✅ Done | AI synthesizes PERSONA/PLAYBOOK from session data + merge command |
-| 3 — HTTP + fly.io | ✅ Done | CLI + Desktop share memory via remote server |
-| 4 — Polish | 📋 Next | OAuth (unblocks web), onboarding flow, CLI, tests |
+| 2 — Haiku synthesis | ✅ Done | AI synthesizes PERSONA/PLAYBOOK from session data |
+| 3 — HTTP + fly.io | ✅ Done | All Claude surfaces share memory via remote server |
+| 4 — Polish | ✅ Done | OAuth, onboarding, CLI, tests, Linux support |
+| 5 — Session Fidelity | 📋 Next | Rules injection, PreCompact hook, delta start, observation reinforcement |
 
 ---
 
 ## Data Privacy
 
-All data stays on your machine at `~/.zug/`. Nothing is sent anywhere unless you set up Phase 3 (HTTP transport), at which point you control your own server and hosting.
+All data stays on your machine at `~/.zug/`. Nothing is sent anywhere unless you set up the HTTP server (Phase 3), at which point you control your own server and hosting. The only external calls are synthesis requests to the Anthropic API using your own API key.
 
 ---
 
@@ -190,4 +220,4 @@ The long-term goal: you start asking the questions Zug would have asked. That's 
 
 ## Contributing
 
-Built for personal use first, extensible by design. PRs welcome — especially for Phase 3 (HTTP transport) and Phase 4 (onboarding + CLI).
+Built for personal use first, extensible by design. PRs welcome — especially for Phase 5 (session fidelity) and Phase 6 (advanced persistence).

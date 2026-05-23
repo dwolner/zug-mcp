@@ -47,44 +47,34 @@
 **What was built:**
 - `src/http.ts` — Express server wrapping the same tools with HTTP/Streamable transport
 - Auth middleware: `X-Zug-Token` header validated before MCP handshake
-- Deployed on fly.io with persistent volume at `/data/.zug/` (data survives redeploys)
+- Deployed on fly.io with persistent volume at `/data/.zug/` (data survives redeploys via `ZUG_DATA_DIR`)
 - `install.sh --configure-http <url> <token>` configures all clients automatically
-- npm scripts: `start:stdio`, `start:http`
+- CI/CD: GitHub Actions workflow deploys to fly.io on every push to main
 
 **Client support (actual state):**
 | Surface | Transport | Status |
 |---|---|---|
 | Claude Code CLI | HTTP native | ✅ Works |
 | Claude Desktop | `mcp-remote` stdio proxy → HTTP | ✅ Works |
-| Claude.ai web | OAuth required — raw headers not supported | ❌ Blocked |
-
-**Claude Desktop setup:**
-- Claude Desktop only supports stdio — HTTP type is rejected
-- `install.sh --configure-http` writes an `mcp-remote` proxy config automatically
-- Create a Desktop Project and paste `prompts/system-prompt-desktop.md` as the system prompt to enable automatic `zug_get_context` calls
-
-**Claude.ai web:**
-- Settings → Integrations only supports OAuth-based connectors
-- No path forward without adding OAuth to the server (Phase 4 candidate)
+| Claude.ai web | OAuth (Phase 4) | ✅ Works |
 
 **fly.io note:** Machines sleep after inactivity, cold start ~2-3s. Upgrade to `min_machines_running = 1` when cold starts become disruptive.
 
 ---
 
-## Phase 4 — Polish 📋
+## Phase 4 — Polish ✅
 
 **Goal:** Zug is reliable, maintainable, and easy to hand to someone else.
 
-**Completed:**
+**What was built:**
 - ✅ Context tagging — optional `context` field on observations and sessions; `zug_get_recent_sessions` filterable by context
-
-**What to build (ordered by value/safety):**
-- Tests for storage and synthesis layers (T-011) — first: synthesis mutates PERSONA.md; tests must exist before Phase 5 changes
-- Onboarding flow: new user runs install, answers 5 questions, Haiku writes their seed PERSONA.md (T-009)
-- `zug_status` extended: last session date, PERSONA.md excerpt, growth trend (T-007)
-- CLI: `zug status`, `zug tail` (recent observations), `zug persona` (print fingerprint) (T-008) — blocked by T-007
-- Linux support in install.sh (T-010)
-- OAuth support for the HTTP server — unblocks Claude.ai web integration (T-006) — last: high effort, one surface
+- ✅ Tests — Vitest unit tests for `storage.ts` and `synthesize.ts`; `storage.ts` refactored to read `ZUG_DATA_DIR` lazily for test isolation (T-011)
+- ✅ Onboarding flow — interactive 5-question CLI seeding `PERSONA.md` via Haiku on first install; `src/api-key.ts` extracted as shared module (T-009)
+- ✅ Extended `zug_status` — last session date, 2-line PERSONA excerpt, 4-week rolling observation trend (T-007)
+- ✅ CLI — `zug status`, `zug tail [n]`, `zug persona`; global binary via `pnpm link --global` (T-008)
+- ✅ Linux support — replaced python3 JSON-patching blocks with `node -` + `process.argv` helpers; added git dependency check (T-010)
+- ✅ OAuth 2.1 — `src/oauth-provider.ts` with PKCE, refresh token rotation, code TTL, in-memory storage; `src/http.ts` migrated to Express with `mcpAuthRouter`; dual auth preserves legacy `X-Zug-Token` (T-006)
+- ✅ Synthesis timeout fix — `zug_end_session` appends observations immediately and runs Haiku synthesis in the background; no MCP transport timeouts
 
 ---
 
@@ -126,6 +116,6 @@
 
 ## Contributing
 
-Each phase has a clear entry point. Phase 3 is the highest-leverage next step — it's what connects all Claude surfaces to one shared memory.
+Each phase has a clear entry point. Phase 5 is the current focus — session fidelity improvements that make context survive compaction and accumulate signal over time.
 
-If you're building Phase 3 or 4, read `docs/architecture.md` first.
+If you're building Phase 5 or 6, read `docs/architecture.md` first.
