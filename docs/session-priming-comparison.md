@@ -40,14 +40,20 @@ First call: ACTIVE.md only (~157 tokens). Full context on demand.
 
 **Why not implemented:** Delta already covers this use case at ~400–600 tokens with no extra tool call. The marginal save (~300 tokens) doesn't justify a second decision point. Skipped.
 
-## Key structural finding: ACTIVE.md is already free
+## Key structural finding: ACTIVE.md is effectively free after session 1
 
-`syncRulesContext()` runs inside every `zug_get_context` call and writes ACTIVE.md + a 3-line persona excerpt to `~/.claude/rules/zug-context.md`. That file is injected into every Claude Code session automatically — before `zug_get_context` is even called.
+`syncRulesContext()` runs inside every `zug_get_context` call and writes ACTIVE.md + a 3-line persona excerpt to `~/.claude/rules/zug-context.md`. Claude Code loads that rules file at the **start of the next session** — so by session 2+, ACTIVE.md is already present in the rules context when `zug_get_context` is called.
 
-This means:
-- ACTIVE.md is never the reason to call `zug_get_context` — it's already there
+Precise timing:
+- Session N calls `zug_get_context` → `syncRulesContext()` writes zug-context.md
+- Session N+1 starts → Claude Code loads zug-context.md from disk (ACTIVE already present)
+- Session N+1 calls `zug_get_context` → ACTIVE is redundant in the response, but PERSONA and PLAYBOOK are not
+
+This means (for established sessions):
+- ACTIVE.md loading via `zug_get_context` is redundant — the rules file already provided it
 - The real value of calling `zug_get_context` is loading PERSONA.md and PLAYBOOK.md
 - Delta is therefore: "just the new stuff on top of what the rules file already injected"
+- On a brand-new install (session 1), zug-context.md doesn't exist yet — full context is required
 
 ## Recommendation matrix
 
