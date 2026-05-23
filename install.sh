@@ -124,6 +124,27 @@ else
   warn '  { "hooks": { "PreCompact": [{ "matcher": "", "hooks": [{ "type": "command", "command": "zug compact" }] }] } }'
 fi
 
+# ── Register SessionStart hook (post-compaction resume) ───────────────────────
+# ZUG_BIN and SETTINGS_JSON already resolved above
+if [[ -n "$ZUG_BIN" && -f "$SETTINGS_JSON" ]] && "$ZUG_BIN" --version > /dev/null 2>&1; then
+  info "Registering SessionStart hook..."
+  node - "$SETTINGS_JSON" "$ZUG_BIN" << 'JSEOF'
+const fs = require('fs');
+const [settingsPath, zugBin] = process.argv.slice(2);
+const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+settings.hooks = settings.hooks || {};
+settings.hooks.SessionStart = (settings.hooks.SessionStart || []).filter(
+  h => !h.hooks?.some(e => e.command?.includes('zug resume'))
+);
+settings.hooks.SessionStart.push({
+  matcher: "compact",
+  hooks: [{ type: "command", command: zugBin + " resume" }]
+});
+fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n');
+JSEOF
+  success "SessionStart hook registered ($ZUG_BIN resume)"
+fi
+
 # ── Create data directories ────────────────────────────────────────────────────
 info "Creating data directories..."
 mkdir -p "$ZUG_DIR/sessions"

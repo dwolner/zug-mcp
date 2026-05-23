@@ -75,6 +75,34 @@ function cmdPersona() {
   console.log(content);
 }
 
+function cmdResume() {
+  const { sessions, observations } = getStats();
+  const lastDate = getLastSessionDate();
+  const active = readActive();
+
+  if (sessions === 0 && !active) {
+    console.log("# Zug — context resumed (no data yet)");
+    return;
+  }
+
+  const parts: string[] = ["# Zug — Context Resumed", ""];
+  parts.push("Your session context was compacted. Your Zug data is intact on disk.", "");
+
+  const statLine = `Sessions: ${sessions}${lastDate ? ` | Last: ${lastDate}` : ""} | Observations: ${observations}`;
+  parts.push(statLine, "");
+
+  if (active) {
+    parts.push("## Active Patterns", "", active, "");
+  }
+
+  parts.push(
+    "## Action required",
+    "Call zug_get_context now to reload your full cognitive fingerprint and playbook.",
+  );
+
+  console.log(parts.join("\n"));
+}
+
 function cmdCompact() {
   const { sessions, observations } = getStats();
   const lastDate = getLastSessionDate();
@@ -125,6 +153,9 @@ switch (cmd) {
     break;
   case "compact":
     cmdCompact();
+    break;
+  case "resume":
+    cmdResume();
     break;
   case "--version":
   case "version":
