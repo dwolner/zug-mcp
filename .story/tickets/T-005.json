@@ -3,13 +3,14 @@
     "T-002",
     "T-003"
   ],
-  "completedDate": null,
+  "claimedBySession": "fa27eea2-7349-41ed-8f1e-ba7b87f15e99",
+  "completedDate": "2026-05-23",
   "createdDate": "2026-05-22",
   "description": "Design and document a comparison of session priming strategies: (1) full context dump via zug_get_context, (2) delta-only recap, (3) layered load (active patterns first, full fingerprint on demand). Storybloq has a SESSION_PRIMING_COMPARISON.md suggesting this was a hard design problem for them too. Inform the delta session start ticket (T-3) with empirical data.",
   "id": "T-005",
   "order": 70,
   "phase": "p5",
-  "status": "open",
+  "status": "complete",
   "title": "Session priming comparison — benchmark full load vs. delta approach",
   "type": "task"
 }
