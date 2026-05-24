@@ -524,7 +524,7 @@ export function createServer(): McpServer {
           { name: "Meta-Cognitive Awareness", prompt: `Is the reasoner aware of their own reasoning process? Do they acknowledge uncertainty, bias, or limitations in their thinking? Be specific and concise (2-3 sentences):\n\n${text}` },
         ];
 
-        const results = await Promise.all(
+        const settled = await Promise.allSettled(
           lenses.map(async (lens) => {
             const response = await client.messages.create({
               model: HAIKU_MODEL,
@@ -537,10 +537,14 @@ export function createServer(): McpServer {
           })
         );
 
+        const sections = settled.map((result, i) =>
+          result.status === "fulfilled" ? result.value : `### ${lenses[i].name}\n(lens failed)`
+        );
+
         return {
           content: [{
             type: "text" as const,
-            text: `## Reasoning Analysis\n\n${results.join("\n\n")}`,
+            text: `## Reasoning Analysis\n\n${sections.join("\n\n")}`,
           }],
         };
       } catch (err) {

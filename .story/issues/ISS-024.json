@@ -8,9 +8,9 @@
   "location": [],
   "phase": null,
   "relatedTickets": [],
-  "resolution": null,
-  "resolvedDate": null,
+  "resolution": "Switched from Promise.all to Promise.allSettled in zug_reasoning_analysis. Individual lens failures now produce a (lens failed) placeholder for that lens instead of failing the entire call. Partial results are returned for all 6 lenses even if some error.",
+  "resolvedDate": "2026-05-24",
   "severity": "medium",
-  "status": "open",
+  "status": "resolved",
   "title": "[ux] Promise.all means a single lens failure returns error for the whole analysis rat"
 }
