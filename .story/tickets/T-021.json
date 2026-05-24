@@ -1,12 +1,13 @@
 {
   "blockedBy": [],
-  "completedDate": null,
+  "claimedBySession": "9d2e1615-f840-4b9a-991b-15eaf82acb3a",
+  "completedDate": "2026-05-24",
   "createdDate": "2026-05-24",
   "description": "Create `LICENSE` with standard MIT text. Copyright holder: Daniel Wolner, 2026.",
   "id": "T-021",
   "order": 20,
   "phase": "p7",
-  "status": "open",
+  "status": "complete",
   "title": "MIT LICENSE file",
   "type": "chore"
 }
