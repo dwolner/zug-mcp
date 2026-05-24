@@ -1,12 +1,13 @@
 {
   "blockedBy": [],
-  "completedDate": null,
+  "claimedBySession": "9d2e1615-f840-4b9a-991b-15eaf82acb3a",
+  "completedDate": "2026-05-24",
   "createdDate": "2026-05-24",
   "description": "Create CONTRIBUTING.md covering: clone + pnpm install, `pnpm dev` for running the MCP server locally, `pnpm cli` for CLI commands, `pnpm test` / `pnpm test:watch` / `pnpm typecheck`, `pnpm build` output, PR guidelines (focused PRs, tests required, explain the why), data format note (JSONL append-only), project structure overview of src/ files.",
   "id": "T-026",
   "order": 70,
   "phase": "p7",
-  "status": "open",
+  "status": "complete",
   "title": "CONTRIBUTING.md",
   "type": "chore"
 }
