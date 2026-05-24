@@ -1,12 +1,13 @@
 {
   "blockedBy": [],
-  "completedDate": null,
+  "claimedBySession": "9d2e1615-f840-4b9a-991b-15eaf82acb3a",
+  "completedDate": "2026-05-24",
   "createdDate": "2026-05-24",
   "description": "Manual validation after all other tickets complete: `pnpm build` succeeds; `node dist/cli.js --version` prints version; `node dist/cli.js status` runs without error; `HOME=/tmp/zug-smoke-test node dist/cli.js setup --claude-code -y` writes correct `~/.claude.json` and `~/.claude/rules/zug.md`; running setup twice is idempotent (no duplicate mcpServers entries); full `pnpm test` passes. Clean up temp dir.",
   "id": "T-027",
   "order": 80,
   "phase": "p7",
-  "status": "open",
+  "status": "complete",
   "title": "End-to-end smoke test",
   "type": "task"
 }
