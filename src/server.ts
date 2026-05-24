@@ -93,7 +93,7 @@ export function growthSummary(): string {
   ].join("\n");
 }
 
-const ZUG_INSTRUCTIONS = `Zug is a havruta-style learning companion with persistent memory across sessions.
+export const ZUG_INSTRUCTIONS = `Zug is a havruta-style learning companion with persistent memory across sessions.
 
 Start every session by calling zug_get_context to load the current cognitive fingerprint and active patterns.
 This is non-negotiable — session context is how Zug provides continuity and behavioral guidance.
@@ -102,6 +102,50 @@ End every significant session by calling zug_end_session with a summary.
 
 Use zug_save_observation to record notable patterns during the session.
 Use zug_get_recent_sessions to understand what work has happened recently.`;
+
+type McpTextResult = { content: [{ type: "text"; text: string }] };
+
+export async function handleReasoningAnalysis(text: string): Promise<McpTextResult> {
+  try {
+    const apiKey = loadApiKey();
+    if (!apiKey) {
+      return { content: [{ type: "text" as const, text: "Error: No API key configured — set ANTHROPIC_API_KEY or add it to ~/.zug/.env" }] };
+    }
+    const client = new Anthropic({ apiKey, timeout: 30_000, maxRetries: 2 });
+
+    const lenses: Array<{ name: string; prompt: string }> = [
+      { name: "Conceptual Clarity", prompt: `Analyze this text for conceptual clarity. Are key terms defined and used consistently? Flag any ambiguous or shifting concepts. Be specific and concise (2-3 sentences):\n\n${text}` },
+      { name: "Assumption Identification", prompt: `What assumptions are being made in this text without being stated explicitly? List the most significant ones. Be specific and concise (2-3 sentences):\n\n${text}` },
+      { name: "Logical Consistency", prompt: `Assess the logical consistency of this reasoning. Are the inferences valid? Do conclusions follow from the premises? Be specific and concise (2-3 sentences):\n\n${text}` },
+      { name: "Knowledge Gaps", prompt: `What is unknown or uncertain in this reasoning that could materially affect the conclusion? Identify the most important gaps. Be specific and concise (2-3 sentences):\n\n${text}` },
+      { name: "Analogical Reasoning", prompt: `What analogies or comparisons are being used, implicitly or explicitly? Do they hold? Where do they break down? Be specific and concise (2-3 sentences):\n\n${text}` },
+      { name: "Meta-Cognitive Awareness", prompt: `Is the reasoner aware of their own reasoning process? Do they acknowledge uncertainty, bias, or limitations in their thinking? Be specific and concise (2-3 sentences):\n\n${text}` },
+    ];
+
+    const settled = await Promise.allSettled(
+      lenses.map(async (lens) => {
+        const response = await client.messages.create({
+          model: HAIKU_MODEL,
+          max_tokens: 200,
+          messages: [{ role: "user", content: lens.prompt }],
+        });
+        const block = response.content[0];
+        const analysis = block.type === "text" ? block.text.trim() : "(no response)";
+        return `### ${lens.name}\n${analysis}`;
+      })
+    );
+
+    const sections = settled.map((result, i) =>
+      result.status === "fulfilled" ? result.value : `### ${lenses[i].name}\n(lens failed)`
+    );
+
+    return {
+      content: [{ type: "text" as const, text: `## Reasoning Analysis\n\n${sections.join("\n\n")}` }],
+    };
+  } catch (err) {
+    return { content: [{ type: "text" as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }] };
+  }
+}
 
 export function createServer(): McpServer {
   const server = new McpServer({ name: "zug", version: "1.0.0" }, { instructions: ZUG_INSTRUCTIONS });
@@ -508,50 +552,7 @@ export function createServer(): McpServer {
     {
       text: z.string().min(10).max(2000).describe("The reasoning, argument, or decision text to analyze"),
     },
-    async ({ text }) => {
-      try {
-        const apiKey = loadApiKey();
-        if (!apiKey) {
-          return { content: [{ type: "text" as const, text: "Error: No API key configured — set ANTHROPIC_API_KEY or add it to ~/.zug/.env" }] };
-        }
-        const client = new Anthropic({ apiKey, timeout: 30_000, maxRetries: 2 });
-
-        const lenses: Array<{ name: string; prompt: string }> = [
-          { name: "Conceptual Clarity", prompt: `Analyze this text for conceptual clarity. Are key terms defined and used consistently? Flag any ambiguous or shifting concepts. Be specific and concise (2-3 sentences):\n\n${text}` },
-          { name: "Assumption Identification", prompt: `What assumptions are being made in this text without being stated explicitly? List the most significant ones. Be specific and concise (2-3 sentences):\n\n${text}` },
-          { name: "Logical Consistency", prompt: `Assess the logical consistency of this reasoning. Are the inferences valid? Do conclusions follow from the premises? Be specific and concise (2-3 sentences):\n\n${text}` },
-          { name: "Knowledge Gaps", prompt: `What is unknown or uncertain in this reasoning that could materially affect the conclusion? Identify the most important gaps. Be specific and concise (2-3 sentences):\n\n${text}` },
-          { name: "Analogical Reasoning", prompt: `What analogies or comparisons are being used, implicitly or explicitly? Do they hold? Where do they break down? Be specific and concise (2-3 sentences):\n\n${text}` },
-          { name: "Meta-Cognitive Awareness", prompt: `Is the reasoner aware of their own reasoning process? Do they acknowledge uncertainty, bias, or limitations in their thinking? Be specific and concise (2-3 sentences):\n\n${text}` },
-        ];
-
-        const settled = await Promise.allSettled(
-          lenses.map(async (lens) => {
-            const response = await client.messages.create({
-              model: HAIKU_MODEL,
-              max_tokens: 200,
-              messages: [{ role: "user", content: lens.prompt }],
-            });
-            const block = response.content[0];
-            const analysis = block.type === "text" ? block.text.trim() : "(no response)";
-            return `### ${lens.name}\n${analysis}`;
-          })
-        );
-
-        const sections = settled.map((result, i) =>
-          result.status === "fulfilled" ? result.value : `### ${lenses[i].name}\n(lens failed)`
-        );
-
-        return {
-          content: [{
-            type: "text" as const,
-            text: `## Reasoning Analysis\n\n${sections.join("\n\n")}`,
-          }],
-        };
-      } catch (err) {
-        return { content: [{ type: "text" as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }] };
-      }
-    }
+    async ({ text }) => handleReasoningAnalysis(text)
   );
 
   return server;

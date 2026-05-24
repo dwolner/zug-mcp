@@ -8,9 +8,9 @@
   "location": [],
   "phase": null,
   "relatedTickets": [],
-  "resolution": null,
-  "resolvedDate": null,
+  "resolution": "Exported ZUG_INSTRUCTIONS and handleReasoningAnalysis from server.ts. Tests now verify the constant directly and invoke the handler function, eliminating all (server as any)._* private field access.",
+  "resolvedDate": "2026-05-24",
   "severity": "medium",
-  "status": "open",
+  "status": "resolved",
   "title": "[testing] Tests access (server as any)._registeredTools — a private McpServer field. Fragi"
 }
