@@ -11,9 +11,9 @@
   ],
   "phase": null,
   "relatedTickets": [],
-  "resolution": null,
-  "resolvedDate": null,
+  "resolution": "Changed `currentPlaybook: readPersona()` to `currentPlaybook: readPlaybook()` in the synthesize() call in src/server.ts (line 294). The typo caused every synthesis run to receive the current persona content in both the persona and playbook fields, so PLAYBOOK.md was never read or used as input. Now synthesis receives the actual PLAYBOOK.md content and can update it independently from the persona.",
+  "resolvedDate": "2026-05-24",
   "severity": "critical",
-  "status": "open",
+  "status": "resolved",
   "title": "[bug] currentPlaybook: readPersona() — synthesis never sees the real PLAYBOOK.md"
 }

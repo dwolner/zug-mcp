@@ -291,7 +291,7 @@ export function createServer(): McpServer {
       if (meaningful.length > 0) {
         synthesize({
           currentPersona: persona,
-          currentPlaybook: readPersona(), // re-read after append
+          currentPlaybook: readPlaybook(),
           sessionSummary: summary,
           observations: meaningful.map((o) => ({
             type: o.type,
