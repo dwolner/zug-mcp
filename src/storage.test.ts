@@ -404,15 +404,16 @@ describe("getObservationsSince", () => {
 describe("reinforcePattern / getTopPatterns", () => {
   it("creates a new pattern with count 1 on first reinforce", () => {
     const result = reinforcePattern("Thinks in systems");
-    expect(result.count).toBe(1);
-    expect(result.text).toBe("Thinks in systems");
+    expect(result.pattern.count).toBe(1);
+    expect(result.pattern.text).toBe("Thinks in systems");
+    expect(result.matched).toBe(false);
   });
 
   it("increments count on subsequent reinforcements", () => {
     reinforcePattern("Thinks in systems");
     reinforcePattern("Thinks in systems");
     const result = reinforcePattern("Thinks in systems");
-    expect(result.count).toBe(3);
+    expect(result.pattern.count).toBe(3);
   });
 
   it("tracks separate patterns independently", () => {
@@ -444,6 +445,27 @@ describe("reinforcePattern / getTopPatterns", () => {
     reinforcePattern("B");
     reinforcePattern("C");
     expect(getTopPatterns(2)).toHaveLength(2);
+  });
+
+  it("fuzzy matches case-insensitive normalized text", () => {
+    reinforcePattern("User prefers concise answers");
+    const result = reinforcePattern("user prefers concise answers");
+    expect(result.matched).toBe(true);
+    expect(result.pattern.count).toBe(2);
+  });
+
+  it("fuzzy matches by word overlap above threshold", () => {
+    reinforcePattern("User builds systems thinking in layers with careful abstractions");
+    const result = reinforcePattern("User thinks in layers and builds careful abstractions");
+    expect(result.matched).toBe(true);
+    expect(result.pattern.count).toBe(2);
+  });
+
+  it("does not fuzzy match unrelated patterns", () => {
+    reinforcePattern("User prefers concise answers");
+    const result = reinforcePattern("Completely different topic here");
+    expect(result.matched).toBe(false);
+    expect(result.pattern.count).toBe(1);
   });
 });
 

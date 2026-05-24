@@ -392,16 +392,23 @@ export function createServer(): McpServer {
 
   server.tool(
     "zug_reinforce_observation",
-    "Mark a pattern as recurring across sessions. Call this when you notice the same observation appearing again. Reinforced patterns get elevated weight in synthesis.",
+    "Mark a pattern as recurring across sessions. Call this when you notice the same observation appearing again. Uses fuzzy matching — near-equivalent phrasings reinforce the same entry. Reinforced patterns get elevated weight in synthesis.",
     {
-      text: z.string().describe("The observation text to reinforce — ideally matching a previous observation"),
+      text: z.string().describe("The observation text to reinforce — fuzzy matching handles minor rephrasing"),
     },
     async ({ text }) => {
       const trimmed = text.trim();
       if (!trimmed) return { content: [{ type: "text" as const, text: "Error: text cannot be empty" }] };
-      const result = reinforcePattern(trimmed);
+      const { pattern, matched, similarity } = reinforcePattern(trimmed);
+      const matchNote = matched && pattern.text !== trimmed
+        ? ` (fuzzy match, similarity ${Math.round(similarity * 100)}%)`
+        : "";
+      const existing = getTopPatterns(5);
+      const existingNote = existing.length > 0
+        ? `\n\nTop patterns for reference:\n${existing.map((p) => `- (${p.count}x) ${p.text}`).join("\n")}`
+        : "";
       return {
-        content: [{ type: "text" as const, text: `Reinforced (${result.count}x): ${result.text}` }],
+        content: [{ type: "text" as const, text: `Reinforced (${pattern.count}x)${matchNote}: ${pattern.text}${existingNote}` }],
       };
     }
   );

@@ -277,19 +277,62 @@ export interface ReinforcedPattern {
   lastSeen: string;
 }
 
-export function reinforcePattern(text: string): ReinforcedPattern {
+export interface ReinforceResult {
+  pattern: ReinforcedPattern;
+  matched: boolean;
+  similarity: number;
+}
+
+function normalizeText(text: string): string {
+  return text.toLowerCase().replace(/[^\w\s]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+const STOP_WORDS = new Set(["the", "and", "for", "with", "that", "this", "from", "are", "was", "were", "has", "have", "not", "but", "all"]);
+
+// Jaccard similarity over content words (>2 chars, not stop words)
+function wordSimilarity(a: string, b: string): { jaccard: number; sharedCount: number } {
+  const words = (s: string) => new Set(normalizeText(s).split(" ").filter((w) => w.length > 2 && !STOP_WORDS.has(w)));
+  const A = words(a);
+  const B = words(b);
+  const shared = [...A].filter((w) => B.has(w));
+  const union = new Set([...A, ...B]).size;
+  return { jaccard: union > 0 ? shared.length / union : 0, sharedCount: shared.length };
+}
+
+function findBestMatch(patterns: ReinforcedPattern[], text: string): { idx: number; similarity: number } {
+  const norm = normalizeText(text);
+  let bestIdx = -1;
+  let bestSim = 0;
+
+  for (let i = 0; i < patterns.length; i++) {
+    if (normalizeText(patterns[i].text) === norm) return { idx: i, similarity: 1 };
+    const { jaccard, sharedCount } = wordSimilarity(patterns[i].text, text);
+    // Require both ratio threshold AND at least 2 shared content words
+    if (jaccard >= 0.4 && sharedCount >= 2 && jaccard > bestSim) {
+      bestSim = jaccard;
+      bestIdx = i;
+    }
+  }
+
+  return { idx: bestIdx, similarity: bestSim };
+}
+
+function loadPatterns(reinforcementsFile: string): ReinforcedPattern[] {
+  if (!fs.existsSync(reinforcementsFile)) return [];
+  return fs.readFileSync(reinforcementsFile, "utf-8")
+    .split("\n")
+    .filter(Boolean)
+    .map((l) => { try { return JSON.parse(l) as ReinforcedPattern; } catch { return null; } })
+    .filter((p): p is ReinforcedPattern => p !== null);
+}
+
+export function reinforcePattern(text: string): ReinforceResult {
   ensureDirs();
   const { reinforcementsFile } = getPaths();
 
-  const patterns: ReinforcedPattern[] = fs.existsSync(reinforcementsFile)
-    ? fs.readFileSync(reinforcementsFile, "utf-8")
-        .split("\n")
-        .filter(Boolean)
-        .map((l) => { try { return JSON.parse(l) as ReinforcedPattern; } catch { return null; } })
-        .filter((p): p is ReinforcedPattern => p !== null)
-    : [];
+  const patterns = loadPatterns(reinforcementsFile);
+  const { idx, similarity } = findBestMatch(patterns, text);
 
-  const idx = patterns.findIndex((p) => p.text === text);
   const updated: ReinforcedPattern = idx >= 0
     ? { ...patterns[idx], count: patterns[idx].count + 1, lastSeen: new Date().toISOString() }
     : { text, count: 1, lastSeen: new Date().toISOString() };
@@ -301,19 +344,13 @@ export function reinforcePattern(text: string): ReinforcedPattern {
   }
 
   fs.writeFileSync(reinforcementsFile, patterns.map((p) => JSON.stringify(p)).join("\n") + "\n", "utf-8");
-  return updated;
+  return { pattern: updated, matched: idx >= 0, similarity };
 }
 
 export function getTopPatterns(limit: number): ReinforcedPattern[] {
   ensureDirs();
   const { reinforcementsFile } = getPaths();
-  if (!fs.existsSync(reinforcementsFile)) return [];
-
-  return fs.readFileSync(reinforcementsFile, "utf-8")
-    .split("\n")
-    .filter(Boolean)
-    .map((l) => { try { return JSON.parse(l) as ReinforcedPattern; } catch { return null; } })
-    .filter((p): p is ReinforcedPattern => p !== null)
+  return loadPatterns(reinforcementsFile)
     .sort((a, b) => b.count - a.count)
     .slice(0, limit);
 }

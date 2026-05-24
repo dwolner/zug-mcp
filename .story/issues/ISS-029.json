@@ -12,9 +12,9 @@
   ],
   "phase": null,
   "relatedTickets": [],
-  "resolution": null,
-  "resolvedDate": null,
+  "resolution": "Replaced exact-text matching in reinforcePattern with fuzzy matching: normalized text comparison (case-insensitive, punctuation-stripped) plus Jaccard word-overlap similarity (threshold 0.4, minimum 2 shared content words). The tool now reinforces the closest existing pattern when a near-equivalent is found, rather than creating a duplicate. The tool response also returns the top 5 patterns so agents can see what exists. Updated storage.test.ts to cover fuzzy match, miss, and normalization cases.",
+  "resolvedDate": "2026-05-24",
   "severity": "high",
-  "status": "open",
+  "status": "resolved",
   "title": "[usability] zug_reinforce_observation requires exact text match — unusable in practice"
 }
