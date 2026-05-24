@@ -13,9 +13,9 @@
   "relatedTickets": [
     "T-006"
   ],
-  "resolution": null,
-  "resolvedDate": null,
+  "resolution": "Added ZUG_REGISTER_TOKEN env var. When set, POST /register requires it as a Bearer token (RFC 7591 initial access token pattern). Uses timingSafeEqual to prevent timing attacks. Opt-in — defaults to open registration for backward compatibility. registerClient already enforces https://claude.ai/ redirect URIs as a second layer.",
+  "resolvedDate": "2026-05-24",
   "severity": "medium",
-  "status": "open",
+  "status": "resolved",
   "title": "OAuth /register endpoint is open — any peer can register a claude.ai client"
 }
