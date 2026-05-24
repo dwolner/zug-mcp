@@ -1,0 +1,12 @@
+{
+  "blockedBy": [],
+  "completedDate": null,
+  "createdDate": "2026-05-24",
+  "description": "Rewrite README.md as the public npm/GitHub landing page. Headline: \"The memory and reflection layer for people who work with AI.\" Subhead: \"Observations. Patterns. Lessons. Growth — across every session, every agent.\" Include: install one-liner, what it does, agent support table (honest about two-tier autonomy — Claude Code is first-class, others are best-effort), CLI commands, all 16 tools listed by category, data directory layout, MIT license note, link to CONTRIBUTING.md.",
+  "id": "T-025",
+  "order": 60,
+  "phase": "p7",
+  "status": "open",
+  "title": "README — public-facing OSS landing page",
+  "type": "chore"
+}

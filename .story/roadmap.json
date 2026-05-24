@@ -43,6 +43,13 @@
       "id": "p6",
       "label": "PHASE 6",
       "name": "Advanced Persistence"
+    },
+    {
+      "description": "Make Zug installable by anyone in under 2 minutes. npm package with two binaries (zug CLI + zug-mcp server), auto-detecting setup command for Claude Code/Cursor/Windsurf, MCP server instructions field for non-Claude-Code autonomy, and a public-facing README.",
+      "id": "p7",
+      "label": "PHASE 7",
+      "name": "OSS Distribution",
+      "summary": "npm install -g zug-mcp — installable, agent-agnostic, MIT"
     }
   ],
   "title": "zug"

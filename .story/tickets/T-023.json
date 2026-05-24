@@ -1,0 +1,12 @@
+{
+  "blockedBy": [],
+  "completedDate": null,
+  "createdDate": "2026-05-24",
+  "description": "Create `src/setup.ts` with: `detectAgents({ home? })` scanning for `~/.claude/`, `~/.cursor/`, `~/.codeium/windsurf/`; `mergeMcpConfig(path)` that reads existing JSON, sets `mcpServers.zug = { command: \"zug-mcp\", args: [] }`, writes back (idempotent, creates parent dirs, handles malformed JSON); `runSetup(opts)` orchestrating auto-detect vs explicit flags, confirmation prompt, writing Claude Code config + `~/.claude/rules/zug.md`, Cursor config, Windsurf config, and ensuring `~/.zug/` data dir exists. Create `src/setup.test.ts` with full test coverage for detectAgents (4 cases) and mergeMcpConfig (5 cases) using a temp HOME dir.",
+  "id": "T-023",
+  "order": 40,
+  "phase": "p7",
+  "status": "open",
+  "title": "zug setup — agent detection and config writing",
+  "type": "feature"
+}

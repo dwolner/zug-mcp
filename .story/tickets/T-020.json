@@ -1,0 +1,13 @@
+{
+  "blockedBy": [],
+  "claimedBySession": "9d2e1615-f840-4b9a-991b-15eaf82acb3a",
+  "completedDate": "2026-05-24",
+  "createdDate": "2026-05-24",
+  "description": "Add `zug-mcp` bin entry pointing to `dist/stdio.js`, update `zug` bin to `dist/cli.js` (currently points to src/cli.ts which can't ship in npm), add `files` field (`dist/`, `LICENSE`, `README.md`), add `engines: node>=20`, add `prepublishOnly: pnpm build` script. Verify `pnpm build` produces both binaries cleanly.",
+  "id": "T-020",
+  "order": 10,
+  "phase": "p7",
+  "status": "complete",
+  "title": "Package.json — npm publish setup",
+  "type": "chore"
+}

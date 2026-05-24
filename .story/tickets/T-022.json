@@ -1,0 +1,12 @@
+{
+  "blockedBy": [],
+  "completedDate": null,
+  "createdDate": "2026-05-24",
+  "description": "Add `instructions` string to `createServer()` in `src/server.ts`. Pass it to `McpServer` constructor as `options.instructions` — the SDK's low-level Server class surfaces it in the MCP initialize response. This is how Cursor/Windsurf agents get behavioral guidance without a rules file. Write a test asserting `server.server._instructions` is a non-empty string containing `zug_get_context`.",
+  "id": "T-022",
+  "order": 30,
+  "phase": "p7",
+  "status": "open",
+  "title": "MCP server instructions field",
+  "type": "feature"
+}

@@ -4,10 +4,20 @@
   "description": "Zug — persistent memory MCP server for a havruta learning companion",
   "main": "dist/stdio.js",
   "bin": {
-    "zug": "src/cli.ts"
+    "zug": "dist/cli.js",
+    "zug-mcp": "dist/stdio.js"
+  },
+  "files": [
+    "dist/",
+    "LICENSE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
   },
   "scripts": {
     "build": "tsc",
+    "prepublishOnly": "pnpm build",
     "dev": "tsx src/stdio.ts",
     "start:http": "node dist/http.js",
     "typecheck": "tsc --noEmit",

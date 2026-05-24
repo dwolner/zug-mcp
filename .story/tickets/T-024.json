@@ -1,0 +1,12 @@
+{
+  "blockedBy": [],
+  "completedDate": null,
+  "createdDate": "2026-05-24",
+  "description": "Update `src/cli.ts`: add `setup` command (delegates to `runSetup()` from setup.ts, supports `--claude-code --cursor --windsurf --all -y` flags); add `update` command (runs `npm install -g zug-mcp@latest` via execSync); extend `status` to show per-agent config status (reads each MCP config file, checks for `mcpServers.zug` entry) and data dir size (du -sh). Update printUsage() to document new commands.",
+  "id": "T-024",
+  "order": 50,
+  "phase": "p7",
+  "status": "open",
+  "title": "CLI — add setup and update commands",
+  "type": "feature"
+}

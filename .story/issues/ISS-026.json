@@ -1,0 +1,19 @@
+{
+  "components": [
+    "testing",
+    "build"
+  ],
+  "discoveredDate": "2026-05-24",
+  "id": "ISS-026",
+  "impact": "After running `pnpm build`, vitest picks up compiled test files from dist/ and fails with \"Vitest cannot be imported in a CommonJS module using require()\". The 97 source tests all pass but 3 suites error. Fix: add `include: [\"src/**/*.test.ts\"]` to vitest.config.ts.",
+  "location": [
+    "vitest.config.ts"
+  ],
+  "phase": null,
+  "relatedTickets": [],
+  "resolution": null,
+  "resolvedDate": null,
+  "severity": "medium",
+  "status": "open",
+  "title": "vitest scans dist/ compiled test files — fails with CJS/ESM error after any build"
+}
