@@ -1,12 +1,13 @@
 {
   "blockedBy": [],
-  "completedDate": null,
+  "claimedBySession": "325c3fc0-e440-48d0-ad08-7bd1aec08214",
+  "completedDate": "2026-05-24",
   "createdDate": "2026-05-24",
   "description": "Design decision required before T-016 can be implemented. Resolve: (1) what event triggers multi-lens analysis — every message is too expensive, explicit demand is just \"ask Claude,\" so what's the right inflection point? Candidates: start of decision mode, specific phrasing patterns, manual tool invocation, N exchanges into decision mode. (2) Frequency cap per session/topic. (3) Output disposition — inline, observation, session-end summary. (4) Minimum lens set. (5) Cost acceptance at intended trigger rate. This is a design/discussion ticket, not an implementation ticket.",
   "id": "T-019",
   "order": 50,
   "phase": "p6",
-  "status": "open",
+  "status": "complete",
   "title": "Design: multi-lens trigger contract — when does reasoning analysis add value?",
   "type": "task"
 }
