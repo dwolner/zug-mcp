@@ -8,7 +8,6 @@ import { isRateLimited } from "./rate-limit.js";
 import { zugOAuthProvider } from "./oauth-provider.js";
 
 const ZUG_TOKEN = process.env.ZUG_TOKEN || "";
-const ZUG_REGISTER_TOKEN = process.env.ZUG_REGISTER_TOKEN || "";
 const PORT = parseInt(process.env.PORT || "8080", 10);
 const ZUG_URL = process.env.ZUG_URL || `http://localhost:${PORT}`;
 
@@ -32,21 +31,6 @@ function getClientIp(req: express.Request): string {
 }
 
 const app = express();
-
-// Restrict /register to requests bearing ZUG_REGISTER_TOKEN when set (RFC 7591 initial access token)
-if (ZUG_REGISTER_TOKEN) {
-  app.use("/register", (req, res, next) => {
-    if (req.method !== "POST") { next(); return; }
-    const auth = req.headers.authorization;
-    const token = auth?.startsWith("Bearer ") ? auth.slice(7) : "";
-    const tokenBuf = Buffer.from(token);
-    const expectedBuf = Buffer.from(ZUG_REGISTER_TOKEN);
-    if (tokenBuf.length === expectedBuf.length && timingSafeEqual(tokenBuf, expectedBuf)) {
-      next(); return;
-    }
-    res.status(401).json({ error: "Registration requires a valid initial access token" });
-  });
-}
 
 // OAuth endpoints: /.well-known/oauth-authorization-server, /authorize, /token, /register, /revoke
 app.use(mcpAuthRouter({ provider: zugOAuthProvider, issuerUrl }));

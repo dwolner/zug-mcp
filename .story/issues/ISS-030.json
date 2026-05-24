@@ -11,9 +11,9 @@
   ],
   "phase": null,
   "relatedTickets": [],
-  "resolution": null,
-  "resolvedDate": null,
+  "resolution": "Removed the ZUG_REGISTER_TOKEN middleware from http.ts entirely. The feature required `Authorization: Bearer <token>` on POST /register per RFC 7591, but claude.ai's dynamic client registration does not send this header — making the feature incompatible with the product's only real use case. The registerClient redirect-URI allowlist in oauth-provider.ts (https://claude.ai/* only) remains as the sole registration guard and provides equivalent security without breaking claude.ai integration.",
+  "resolvedDate": "2026-05-24",
   "severity": "high",
-  "status": "open",
+  "status": "resolved",
   "title": "[bug] ZUG_REGISTER_TOKEN breaks claude.ai — RFC 7591 initial access token not supported by claude.ai client"
 }
