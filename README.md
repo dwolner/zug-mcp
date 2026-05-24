@@ -1,223 +1,127 @@
-# Zug — Persistent Memory for Your AI Learning Companion
+# zug-mcp
 
-**Zug** (Hebrew: "pair") is an MCP server that gives Claude persistent memory across sessions — building a cognitive fingerprint of how you think, where you get stuck, what excites you, and how you grow over time.
+**The memory and reflection layer for people who work with AI.**
 
-It's built around the Jewish concept of *havruta*: the idea that learning alongside a partner produces something neither could reach alone. Zug is the infrastructure that makes that long-term relationship possible.
+Observations. Patterns. Lessons. Growth — across every session, every agent.
 
 ---
+
+Zug (Hebrew: "pair") is an MCP server that gives your AI a persistent cognitive fingerprint of you — how you think, what you care about, where you get stuck, and how you grow. Built around the Jewish concept of *havruta*: learning alongside a partner produces something neither could reach alone.
+
+## Install
+
+```bash
+npm install -g zug-mcp
+zug setup
+```
+
+`zug setup` auto-detects your installed agent clients and writes the MCP config to each. Restart your agent to connect.
 
 ## What It Does
 
-Zug exposes five tools Claude can call during any session:
+Every session, Zug builds a richer picture of who you are as a thinker. It stores observations about your reasoning patterns, cognitive preferences, and growth moments. At the start of each session, it surfaces the most relevant context so your AI partner can calibrate — without you having to re-explain yourself.
 
-| Tool | When it's called |
-|---|---|
-| `zug_get_context` | Session start — loads your cognitive fingerprint, playbook, and active patterns |
-| `zug_save_observation` | Mid-session — saves a pattern, preference, breakthrough, or mistake |
-| `zug_end_session` | Session end — writes the session log, updates your fingerprint in the background |
-| `zug_get_recent_sessions` | After a gap — re-establishes context from past sessions |
-| `zug_status` | Anytime — shows sessions, observations, persona size, excerpt, and weekly trend |
+Over time: a cognitive fingerprint that makes every session smarter than the last.
 
-### CLI
+## Agent Support
 
-After install, `zug` is available as a global command:
+| Agent | Support tier | Notes |
+|-------|-------------|-------|
+| Claude Code | First-class | Full rule injection via `~/.claude/rules/zug.md`. Hooks auto-run context at session start. |
+| Cursor | Best-effort | MCP config written. No automatic rule injection — add the rule manually if needed. |
+| Windsurf | Best-effort | MCP config written. Manual rule setup required. |
 
-```bash
-zug status        # sessions, observations, trend, persona excerpt
-zug tail [n]      # last N observations (default 10)
-zug persona       # print full PERSONA.md
+Claude Code is the primary target. Other agents receive MCP connectivity but lack the automatic session gate behavior.
+
+## CLI
+
+```
+zug status          Show sessions, observations, config status, and data dir size
+zug setup           Auto-detect agents and write MCP configs
+  --claude-code     Configure Claude Code only
+  --cursor          Configure Cursor only
+  --windsurf        Configure Windsurf only
+  --all             Configure all agents
+zug update          Update zug-mcp to latest (runs npm install -g)
+zug tail [n]        Show recent observations (default: 10)
+zug persona         Print full PERSONA.md
+zug compact         Print pre-compaction checkpoint (used by PreCompact hook)
 ```
 
-### Context Tagging
+## MCP Tools
 
-`zug_save_observation` and `zug_end_session` accept an optional `context` field (e.g. `"work"`, `"personal"`). Tagged data stays in the unified fingerprint but can be filtered:
+Your AI calls these automatically. You can also call them manually.
 
-```json
-{ "limit": 20, "context": "work" }
-```
+**Context & Memory**
 
-Your data lives at `~/.zug/`:
+| Tool | What it does |
+|------|-------------|
+| `zug_get_context` | Load cognitive fingerprint, playbook, and active patterns. Call at session start. |
+| `zug_status` | Stats snapshot: sessions, observations, weekly trend. |
+| `zug_get_recent_sessions` | Re-establish context after a gap or compaction. |
+
+**Observations**
+
+| Tool | What it does |
+|------|-------------|
+| `zug_save_observation` | Record a pattern, preference, breakthrough, or correction. |
+| `zug_reinforce_observation` | Mark a pattern as recurring — increases its weight in future context. |
+
+**Sessions**
+
+| Tool | What it does |
+|------|-------------|
+| `zug_end_session` | Write session log and trigger background synthesis. Call at session end. |
+
+**Lessons**
+
+| Tool | What it does |
+|------|-------------|
+| `zug_create_lesson` | Promote a reinforced pattern to a named behavioral rule. |
+| `zug_lesson_digest` | Ranked list of active lessons — loaded with context. |
+| `zug_lesson_update` | Edit, deprecate, or supersede a lesson. |
+| `zug_reinforce_lesson` | Increment reinforcement count when a lesson proves true again. |
+
+**Socratic Threads**
+
+| Tool | What it does |
+|------|-------------|
+| `zug_open_thread` | Start tracking an open question in a havruta exchange. |
+| `zug_close_thread` | Resolve or explicitly defer an open thread. |
+| `zug_get_open_thread` | Surface the current unresolved thread. |
+
+**Analysis & Growth**
+
+| Tool | What it does |
+|------|-------------|
+| `zug_reasoning_analysis` | 6-lens parallel reasoning review via Haiku (~$0.006/call). |
+| `zug_growth_summary` | Observation trend and persona growth metrics over time. |
+
+## Data Directory
+
+All data lives in `~/.zug/` (or `$ZUG_DATA_DIR`):
+
 ```
 ~/.zug/
-├── PERSONA.md         ← your cognitive fingerprint (grows over time)
-├── PLAYBOOK.md        ← what works universally (updated each session)
-├── ACTIVE.md          ← active patterns for the next session
-├── observations.jsonl ← structured observation log
-└── sessions/          ← full session logs by date
+  PERSONA.md          Cognitive fingerprint — how you think, what excites you
+  PLAYBOOK.md         Universal session patterns — what works
+  ACTIVE.md           Current behavioral frame (active patterns)
+  observations.jsonl  Append-only observation log
+  sessions/           Per-session logs
+  lessons.json        Named behavioral rules
+  growth.jsonl        Growth snapshots (appended on session end)
 ```
 
----
+No database. No cloud sync. Plain files you can read, back up, or delete.
 
-## Quick Install
+## Configuration
 
-```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/dwolner/zug-mcp/main/install.sh)
-```
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ZUG_DATA_DIR` | `~/.zug` | Override the data directory location |
 
-Or manually:
+## License
 
-```bash
-git clone https://github.com/dwolner/zug-mcp ~/.zug/server
-cd ~/.zug/server
-pnpm install
-./install.sh --configure-only
-```
+MIT — see [LICENSE](./LICENSE).
 
----
-
-## Requirements
-
-- Node.js 18+
-- git
-- pnpm (`npm install -g pnpm`)
-- Claude Code (VS Code extension) and/or Claude desktop app
-
----
-
-## Setup
-
-### 1. Install the server (above)
-
-The install script will:
-- Clone the repo and install dependencies
-- Run an interactive onboarding flow — 5 questions to seed your `PERSONA.md` via Haiku
-- Register the MCP server with Claude Code and Claude Desktop
-- Install `~/.claude/rules/zug.md` (activates Zug in every Claude Code session)
-- Link `zug` as a global CLI command
-
-If `PERSONA.md` already exists with real content, onboarding is skipped automatically.
-
-### 2. Add the system prompt to Claude
-
-**Claude Code CLI** (recommended):
-- The session gates are automatically active via `~/.claude/rules/zug.md`
-- No further action needed — Zug calls `zug_get_context` automatically at every session start
-
-**Claude Desktop** (remote/HTTP mode):
-- Run `install.sh --configure-http <url> <token>` to configure the `mcp-remote` proxy
-- Create a new Project in Claude Desktop called "Zug"
-- Go to Project Settings → paste the contents of `prompts/system-prompt-desktop.md`
-
-**Claude.ai web** (OAuth):
-- Deploy the HTTP server (see fly.io section below)
-- Go to Claude.ai Settings → Integrations → Add integration
-- Enter your server URL — Claude.ai handles the OAuth flow automatically
-
-### 3. Restart Claude
-
-The MCP server starts automatically when Claude connects. You'll see Zug tools available in your session.
-
----
-
-## How It Works
-
-```
-Session start
-  └── Claude calls zug_get_context()
-  └── Your PERSONA.md + PLAYBOOK.md + active patterns loaded into context
-
-During session
-  └── Claude calls zug_save_observation() when it notices something
-  └── Stored in observations.jsonl with type, confidence, session_id
-
-Session end
-  └── Claude calls zug_end_session() with a summary
-  └── Session log written to ~/.zug/sessions/ immediately
-  └── Observations appended to PERSONA.md immediately (fallback)
-  └── Haiku synthesis runs in background — rewrites PERSONA/PLAYBOOK/ACTIVE if successful
-
-Next session
-  └── zug_get_context() loads the updated fingerprint
-  └── The relationship continues where it left off
-```
-
----
-
-## Synthesis
-
-When a session ends, Zug immediately appends new observations to `PERSONA.md`, then kicks off a background call to Claude Haiku to intelligently rewrite `PERSONA.md`, `PLAYBOOK.md`, and `ACTIVE.md` — integrating new observations into existing sections rather than appending dated entries.
-
-If synthesis succeeds, it overwrites the appended entries with the integrated version. If it fails or times out, the raw append remains as the fallback.
-
-Requires an API key at `~/.zug/.env`:
-```bash
-echo "ANTHROPIC_API_KEY=sk-ant-your-key-here" > ~/.zug/.env
-```
-
-Cost: ~$0.001–0.003 per session end in Haiku tokens.
-
----
-
-## HTTP Server (fly.io)
-
-For Claude.ai web and multi-machine sync, deploy the HTTP server:
-
-```bash
-fly launch   # first time
-fly deploy   # subsequent deploys
-```
-
-Set the following secrets:
-```bash
-fly secrets set ZUG_TOKEN=your-secret-token
-```
-
-The fly.toml already configures:
-- Persistent volume at `/data/.zug/` mapped via `ZUG_DATA_DIR`
-- Auto-sleep when idle, auto-wake on request
-- `ZUG_URL` for OAuth issuer metadata (set to your fly app URL)
-
-Configure clients for HTTP:
-```bash
-./install.sh --configure-http https://your-app.fly.dev your-secret-token
-```
-
----
-
-## Merging Data from Another Machine
-
-```bash
-cd ~/.zug/server
-pnpm merge ~/path/to/external-zug-dir
-```
-
-This will:
-1. **observations.jsonl** — deduplicate by timestamp+text, merge, sort chronologically
-2. **sessions/** — copy any session files that don't already exist locally
-3. **PERSONA.md + PLAYBOOK.md** — call Haiku to synthesize both versions into one unified fingerprint (backs up originals before overwriting)
-
----
-
-## Phases
-
-See [ROADMAP.md](ROADMAP.md) for the full development plan.
-
-| Phase | Status | What it adds |
-|---|---|---|
-| 1 — Local stdio | ✅ Done | Claude Code gets persistent memory |
-| 2 — Haiku synthesis | ✅ Done | AI synthesizes PERSONA/PLAYBOOK from session data |
-| 3 — HTTP + fly.io | ✅ Done | All Claude surfaces share memory via remote server |
-| 4 — Polish | ✅ Done | OAuth, onboarding, CLI, tests, Linux support |
-| 5 — Session Fidelity | 📋 Next | Rules injection, PreCompact hook, delta start, observation reinforcement |
-
----
-
-## Data Privacy
-
-All data stays on your machine at `~/.zug/`. Nothing is sent anywhere unless you set up the HTTP server (Phase 3), at which point you control your own server and hosting. The only external calls are synthesis requests to the Anthropic API using your own API key.
-
----
-
-## Philosophy
-
-> "Either a chavruta or death" — Babylonian Talmud
-
-The havruta tradition holds that learning alone is insufficient. You need a partner who challenges your thinking, holds you accountable, and grows with you over time. Zug is the infrastructure for that kind of relationship with an AI — not a tutor that explains, but a pair that thinks alongside you.
-
-The long-term goal: you start asking the questions Zug would have asked. That's when the relationship has changed you permanently.
-
----
-
-## Contributing
-
-Built for personal use first, extensible by design. PRs welcome — especially for Phase 5 (session fidelity) and Phase 6 (advanced persistence).
+Contributions welcome — see [CONTRIBUTING.md](./CONTRIBUTING.md).
