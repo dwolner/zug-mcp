@@ -1,12 +1,13 @@
 {
   "blockedBy": [],
-  "completedDate": null,
+  "claimedBySession": "325c3fc0-e440-48d0-ad08-7bd1aec08214",
+  "completedDate": "2026-05-24",
   "createdDate": "2026-05-22",
   "description": "Track whether a Socratic thread opened during a session was ever resolved. A \"dangling thread\" is a question Zug asked (or should have asked) that the user deflected, changed subject from, or never answered. At natural session pauses or wind-down, surface the unresolved thread: \"We didn't finish the thought about X.\" This is the one multi-signal health indicator unique to havruta that isn't already visible to the user. Simpler than a full multi-signal health system — one well-defined signal, one behavioral output. Store thread state in session metadata (in-memory during session, persisted in zug_end_session if unresolved).",
   "id": "T-015",
   "order": 20,
   "phase": "p6",
-  "status": "open",
+  "status": "complete",
   "title": "Dangling Socratic thread detector — surface unresolved havruta threads at session end",
   "type": "task"
 }

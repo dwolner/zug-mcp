@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { digestLessons } from "./server";
+import { digestLessons, getOpenThread, resetOpenThread, setOpenThreadForTesting } from "./server";
 import { createLesson, reinforceLesson, writeLessons, type Lesson } from "./storage";
 
 let tmpDir: string;
@@ -10,9 +10,11 @@ let tmpDir: string;
 beforeEach(() => {
   tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "zug-server-test-"));
   process.env.ZUG_DATA_DIR = tmpDir;
+  resetOpenThread();
 });
 
 afterEach(() => {
+  resetOpenThread();
   delete process.env.ZUG_DATA_DIR;
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
@@ -61,5 +63,31 @@ describe("digestLessons", () => {
     const lowIdx = digest.indexOf("Low");
     const highIdx = digest.indexOf("High");
     expect(highIdx).toBeLessThan(lowIdx);
+  });
+});
+
+describe("openThread state", () => {
+  it("getOpenThread returns null initially", () => {
+    expect(getOpenThread()).toBeNull();
+  });
+
+  it("setOpenThreadForTesting sets retrievable state", () => {
+    setOpenThreadForTesting("What do you think the real constraint is here?", "session-1");
+    const t = getOpenThread();
+    expect(t?.question).toBe("What do you think the real constraint is here?");
+    expect(t?.sessionId).toBe("session-1");
+    expect(t?.openedAt).toBeTruthy();
+  });
+
+  it("resetOpenThread clears state", () => {
+    setOpenThreadForTesting("A question", "session-1");
+    resetOpenThread();
+    expect(getOpenThread()).toBeNull();
+  });
+
+  it("opening a second thread replaces the first", () => {
+    setOpenThreadForTesting("First question", "session-1");
+    setOpenThreadForTesting("Second question", "session-1");
+    expect(getOpenThread()?.question).toBe("Second question");
   });
 });

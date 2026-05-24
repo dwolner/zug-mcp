@@ -31,6 +31,21 @@ import {
 } from "./storage.js";
 import { synthesize } from "./synthesize.js";
 
+interface SocraticThread {
+  question: string;
+  openedAt: string;
+  sessionId: string;
+}
+
+let openThread: SocraticThread | null = null;
+
+export function getOpenThread(): SocraticThread | null { return openThread; }
+export function resetOpenThread(): void { openThread = null; }
+/** @internal test helper only */
+export function setOpenThreadForTesting(question: string, sessionId: string): void {
+  openThread = { question, openedAt: new Date().toISOString(), sessionId };
+}
+
 export function digestLessons(): string {
   const lessons = getActiveLessons();
   if (lessons.length === 0) return "";
@@ -62,11 +77,13 @@ export function createServer(): McpServer {
         const recentObs = lastTimestamp ? getObservationsSince(lastTimestamp) : [];
         let lessonDigest = "";
         try { lessonDigest = digestLessons(); } catch { /* best-effort */ }
+        const threadBlock = openThread ? `## Open Thread\n${openThread.question}` : "";
 
         const parts = [
           `# Zug Context (delta)\nSessions: ${stats.sessions} | Last: ${lastDate ?? "none"} | Observations: ${stats.observations}\n`,
           active ? `## Active Patterns\n${active}` : "",
           lessonDigest,
+          threadBlock,
           lastSummary ? `## Last session\n${lastSummary}` : "",
           recentObs.length > 0
             ? `## New since last session (${recentObs.length})\n${recentObs.map((o) => `- [${o.type}/${o.confidence}] ${o.observation}`).join("\n")}`
@@ -83,11 +100,13 @@ export function createServer(): McpServer {
       const stats = getStats();
       let lessonDigest = "";
       try { lessonDigest = digestLessons(); } catch { /* best-effort */ }
+      const fullThreadBlock = openThread ? `## Open Thread\n${openThread.question}` : "";
 
       const parts = [
         `# Zug Context\nSessions: ${stats.sessions} | Observations: ${stats.observations}\n`,
         active ? `## Active Patterns\n${active}` : "",
         lessonDigest,
+        fullThreadBlock,
         persona
           ? `## Cognitive Fingerprint\n${persona}`
           : "## Cognitive Fingerprint\n*Not yet built. This is an early session.*",
@@ -144,6 +163,8 @@ export function createServer(): McpServer {
           ? observations.map((o) => `- [${o.type}/${o.confidence}] ${o.observation}`).join("\n")
           : "*No observations saved this session.*";
 
+      const unresolvedThread = openThread?.sessionId === session_id ? openThread : null;
+
       const sessionLines = [
         `# Session ${session_id}`,
         `Date: ${new Date().toISOString()}`,
@@ -154,12 +175,15 @@ export function createServer(): McpServer {
         ...(decisions?.length ? ["", "## Decisions", ...decisions.map((d) => `- ${d}`)] : []),
         ...(blockers?.length ? ["", "## Blockers", ...blockers.map((b) => `- ${b}`)] : []),
         ...(next_steps?.length ? ["", "## Next Steps", ...next_steps.map((s) => `- ${s}`)] : []),
+        ...(unresolvedThread ? ["", "## Unresolved Thread", unresolvedThread.question] : []),
         "",
         "## Observations",
         obsText,
       ];
 
       writeSession(session_id, sessionLines.join("\n"));
+      // Synchronous reset before async synthesis; also clears orphaned threads from other sessions
+      if (openThread) openThread = null;
 
       // Append observations immediately (synchronous, always succeeds)
       const meaningful = observations.filter((o) => o.confidence !== "low");
@@ -201,6 +225,7 @@ export function createServer(): McpServer {
         decisions?.length ? `${decisions.length} decision${decisions.length > 1 ? "s" : ""}` : null,
         blockers?.length ? `${blockers.length} blocker${blockers.length > 1 ? "s" : ""}` : null,
         next_steps?.length ? `${next_steps.length} next step${next_steps.length > 1 ? "s" : ""}` : null,
+        unresolvedThread ? "1 unresolved thread" : null,
       ].filter(Boolean);
       const structuredLabel = structuredParts.length ? ` (${structuredParts.join(", ")})` : "";
 
@@ -335,6 +360,52 @@ export function createServer(): McpServer {
         const lesson = updateLesson(id, updates);
         if (!lesson) return { content: [{ type: "text" as const, text: `Error: lesson ${id} not found` }] };
         return { content: [{ type: "text" as const, text: `Updated: [${lesson.id}] ${lesson.title} (status: ${lesson.status})` }] };
+      } catch (err) {
+        return { content: [{ type: "text" as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }] };
+      }
+    }
+  );
+
+  server.tool(
+    "zug_open_thread",
+    "Open a Socratic thread — call when Zug asks a question worth tracking. Only one thread is active at a time; opening a new one replaces any existing open thread.",
+    {
+      question: z.string().max(1000).describe("The Socratic question Zug asked"),
+      session_id: z.string().describe("Current session identifier"),
+    },
+    async ({ question, session_id }) => {
+      try {
+        openThread = { question, openedAt: new Date().toISOString(), sessionId: session_id };
+        return { content: [{ type: "text" as const, text: `Thread opened: ${question}` }] };
+      } catch (err) {
+        return { content: [{ type: "text" as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }] };
+      }
+    }
+  );
+
+  server.tool(
+    "zug_close_thread",
+    "Close the active Socratic thread — call when the user has answered the question substantively.",
+    {},
+    async () => {
+      try {
+        if (!openThread) return { content: [{ type: "text" as const, text: "No open thread" }] };
+        openThread = null;
+        return { content: [{ type: "text" as const, text: "Thread resolved" }] };
+      } catch (err) {
+        return { content: [{ type: "text" as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }] };
+      }
+    }
+  );
+
+  server.tool(
+    "zug_get_open_thread",
+    "Check whether there is an unresolved Socratic thread. Call at session wind-down or before opening a new thread.",
+    {},
+    async () => {
+      try {
+        if (!openThread) return { content: [{ type: "text" as const, text: "No open thread" }] };
+        return { content: [{ type: "text" as const, text: `Open thread (since ${openThread.openedAt}): ${openThread.question}` }] };
       } catch (err) {
         return { content: [{ type: "text" as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }] };
       }
