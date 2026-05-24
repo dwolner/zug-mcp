@@ -30,7 +30,6 @@ import {
   getActiveLessons,
   appendGrowthSnapshot,
   readGrowthSnapshots,
-  getGrowthTrend,
   type ObservationType,
   type Lesson,
 } from "./storage.js";
@@ -62,12 +61,14 @@ export function digestLessons(): string {
 }
 
 export function growthSummary(): string {
-  const snapshots = getGrowthTrend(5);
-  if (snapshots.length === 0) return "No growth data yet. Run a session first.";
-
-  const latest = snapshots[0];
   const allSnapshots = readGrowthSnapshots();
+  if (allSnapshots.length === 0) return "No growth data yet. Run a session first.";
+
   const total = allSnapshots.length;
+  const snapshots = allSnapshots
+    .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
+    .slice(0, 5);
+  const latest = snapshots[0];
 
   const obsTrend = snapshots.map((s) => s.observationCount).reverse().join(" → ");
   const personaTrend = snapshots.map((s) => s.personaLines).reverse().join(" → ");

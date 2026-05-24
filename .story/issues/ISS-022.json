@@ -8,9 +8,9 @@
   "location": [],
   "phase": null,
   "relatedTickets": [],
-  "resolution": null,
-  "resolvedDate": null,
+  "resolution": "growthSummary() now calls readGrowthSnapshots() once, sorts+slices inline for the trend, and uses .length for the total. Removed the separate getGrowthTrend() call and the unused import.",
+  "resolvedDate": "2026-05-24",
   "severity": "medium",
-  "status": "open",
+  "status": "resolved",
   "title": "[performance] growthSummary() calls readGrowthSnapshots() twice: once via getGrowthTrend(5) an"
 }
