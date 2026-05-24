@@ -18,7 +18,15 @@ import {
   getObservationsSince,
   reinforcePattern,
   getTopPatterns,
+  readLessons,
+  writeLessons,
+  createLesson,
+  getLessonById,
+  updateLesson,
+  reinforceLesson,
+  getActiveLessons,
   type Observation,
+  type Lesson,
 } from "./storage";
 
 let tmpDir: string;
@@ -125,6 +133,7 @@ function getPaths() {
   const zugDir = process.env.ZUG_DATA_DIR!;
   return {
     observationsFile: path.join(zugDir, "observations.jsonl"),
+    lessonsFile: path.join(zugDir, "lessons.jsonl"),
   };
 }
 
@@ -430,5 +439,157 @@ describe("reinforcePattern / getTopPatterns", () => {
     reinforcePattern("B");
     reinforcePattern("C");
     expect(getTopPatterns(2)).toHaveLength(2);
+  });
+});
+
+describe("createLesson", () => {
+  it("generates sequential IDs starting at L-001", () => {
+    const a = createLesson({ title: "A", content: "ca", context: "ctx", source: "manual", tags: [] });
+    const b = createLesson({ title: "B", content: "cb", context: "ctx", source: "manual", tags: [] });
+    expect(a.id).toBe("L-001");
+    expect(b.id).toBe("L-002");
+  });
+
+  it("uses max+1 strategy when IDs have gaps", () => {
+    const now = new Date().toISOString();
+    writeLessons([
+      { id: "L-001", title: "A", content: "ca", context: "ctx", source: "manual", tags: [], status: "active", createdAt: now, lastReinforced: now, reinforcementCount: 0 },
+      { id: "L-003", title: "C", content: "cc", context: "ctx", source: "manual", tags: [], status: "active", createdAt: now, lastReinforced: now, reinforcementCount: 0 },
+    ]);
+    const next = createLesson({ title: "D", content: "cd", context: "ctx", source: "manual", tags: [] });
+    expect(next.id).toBe("L-004");
+  });
+
+  it("sets status=active, timestamps, reinforcementCount=0", () => {
+    const before = new Date().toISOString();
+    const lesson = createLesson({ title: "T", content: "c", context: "ctx", source: "manual", tags: [] });
+    expect(lesson.status).toBe("active");
+    expect(lesson.reinforcementCount).toBe(0);
+    expect(lesson.createdAt >= before).toBe(true);
+    expect(lesson.lastReinforced).toBe(lesson.createdAt);
+  });
+
+  it("round-trips supersedes field correctly", () => {
+    const first = createLesson({ title: "Original", content: "old", context: "ctx", source: "manual", tags: [] });
+    const second = createLesson({ title: "Replacement", content: "new", context: "ctx", source: "review", tags: [], supersedes: first.id });
+    expect(second.supersedes).toBe(first.id);
+    expect(getLessonById(second.id)?.supersedes).toBe(first.id);
+  });
+});
+
+describe("getLessonById", () => {
+  it("returns null for unknown ID", () => {
+    expect(getLessonById("L-999")).toBeNull();
+  });
+
+  it("returns the matching lesson", () => {
+    const lesson = createLesson({ title: "T", content: "c", context: "ctx", source: "manual", tags: [] });
+    expect(getLessonById(lesson.id)?.id).toBe(lesson.id);
+  });
+});
+
+describe("updateLesson", () => {
+  it("returns null for unknown ID", () => {
+    expect(updateLesson("L-999", { title: "x" })).toBeNull();
+  });
+
+  it("updates specified fields and persists them", () => {
+    const lesson = createLesson({ title: "Old", content: "old", context: "ctx", source: "manual", tags: [] });
+    const result = updateLesson(lesson.id, { title: "New", status: "validated" });
+    expect(result?.title).toBe("New");
+    expect(result?.status).toBe("validated");
+    expect(getLessonById(lesson.id)?.title).toBe("New");
+  });
+
+  it("partial update preserves unspecified fields", () => {
+    const lesson = createLesson({ title: "T", content: "original content", context: "ctx", source: "manual", tags: ["a"] });
+    updateLesson(lesson.id, { title: "New title" });
+    const updated = getLessonById(lesson.id)!;
+    expect(updated.content).toBe("original content");
+    expect(updated.tags).toEqual(["a"]);
+    expect(updated.source).toBe("manual");
+  });
+
+  it("updates status to deprecated correctly", () => {
+    const lesson = createLesson({ title: "T", content: "c", context: "ctx", source: "manual", tags: [] });
+    updateLesson(lesson.id, { status: "deprecated" });
+    expect(getLessonById(lesson.id)?.status).toBe("deprecated");
+  });
+
+  it("empty updates {} returns the unchanged lesson", () => {
+    const lesson = createLesson({ title: "T", content: "c", context: "ctx", source: "manual", tags: [] });
+    const result = updateLesson(lesson.id, {});
+    expect(result).toEqual(getLessonById(lesson.id));
+  });
+});
+
+describe("reinforceLesson", () => {
+  it("increments reinforcementCount and updates lastReinforced", () => {
+    const lesson = createLesson({ title: "T", content: "c", context: "ctx", source: "manual", tags: [] });
+    const before = new Date().toISOString();
+    const result = reinforceLesson(lesson.id);
+    expect(result?.reinforcementCount).toBe(1);
+    expect(result!.lastReinforced >= before).toBe(true);
+    expect(getLessonById(lesson.id)?.reinforcementCount).toBe(1);
+  });
+
+  it("returns null for unknown ID", () => {
+    expect(reinforceLesson("L-999")).toBeNull();
+  });
+});
+
+describe("getActiveLessons", () => {
+  it("returns empty array when no lessons exist", () => {
+    expect(getActiveLessons()).toEqual([]);
+  });
+
+  it("excludes deprecated and validated lessons", () => {
+    const active = createLesson({ title: "Active", content: "c", context: "ctx", source: "manual", tags: [] });
+    updateLesson(active.id, { status: "active" });
+    const dep = createLesson({ title: "Deprecated", content: "c", context: "ctx", source: "manual", tags: [] });
+    updateLesson(dep.id, { status: "deprecated" });
+    const val = createLesson({ title: "Validated", content: "c", context: "ctx", source: "manual", tags: [] });
+    updateLesson(val.id, { status: "validated" });
+    const results = getActiveLessons();
+    expect(results).toHaveLength(1);
+    expect(results[0].id).toBe(active.id);
+  });
+
+  it("sorts by reinforcementCount descending", () => {
+    const low = createLesson({ title: "Low", content: "c", context: "ctx", source: "manual", tags: [] });
+    const high = createLesson({ title: "High", content: "c", context: "ctx", source: "manual", tags: [] });
+    reinforceLesson(high.id);
+    reinforceLesson(high.id);
+    const results = getActiveLessons();
+    expect(results[0].id).toBe(high.id);
+    expect(results[1].id).toBe(low.id);
+  });
+
+  it("uses createdAt asc as tie-break (explicit strings, no wall clock)", () => {
+    const now = new Date().toISOString();
+    writeLessons([
+      { id: "L-001", title: "Later", content: "c", context: "ctx", source: "manual" as const, tags: [], status: "active" as const, createdAt: "2026-01-02T00:00:00.000Z", lastReinforced: now, reinforcementCount: 0 },
+      { id: "L-002", title: "Earlier", content: "c", context: "ctx", source: "manual" as const, tags: [], status: "active" as const, createdAt: "2026-01-01T00:00:00.000Z", lastReinforced: now, reinforcementCount: 0 },
+    ]);
+    const results = getActiveLessons();
+    expect(results[0].id).toBe("L-002"); // earlier createdAt wins
+    expect(results[1].id).toBe("L-001");
+  });
+});
+
+describe("readLessons / writeLessons", () => {
+  it("returns empty array when lessons file does not exist", () => {
+    expect(readLessons()).toEqual([]);
+  });
+
+  it("skips malformed JSONL lines without throwing", () => {
+    const { lessonsFile } = getPaths();
+    fs.mkdirSync(tmpDir, { recursive: true });
+    const now = new Date().toISOString();
+    const valid: Lesson = { id: "L-001", title: "T", content: "c", context: "ctx", source: "manual", tags: [], status: "active", createdAt: now, lastReinforced: now, reinforcementCount: 0 };
+    fs.writeFileSync(lessonsFile, JSON.stringify(valid) + "\nnot-json\n", "utf-8");
+    const results = readLessons();
+    expect(results).toHaveLength(1);
+    expect(results[0].id).toBe("L-001");
   });
 });

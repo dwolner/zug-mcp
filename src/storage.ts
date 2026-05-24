@@ -12,6 +12,7 @@ function getPaths() {
     observationsFile: path.join(zugDir, "observations.jsonl"),
     activeFile: path.join(zugDir, "ACTIVE.md"),
     reinforcementsFile: path.join(zugDir, "reinforcements.jsonl"),
+    lessonsFile: path.join(zugDir, "lessons.jsonl"),
   };
 }
 
@@ -310,4 +311,104 @@ export function getTopPatterns(limit: number): ReinforcedPattern[] {
     .filter((p): p is ReinforcedPattern => p !== null)
     .sort((a, b) => b.count - a.count)
     .slice(0, limit);
+}
+
+// --- Lesson system ---
+// Concurrency assumption: single-process Node.js MCP server; event loop serializes
+// synchronous calls, so no file locking is needed.
+
+export interface Lesson {
+  id: string;
+  title: string;
+  content: string;
+  context: string;
+  source: "review" | "correction" | "postmortem" | "manual";
+  tags: string[];
+  status: "active" | "validated" | "deprecated";
+  createdAt: string;
+  lastReinforced: string;
+  reinforcementCount: number;
+  supersedes?: string;
+}
+
+export function readLessons(): Lesson[] {
+  ensureDirs();
+  const { lessonsFile } = getPaths();
+  if (!fs.existsSync(lessonsFile)) return [];
+  return fs.readFileSync(lessonsFile, "utf-8")
+    .split("\n")
+    .filter(Boolean)
+    .map((l) => { try { return JSON.parse(l) as Lesson; } catch { return null; } })
+    .filter((l): l is Lesson => l !== null);
+}
+
+export function writeLessons(lessons: Lesson[]): void {
+  ensureDirs();
+  const { lessonsFile } = getPaths();
+  fs.writeFileSync(lessonsFile, lessons.map((l) => JSON.stringify(l)).join("\n") + "\n", "utf-8");
+}
+
+function mutateLessons(fn: (lessons: Lesson[]) => Lesson[]): void {
+  ensureDirs();
+  writeLessons(fn(readLessons()));
+}
+
+export function createLesson(
+  data: Omit<Lesson, "id" | "createdAt" | "lastReinforced" | "reinforcementCount" | "status">
+): Lesson {
+  let created!: Lesson;
+  mutateLessons((lessons) => {
+    const maxNum = lessons.reduce((max, l) => {
+      const match = l.id.match(/^L-(\d+)$/);
+      return match ? Math.max(max, parseInt(match[1], 10)) : max;
+    }, 0);
+    const id = `L-${String(maxNum + 1).padStart(3, "0")}`;
+    const now = new Date().toISOString();
+    created = { ...data, id, status: "active", createdAt: now, lastReinforced: now, reinforcementCount: 0 };
+    return [...lessons, created];
+  });
+  return created;
+}
+
+export function getLessonById(id: string): Lesson | null {
+  ensureDirs();
+  return readLessons().find((l) => l.id === id) ?? null;
+}
+
+export function updateLesson(
+  id: string,
+  updates: Partial<Pick<Lesson, "title" | "content" | "context" | "tags" | "status" | "supersedes">>
+): Lesson | null {
+  let updated: Lesson | null = null;
+  mutateLessons((lessons) =>
+    lessons.map((l) => {
+      if (l.id !== id) return l;
+      updated = { ...l, ...updates };
+      return updated;
+    })
+  );
+  return updated;
+}
+
+export function reinforceLesson(id: string): Lesson | null {
+  let updated: Lesson | null = null;
+  mutateLessons((lessons) =>
+    lessons.map((l) => {
+      if (l.id !== id) return l;
+      updated = { ...l, reinforcementCount: l.reinforcementCount + 1, lastReinforced: new Date().toISOString() };
+      return updated;
+    })
+  );
+  return updated;
+}
+
+export function getActiveLessons(): Lesson[] {
+  ensureDirs();
+  return readLessons()
+    .filter((l) => l.status === "active")
+    .sort((a, b) =>
+      b.reinforcementCount !== a.reinforcementCount
+        ? b.reinforcementCount - a.reinforcementCount
+        : a.createdAt.localeCompare(b.createdAt)
+    );
 }

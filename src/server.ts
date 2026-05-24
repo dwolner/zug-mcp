@@ -21,9 +21,25 @@ import {
   getObservationsSince,
   reinforcePattern,
   getTopPatterns,
+  createLesson,
+  getLessonById,
+  updateLesson,
+  reinforceLesson,
+  getActiveLessons,
   type ObservationType,
+  type Lesson,
 } from "./storage.js";
 import { synthesize } from "./synthesize.js";
+
+export function digestLessons(): string {
+  const lessons = getActiveLessons();
+  if (lessons.length === 0) return "";
+  const lines = lessons.map((l, i) => {
+    const count = l.reinforcementCount > 0 ? ` (reinforced ${l.reinforcementCount}x)` : "";
+    return `${i + 1}. [${l.id}] ${l.title} — ${l.content}${count}`;
+  });
+  return `## Lessons (${lessons.length} active)\n${lines.join("\n")}`;
+}
 
 export function createServer(): McpServer {
   const server = new McpServer({ name: "zug", version: "1.0.0" });
@@ -44,10 +60,13 @@ export function createServer(): McpServer {
         const lastSummary = getLastSessionSummary();
         const lastTimestamp = getLastSessionTimestamp();
         const recentObs = lastTimestamp ? getObservationsSince(lastTimestamp) : [];
+        let lessonDigest = "";
+        try { lessonDigest = digestLessons(); } catch { /* best-effort */ }
 
         const parts = [
           `# Zug Context (delta)\nSessions: ${stats.sessions} | Last: ${lastDate ?? "none"} | Observations: ${stats.observations}\n`,
           active ? `## Active Patterns\n${active}` : "",
+          lessonDigest,
           lastSummary ? `## Last session\n${lastSummary}` : "",
           recentObs.length > 0
             ? `## New since last session (${recentObs.length})\n${recentObs.map((o) => `- [${o.type}/${o.confidence}] ${o.observation}`).join("\n")}`
@@ -62,10 +81,13 @@ export function createServer(): McpServer {
       const playbook = readPlaybook();
       const active = readActive();
       const stats = getStats();
+      let lessonDigest = "";
+      try { lessonDigest = digestLessons(); } catch { /* best-effort */ }
 
       const parts = [
         `# Zug Context\nSessions: ${stats.sessions} | Observations: ${stats.observations}\n`,
         active ? `## Active Patterns\n${active}` : "",
+        lessonDigest,
         persona
           ? `## Cognitive Fingerprint\n${persona}`
           : "## Cognitive Fingerprint\n*Not yet built. This is an early session.*",
@@ -251,6 +273,88 @@ export function createServer(): McpServer {
       return {
         content: [{ type: "text" as const, text: `Reinforced (${result.count}x): ${result.text}` }],
       };
+    }
+  );
+
+  server.tool(
+    "zug_create_lesson",
+    "Promote an observation or pattern to a named, status-tracked lesson. Lessons surface in zug_get_context and zug_lesson_digest.",
+    {
+      title: z.string().max(500).describe("Concise lesson name"),
+      content: z.string().max(10000).describe("Actionable rule (1-3 sentences)"),
+      context: z.string().max(5000).describe("Evidence, ticket/issue references"),
+      source: z.enum(["review", "correction", "postmortem", "manual"]).describe("How this lesson was identified"),
+      tags: z.array(z.string().max(50)).max(10).optional().describe("Optional tags"),
+      supersedes: z.string().regex(/^L-\d{3,}$/).optional().describe("ID of lesson this supersedes"),
+    },
+    async ({ title, content, context, source, tags, supersedes }) => {
+      try {
+        const lesson = createLesson({ title, content, context, source, tags: tags ?? [], supersedes });
+        return { content: [{ type: "text" as const, text: `Saved: [${lesson.id}] ${lesson.title}` }] };
+      } catch (err) {
+        return { content: [{ type: "text" as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }] };
+      }
+    }
+  );
+
+  server.tool(
+    "zug_lesson_digest",
+    "Returns active lessons ranked by reinforcement count. Use at session start as a behavioral frame supplement.",
+    {},
+    async () => {
+      try {
+        const digest = digestLessons();
+        return { content: [{ type: "text" as const, text: digest || "No active lessons." }] };
+      } catch (err) {
+        return { content: [{ type: "text" as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }] };
+      }
+    }
+  );
+
+  server.tool(
+    "zug_lesson_update",
+    "Update status or content of an existing lesson.",
+    {
+      id: z.string().regex(/^L-\d{3,}$/).describe("Lesson ID to update"),
+      title: z.string().max(500).optional(),
+      content: z.string().max(10000).optional(),
+      context: z.string().max(5000).optional(),
+      tags: z.array(z.string().max(50)).max(10).optional(),
+      status: z.enum(["active", "validated", "deprecated"]).optional(),
+      supersedes: z.string().regex(/^L-\d{3,}$/).optional(),
+    },
+    async ({ id, title, content, context, tags, status, supersedes }) => {
+      try {
+        const updates: Partial<Pick<Lesson, "title" | "content" | "context" | "tags" | "status" | "supersedes">> = {};
+        if (title !== undefined) updates.title = title;
+        if (content !== undefined) updates.content = content;
+        if (context !== undefined) updates.context = context;
+        if (tags !== undefined) updates.tags = tags;
+        if (status !== undefined) updates.status = status;
+        if (supersedes !== undefined) updates.supersedes = supersedes;
+        const lesson = updateLesson(id, updates);
+        if (!lesson) return { content: [{ type: "text" as const, text: `Error: lesson ${id} not found` }] };
+        return { content: [{ type: "text" as const, text: `Updated: [${lesson.id}] ${lesson.title} (status: ${lesson.status})` }] };
+      } catch (err) {
+        return { content: [{ type: "text" as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }] };
+      }
+    }
+  );
+
+  server.tool(
+    "zug_reinforce_lesson",
+    "Increment reinforcement count for a lesson — call when the lesson's pattern recurs across sessions.",
+    {
+      id: z.string().regex(/^L-\d{3,}$/).describe("Lesson ID to reinforce"),
+    },
+    async ({ id }) => {
+      try {
+        const lesson = reinforceLesson(id);
+        if (!lesson) return { content: [{ type: "text" as const, text: `Error: lesson ${id} not found` }] };
+        return { content: [{ type: "text" as const, text: `Reinforced [${lesson.id}] (${lesson.reinforcementCount}x): ${lesson.title}` }] };
+      } catch (err) {
+        return { content: [{ type: "text" as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }] };
+      }
     }
   );
 
