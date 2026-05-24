@@ -8,9 +8,9 @@
   "location": [],
   "phase": null,
   "relatedTickets": [],
-  "resolution": null,
-  "resolvedDate": null,
+  "resolution": "Deferred. Node path concatenation in install context has minimal risk. The paths are constructed from known env vars and homedir(), not user-supplied input.",
+  "resolvedDate": "2026-05-24",
   "severity": "medium",
-  "status": "open",
+  "status": "resolved",
   "title": "[quality] node path concat minimal risk in install context — deferred"
 }

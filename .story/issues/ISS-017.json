@@ -8,9 +8,9 @@
   "location": [],
   "phase": null,
   "relatedTickets": [],
-  "resolution": null,
-  "resolvedDate": null,
+  "resolution": "Acceptable. Omitting the context note in the no-data case is fine — a fresh install has nothing meaningful to restore, so the absence of the note is not misleading.",
+  "resolvedDate": "2026-05-24",
   "severity": "medium",
-  "status": "open",
+  "status": "resolved",
   "title": "[clarity] note omitted in no-data case — acceptable, fresh install has no context to resto"
 }

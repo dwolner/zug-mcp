@@ -8,9 +8,9 @@
   "location": [],
   "phase": null,
   "relatedTickets": [],
-  "resolution": null,
-  "resolvedDate": null,
+  "resolution": "Deferred. getLastSessionSummary() is a needed standalone function — separating it from related logic is intentional for composability. No design change warranted.",
+  "resolvedDate": "2026-05-24",
   "severity": "medium",
-  "status": "open",
+  "status": "resolved",
   "title": "[design] getLastSessionSummary() is a needed separate function — deferred"
 }

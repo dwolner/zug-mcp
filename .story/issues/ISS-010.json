@@ -8,9 +8,9 @@
   "location": [],
   "phase": null,
   "relatedTickets": [],
-  "resolution": null,
-  "resolvedDate": null,
+  "resolution": "Acceptable for CLI. Silent catch on malformed JSONL lines in cmdTail matches the existing pattern throughout the codebase. Malformed lines are skipped gracefully.",
+  "resolvedDate": "2026-05-24",
   "severity": "medium",
-  "status": "open",
+  "status": "resolved",
   "title": "[error-handling] Silent catch in cmdTail — acceptable for CLI"
 }

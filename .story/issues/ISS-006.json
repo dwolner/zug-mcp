@@ -8,9 +8,9 @@
   "location": [],
   "phase": null,
   "relatedTickets": [],
-  "resolution": null,
-  "resolvedDate": null,
+  "resolution": "Out of scope. Performance concerns at session start are not relevant for a single-user personal tool where startup latency is negligible.",
+  "resolvedDate": "2026-05-24",
   "severity": "medium",
-  "status": "open",
+  "status": "resolved",
   "title": "[performance] Out of scope for personal tool at session start"
 }

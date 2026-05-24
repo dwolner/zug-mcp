@@ -8,9 +8,9 @@
   "location": [],
   "phase": null,
   "relatedTickets": [],
-  "resolution": null,
-  "resolvedDate": null,
+  "resolution": "Accepted as low-impact edge case. A whitespace-only PERSONA.md passes the existsSync check and would show blank output — acceptable behavior for a personal tool where users control the file directly.",
+  "resolvedDate": "2026-05-24",
   "severity": "medium",
-  "status": "open",
+  "status": "resolved",
   "title": "[correctness] whitespace-only PERSONA.md edge case in existing-content check — acceptable risk"
 }

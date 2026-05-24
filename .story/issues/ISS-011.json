@@ -8,9 +8,9 @@
   "location": [],
   "phase": null,
   "relatedTickets": [],
-  "resolution": null,
-  "resolvedDate": null,
+  "resolution": "Deferred. No upper bound on tail limit is acceptable for a personal tool — not a multi-tenant service. Memory pressure from reading a large observations.jsonl is the user's concern.",
+  "resolvedDate": "2026-05-24",
   "severity": "medium",
-  "status": "open",
+  "status": "resolved",
   "title": "[input-validation] No upper bound on tail limit — deferred, personal tool not a service"
 }

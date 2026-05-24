@@ -8,9 +8,9 @@
   "location": [],
   "phase": null,
   "relatedTickets": [],
-  "resolution": null,
-  "resolvedDate": null,
+  "resolution": "Acceptable. Silent catch matches the established pattern for synthesis/best-effort operations throughout the codebase. Observability tooling is not required for a personal tool.",
+  "resolvedDate": "2026-05-24",
   "severity": "medium",
-  "status": "open",
+  "status": "resolved",
   "title": "[observability] Silent catch matches existing synthesis pattern — acceptable"
 }

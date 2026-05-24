@@ -8,9 +8,9 @@
   "location": [],
   "phase": null,
   "relatedTickets": [],
-  "resolution": null,
-  "resolvedDate": null,
+  "resolution": "Acceptable for a single-user personal tool. The comment in storage.ts already documents the concurrency assumption. No locking needed.",
+  "resolvedDate": "2026-05-24",
   "severity": "medium",
-  "status": "open",
+  "status": "resolved",
   "title": "[concurrency] Concurrent write risk — acceptable for single-user personal tool"
 }

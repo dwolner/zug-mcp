@@ -8,9 +8,9 @@
   "location": [],
   "phase": null,
   "relatedTickets": [],
-  "resolution": null,
-  "resolvedDate": null,
+  "resolution": "Deferred. Current structure is clear and correct. Refactoring for code-quality alone provides no functional benefit at this stage.",
+  "resolvedDate": "2026-05-24",
   "severity": "medium",
-  "status": "open",
+  "status": "resolved",
   "title": "[code-quality] Current structure is clear and correct — deferred"
 }
