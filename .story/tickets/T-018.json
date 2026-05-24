@@ -1,12 +1,13 @@
 {
   "blockedBy": [],
-  "completedDate": null,
+  "claimedBySession": "325c3fc0-e440-48d0-ad08-7bd1aec08214",
+  "completedDate": "2026-05-24",
   "createdDate": "2026-05-23",
   "description": "Plant the data infrastructure for a future persona growth dashboard: a place where a user can see, visually, how their thinking has evolved and how Zug has been providing value over time. Phase 1 (this ticket): periodic PERSONA.md snapshots stored as diffs or versioned copies, plus a structured growth summary that captures: observation rate over time, ACTIVE pattern churn (patterns added/retired), session frequency trends, reinforcement counts on top patterns, and a weekly/monthly \"what Zug learned about you\" narrative digest. The data model should be dashboard-ready even if no UI exists yet. Phase 2 (future): a lightweight web dashboard (or email digest) that renders the growth data visually — pattern emergence timelines, session heatmaps, insight quality over time. The north star: a user opens the dashboard and can answer \"what has Zug taught me about how I think?\" and \"is Zug getting better at working with me?\"",
   "id": "T-018",
   "order": 40,
   "phase": "p6",
-  "status": "open",
+  "status": "complete",
   "title": "Persona growth snapshots — infrastructure for insight into how Zug is providing value",
   "type": "task"
 }
