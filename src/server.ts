@@ -26,6 +26,9 @@ import {
   updateLesson,
   reinforceLesson,
   getActiveLessons,
+  appendGrowthSnapshot,
+  readGrowthSnapshots,
+  getGrowthTrend,
   type ObservationType,
   type Lesson,
 } from "./storage.js";
@@ -54,6 +57,37 @@ export function digestLessons(): string {
     return `${i + 1}. [${l.id}] ${l.title} — ${l.content}${count}`;
   });
   return `## Lessons (${lessons.length} active)\n${lines.join("\n")}`;
+}
+
+export function growthSummary(): string {
+  const snapshots = getGrowthTrend(5);
+  if (snapshots.length === 0) return "No growth data yet. Run a session first.";
+
+  const latest = snapshots[0];
+  const allSnapshots = readGrowthSnapshots();
+  const total = allSnapshots.length;
+
+  const obsTrend = snapshots.map((s) => s.observationCount).reverse().join(" → ");
+  const personaTrend = snapshots.map((s) => s.personaLines).reverse().join(" → ");
+
+  const patternLines = latest.topPatterns.length > 0
+    ? latest.topPatterns.map((p, i) => `${i + 1}. "${p.text}" (${p.count}x)`).join("\n")
+    : "*(none yet)*";
+
+  return [
+    `## Growth Summary (${total} sessions)`,
+    "",
+    `Sessions: ${latest.sessionCount} | Observations: ${latest.observationCount} | Active lessons: ${latest.lessonCount}`,
+    "",
+    `### Observation trend (last ${snapshots.length} sessions)`,
+    obsTrend,
+    "",
+    "### Top reinforced patterns",
+    patternLines,
+    "",
+    `### Persona growth (lines, last ${snapshots.length} sessions)`,
+    personaTrend,
+  ].join("\n");
 }
 
 export function createServer(): McpServer {
@@ -220,6 +254,20 @@ export function createServer(): McpServer {
       }
 
       const stats = getStats();
+
+      try {
+        appendGrowthSnapshot({
+          timestamp: new Date().toISOString(),
+          sessionId: session_id,
+          sessionCount: stats.sessions,
+          observationCount: stats.observations,
+          personaLines: stats.personaLines,
+          topPatterns: getTopPatterns(5).map((p) => ({ text: p.text, count: p.count })),
+          activePatternCount: readActive().split("\n").filter((l) => l.trim().length > 0).length,
+          lessonCount: getActiveLessons().length,
+        });
+      } catch { /* best-effort */ }
+
       const contextLabel = context ? ` context=${context}` : "";
       const structuredParts = [
         decisions?.length ? `${decisions.length} decision${decisions.length > 1 ? "s" : ""}` : null,
@@ -423,6 +471,18 @@ export function createServer(): McpServer {
         const lesson = reinforceLesson(id);
         if (!lesson) return { content: [{ type: "text" as const, text: `Error: lesson ${id} not found` }] };
         return { content: [{ type: "text" as const, text: `Reinforced [${lesson.id}] (${lesson.reinforcementCount}x): ${lesson.title}` }] };
+      } catch (err) {
+        return { content: [{ type: "text" as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }] };
+      }
+    }
+  );
+
+  server.tool(
+    "zug_growth_summary",
+    "Returns a trend digest showing how Zug's knowledge and persona have grown over time.",
+    async () => {
+      try {
+        return { content: [{ type: "text" as const, text: growthSummary() }] };
       } catch (err) {
         return { content: [{ type: "text" as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }] };
       }

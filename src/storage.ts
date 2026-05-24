@@ -13,6 +13,7 @@ function getPaths() {
     activeFile: path.join(zugDir, "ACTIVE.md"),
     reinforcementsFile: path.join(zugDir, "reinforcements.jsonl"),
     lessonsFile: path.join(zugDir, "lessons.jsonl"),
+    growthFile: path.join(zugDir, "growth.jsonl"),
   };
 }
 
@@ -411,4 +412,40 @@ export function getActiveLessons(): Lesson[] {
         ? b.reinforcementCount - a.reinforcementCount
         : a.createdAt.localeCompare(b.createdAt)
     );
+}
+
+// --- Growth snapshots ---
+
+export interface GrowthSnapshot {
+  timestamp: string;
+  sessionId: string;
+  sessionCount: number;
+  observationCount: number;
+  personaLines: number;
+  topPatterns: Array<{ text: string; count: number }>;
+  activePatternCount: number;
+  lessonCount: number;
+}
+
+export function appendGrowthSnapshot(snapshot: GrowthSnapshot): void {
+  ensureDirs();
+  const { growthFile } = getPaths();
+  fs.appendFileSync(growthFile, JSON.stringify(snapshot) + "\n", "utf-8");
+}
+
+export function readGrowthSnapshots(): GrowthSnapshot[] {
+  ensureDirs();
+  const { growthFile } = getPaths();
+  if (!fs.existsSync(growthFile)) return [];
+  return fs.readFileSync(growthFile, "utf-8")
+    .split("\n")
+    .filter(Boolean)
+    .map((l) => { try { return JSON.parse(l) as GrowthSnapshot; } catch { return null; } })
+    .filter((s): s is GrowthSnapshot => s !== null);
+}
+
+export function getGrowthTrend(limit: number): GrowthSnapshot[] {
+  return readGrowthSnapshots()
+    .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
+    .slice(0, limit);
 }

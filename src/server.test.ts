@@ -2,8 +2,8 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { digestLessons, getOpenThread, resetOpenThread, setOpenThreadForTesting } from "./server";
-import { createLesson, reinforceLesson, writeLessons, type Lesson } from "./storage";
+import { digestLessons, getOpenThread, resetOpenThread, setOpenThreadForTesting, growthSummary } from "./server";
+import { createLesson, reinforceLesson, writeLessons, appendGrowthSnapshot, type Lesson } from "./storage";
 
 let tmpDir: string;
 
@@ -89,5 +89,39 @@ describe("openThread state", () => {
     setOpenThreadForTesting("First question", "session-1");
     setOpenThreadForTesting("Second question", "session-1");
     expect(getOpenThread()?.question).toBe("Second question");
+  });
+});
+
+describe("growthSummary", () => {
+  it("returns no-data message when growth.jsonl is empty", () => {
+    expect(growthSummary()).toBe("No growth data yet. Run a session first.");
+  });
+
+  it("includes session count and observation trend when snapshots exist", () => {
+    appendGrowthSnapshot({
+      timestamp: "2026-01-01T00:00:00.000Z",
+      sessionId: "s1",
+      sessionCount: 1,
+      observationCount: 10,
+      personaLines: 20,
+      topPatterns: [{ text: "Ask before explaining", count: 3 }],
+      activePatternCount: 2,
+      lessonCount: 1,
+    });
+    appendGrowthSnapshot({
+      timestamp: "2026-01-02T00:00:00.000Z",
+      sessionId: "s2",
+      sessionCount: 2,
+      observationCount: 15,
+      personaLines: 25,
+      topPatterns: [{ text: "Ask before explaining", count: 5 }],
+      activePatternCount: 3,
+      lessonCount: 2,
+    });
+    const summary = growthSummary();
+    expect(summary).toContain("## Growth Summary (2 sessions)");
+    expect(summary).toContain("10 → 15");
+    expect(summary).toContain('"Ask before explaining" (5x)');
+    expect(summary).toContain("20 → 25");
   });
 });

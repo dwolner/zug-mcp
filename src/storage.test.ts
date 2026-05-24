@@ -25,8 +25,12 @@ import {
   updateLesson,
   reinforceLesson,
   getActiveLessons,
+  appendGrowthSnapshot,
+  readGrowthSnapshots,
+  getGrowthTrend,
   type Observation,
   type Lesson,
+  type GrowthSnapshot,
 } from "./storage";
 
 let tmpDir: string;
@@ -134,6 +138,7 @@ function getPaths() {
   return {
     observationsFile: path.join(zugDir, "observations.jsonl"),
     lessonsFile: path.join(zugDir, "lessons.jsonl"),
+    growthFile: path.join(zugDir, "growth.jsonl"),
   };
 }
 
@@ -591,5 +596,71 @@ describe("readLessons / writeLessons", () => {
     const results = readLessons();
     expect(results).toHaveLength(1);
     expect(results[0].id).toBe("L-001");
+  });
+});
+
+function makeSnapshot(overrides: Partial<GrowthSnapshot> = {}): GrowthSnapshot {
+  return {
+    timestamp: new Date().toISOString(),
+    sessionId: "test-session",
+    sessionCount: 1,
+    observationCount: 5,
+    personaLines: 20,
+    topPatterns: [{ text: "Ask before explaining", count: 3 }],
+    activePatternCount: 4,
+    lessonCount: 2,
+    ...overrides,
+  };
+}
+
+describe("appendGrowthSnapshot / readGrowthSnapshots", () => {
+  it("returns empty array when file does not exist", () => {
+    expect(readGrowthSnapshots()).toEqual([]);
+  });
+
+  it("appends a record readable by readGrowthSnapshots", () => {
+    const snap = makeSnapshot();
+    appendGrowthSnapshot(snap);
+    const results = readGrowthSnapshots();
+    expect(results).toHaveLength(1);
+    expect(results[0].sessionId).toBe("test-session");
+    expect(results[0].sessionCount).toBe(1);
+  });
+
+  it("multiple appends accumulate correctly", () => {
+    appendGrowthSnapshot(makeSnapshot({ sessionId: "s1", sessionCount: 1 }));
+    appendGrowthSnapshot(makeSnapshot({ sessionId: "s2", sessionCount: 2 }));
+    appendGrowthSnapshot(makeSnapshot({ sessionId: "s3", sessionCount: 3 }));
+    const results = readGrowthSnapshots();
+    expect(results).toHaveLength(3);
+    expect(results.map((r) => r.sessionId)).toEqual(["s1", "s2", "s3"]);
+  });
+
+  it("skips malformed lines without throwing", () => {
+    const { growthFile } = getPaths();
+    fs.mkdirSync(tmpDir, { recursive: true });
+    const snap = makeSnapshot({ sessionId: "valid" });
+    fs.writeFileSync(growthFile, JSON.stringify(snap) + "\nnot-json\n", "utf-8");
+    const results = readGrowthSnapshots();
+    expect(results).toHaveLength(1);
+    expect(results[0].sessionId).toBe("valid");
+  });
+});
+
+describe("getGrowthTrend", () => {
+  it("returns most recent N records newest first", () => {
+    appendGrowthSnapshot(makeSnapshot({ timestamp: "2026-01-01T00:00:00.000Z", sessionId: "oldest" }));
+    appendGrowthSnapshot(makeSnapshot({ timestamp: "2026-01-03T00:00:00.000Z", sessionId: "newest" }));
+    appendGrowthSnapshot(makeSnapshot({ timestamp: "2026-01-02T00:00:00.000Z", sessionId: "middle" }));
+    const trend = getGrowthTrend(2);
+    expect(trend).toHaveLength(2);
+    expect(trend[0].sessionId).toBe("newest");
+    expect(trend[1].sessionId).toBe("middle");
+  });
+
+  it("returns all records when limit exceeds count", () => {
+    appendGrowthSnapshot(makeSnapshot({ sessionId: "only" }));
+    const trend = getGrowthTrend(10);
+    expect(trend).toHaveLength(1);
   });
 });
