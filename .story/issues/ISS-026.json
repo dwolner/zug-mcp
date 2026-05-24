@@ -11,9 +11,9 @@
   ],
   "phase": null,
   "relatedTickets": [],
-  "resolution": null,
-  "resolvedDate": null,
+  "resolution": "Added include: [\\\"src/**/*.test.ts\\\"] to vitest.config.ts. Vitest now scans only source test files, not compiled dist/ output. All 4 test files and 107 tests pass cleanly.",
+  "resolvedDate": "2026-05-24",
   "severity": "medium",
-  "status": "open",
+  "status": "resolved",
   "title": "vitest scans dist/ compiled test files — fails with CJS/ESM error after any build"
 }
