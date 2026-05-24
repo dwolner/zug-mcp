@@ -2,6 +2,7 @@
 import fs from "fs";
 import path from "path";
 import os from "os";
+import { execSync } from "child_process";
 import {
   getStats,
   getLastSessionDate,
@@ -10,6 +11,7 @@ import {
   readPersona,
   readActive,
 } from "./storage.js";
+import { runSetup } from "./setup.js";
 
 const ZUG_DIR = process.env.ZUG_DATA_DIR || path.join(os.homedir(), ".zug");
 const OBSERVATIONS_FILE = path.join(ZUG_DIR, "observations.jsonl");
@@ -26,7 +28,28 @@ function cmdStatus() {
     `Persona lines: ${personaLines}`,
     excerpt ? `Excerpt: ${excerpt}` : null,
     `Trend (obs/week, last 4): ${trend.join(" → ")}`,
-  ].filter(Boolean);
+  ].filter(Boolean) as string[];
+
+  const home = os.homedir();
+  const agentConfigs = [
+    { name: "Claude Code", path: path.join(home, ".claude.json") },
+    { name: "Cursor",      path: path.join(home, ".cursor", "mcp.json") },
+    { name: "Windsurf",    path: path.join(home, ".codeium", "windsurf", "mcp_config.json") },
+  ];
+  for (const agent of agentConfigs) {
+    let configured = false;
+    try {
+      const raw = fs.readFileSync(agent.path, "utf-8");
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      configured = !!(parsed.mcpServers && (parsed.mcpServers as Record<string, unknown>).zug);
+    } catch { /* file missing or malformed */ }
+    lines.push(`${agent.name}: ${configured ? "configured" : "not configured"}`);
+  }
+
+  try {
+    const size = execSync(`du -sh "${ZUG_DIR}" 2>/dev/null`, { encoding: "utf-8" }).trim().split(/\s/)[0];
+    lines.push(`Data dir size: ${size}`);
+  } catch { /* du not available */ }
 
   console.log(lines.join("\n"));
 }
@@ -130,12 +153,43 @@ function cmdCompact() {
   console.log(parts.join("\n"));
 }
 
+async function cmdSetup(args: string[]): Promise<void> {
+  const all = args.includes("--all");
+  const opts: Parameters<typeof runSetup>[0] = {};
+  if (all || args.includes("--claude-code")) opts!.claude = true;
+  if (all || args.includes("--cursor")) opts!.cursor = true;
+  if (all || args.includes("--windsurf")) opts!.windsurf = true;
+  try {
+    await runSetup(Object.keys(opts!).length > 0 ? opts : undefined);
+  } catch (err) {
+    console.error("Setup failed:", err instanceof Error ? err.message : String(err));
+    process.exit(1);
+  }
+}
+
+function cmdUpdate(): void {
+  console.log("Updating zug-mcp to latest...");
+  try {
+    execSync("npm install -g zug-mcp@latest", { stdio: "inherit" });
+    console.log("Update complete.");
+  } catch {
+    console.error("Update failed. Try: npm install -g zug-mcp@latest");
+    process.exit(1);
+  }
+}
+
 function printUsage() {
   console.error(`Usage: zug <command>
-  zug status          Show sessions, observations, persona size, and trend
+  zug status          Show sessions, observations, config status, and data dir size
   zug tail [n]        Show recent observations (default: 10)
   zug persona         Print full PERSONA.md
-  zug compact         Print pre-compaction checkpoint (used by PreCompact hook)`);
+  zug compact         Print pre-compaction checkpoint (used by PreCompact hook)
+  zug setup           Auto-detect agents and write MCP configs
+    --claude-code     Configure Claude Code only
+    --cursor          Configure Cursor only
+    --windsurf        Configure Windsurf only
+    --all             Configure all agents
+  zug update          Update zug-mcp to latest (runs npm install -g)`);
   process.exit(1);
 }
 
@@ -156,6 +210,12 @@ switch (cmd) {
     break;
   case "resume":
     cmdResume();
+    break;
+  case "setup":
+    cmdSetup(rest).then(() => process.exit(0));
+    break;
+  case "update":
+    cmdUpdate();
     break;
   case "--version":
   case "version":
