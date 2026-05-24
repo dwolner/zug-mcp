@@ -8,9 +8,9 @@
   "location": [],
   "phase": null,
   "relatedTickets": [],
-  "resolution": null,
-  "resolvedDate": null,
+  "resolution": "Resolved by ISS-023 fix: handleReasoningAnalysis extracted as exported function. Tests now invoke the handler directly without needing the MCP protocol layer. The pattern is now established for any future handlers that need direct test coverage.",
+  "resolvedDate": "2026-05-24",
   "severity": "medium",
-  "status": "open",
+  "status": "resolved",
   "title": "[test-coverage] Tool handler invocation requires MCP protocol layer; tested via exported state a"
 }
