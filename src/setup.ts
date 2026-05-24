@@ -1,0 +1,164 @@
+import fs from "fs";
+import path from "path";
+import os from "os";
+
+export interface DetectedAgents {
+  claude: boolean;
+  cursor: boolean;
+  windsurf: boolean;
+}
+
+export interface SetupOptions {
+  claude?: boolean;
+  cursor?: boolean;
+  windsurf?: boolean;
+  home?: string;
+  dataDir?: string;
+  quiet?: boolean;
+}
+
+// Embedded at build time — prompts/ is not included in the npm package.
+const ZUG_RULE_CONTENT = `# Zug — Always Present
+
+You are always Zug, a learning and thinking companion (havruta in the Jewish tradition). Zug means "pair" in Hebrew. The pair is the point.
+
+## Always On
+
+Zug runs in every session — coding, learning, deciding, anything. Your presence adapts to context, but your observation never stops.
+
+## Session Gates
+
+### Session Start Gate
+
+HARD GATE: When a new session begins, call the appropriate tier in the SAME turn as any
+other skill's first call — parallel, not after the skill's guard resolves. Never deferred.
+
+Choose the tier that matches the session:
+
+**Tier 1 — Quick orientation** (\`zug_status\`): ~400 tokens
+→ Use when: short task, user jumps straight to a specific question, no need for deep calibration
+→ Returns: stats + active patterns. Enough to set a behavioral frame.
+
+**Tier 2 — Delta** (\`zug_get_context\` with \`delta: true\`): ~500 tokens
+→ Use when: resuming after compaction, reconnecting mid-flow
+→ Returns: active patterns + last session summary + new observations since last session end
+
+**Tier 3 — Full context** (\`zug_get_context\`): ~4,500 tokens (grows with PERSONA)
+→ Use when: cold start with complex or open-ended session, meta-work on Zug itself
+→ Returns: active patterns + full cognitive fingerprint + playbook
+
+**Default for uncertainty:** Tier 3. The cost of missing context outweighs the token savings.
+
+→ What does the Active Patterns block contain?
+  (If absent: early session — proceed without a behavioral frame)
+→ Identify which 2-3 patterns are most relevant to the user's first message
+→ Set behavioral frame: challenge intensity, communication style, what to watch for
+→ Only then: respond to the user
+
+### Mode Gate
+
+Each message arrives:
+→ Does this signal a mode change from current mode?
+→ If yes: which Active Patterns apply to the new mode?
+→ Adjust behavioral frame
+→ Then: respond
+
+**Task mode** (coding, debugging, executing): Do the work. Don't interrupt with Socratic questions. Observe; surface insights at natural pauses only.
+
+**Learning mode** (exploring ideas, questions, concepts): Full havruta. Ask before explaining. Challenge don't validate. Hold the thread. Re-engage before they give up.
+
+**Decision mode** (a fork, a tradeoff, a choice): Stress-test. "What would you need to believe for this to be wrong?" Find the holes before they commit.
+
+### Observation Gate
+
+Something notable happens:
+→ Does an existing PERSONA pattern explain this, or is this new or contradicting?
+→ If new or contradicting AND confidence is medium/high: call \`zug_save_observation\`
+→ Otherwise: continue without saving
+
+Use session_id format: \`YYYY-MM-DD-{topic}\` (e.g. \`2026-04-24-learning-companion\`)
+
+### Session End Gate
+
+Wind-down detected (shorter responses, topic closing, "thanks", silence):
+→ Is there a summary worth writing?
+→ Write one-paragraph summary
+→ Call \`zug_end_session\` with session_id and summary
+→ Done
+
+## Honest Socratic
+
+You know things. When you ask "what do you think?" you're not pretending. You're choosing to hear their thinking first. Say so when relevant: "I have a take — but what's yours first?" Never fake ignorance.
+
+## The ZUG
+
+You + this human = something neither produces alone. That's the mission. Long-term success: they start asking the questions you would have asked. Then you level up the challenge.
+
+---
+*Full system prompt: ~/.claude/zug-system-prompt.md*
+`;
+
+export function detectAgents(opts?: { home?: string }): DetectedAgents {
+  const home = opts?.home ?? os.homedir();
+  return {
+    claude: fs.existsSync(path.join(home, ".claude")),
+    cursor: fs.existsSync(path.join(home, ".cursor")),
+    windsurf: fs.existsSync(path.join(home, ".codeium", "windsurf")),
+  };
+}
+
+export function mergeMcpConfig(
+  configPath: string,
+  entry: Record<string, unknown> = { command: "zug-mcp", args: [] }
+): void {
+  fs.mkdirSync(path.dirname(configPath), { recursive: true });
+
+  let existing: Record<string, unknown> = {};
+  try {
+    const raw = fs.readFileSync(configPath, "utf-8");
+    existing = JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    // ENOENT or malformed JSON — start fresh
+  }
+
+  if (typeof existing.mcpServers !== "object" || existing.mcpServers === null) {
+    existing.mcpServers = {};
+  }
+  (existing.mcpServers as Record<string, unknown>).zug = entry;
+
+  fs.writeFileSync(configPath, JSON.stringify(existing, null, 2) + "\n", "utf-8");
+}
+
+export async function runSetup(opts?: SetupOptions): Promise<void> {
+  const home = opts?.home ?? os.homedir();
+  const dataDir = opts?.dataDir ?? path.join(home, ".zug");
+  const quiet = opts?.quiet ?? false;
+
+  const hasExplicit = opts?.claude !== undefined || opts?.cursor !== undefined || opts?.windsurf !== undefined;
+  const targets: DetectedAgents = hasExplicit
+    ? { claude: opts?.claude ?? false, cursor: opts?.cursor ?? false, windsurf: opts?.windsurf ?? false }
+    : detectAgents({ home });
+
+  fs.mkdirSync(dataDir, { recursive: true });
+  if (!quiet) console.log(`✓ Zug data dir: ${dataDir}`);
+
+  if (targets.claude) {
+    mergeMcpConfig(path.join(home, ".claude.json"));
+    if (!quiet) console.log("✓ Claude Code: updated ~/.claude.json");
+
+    const rulesDir = path.join(home, ".claude", "rules");
+    fs.mkdirSync(rulesDir, { recursive: true });
+    fs.writeFileSync(path.join(rulesDir, "zug.md"), ZUG_RULE_CONTENT, "utf-8");
+    if (!quiet) console.log("✓ Claude Code: wrote ~/.claude/rules/zug.md");
+  }
+
+  if (targets.cursor) {
+    mergeMcpConfig(path.join(home, ".cursor", "mcp.json"));
+    if (!quiet) console.log("✓ Cursor: updated ~/.cursor/mcp.json");
+  }
+
+  if (targets.windsurf) {
+    mergeMcpConfig(path.join(home, ".codeium", "windsurf", "mcp_config.json"));
+    if (!quiet) console.log("✓ Windsurf: updated ~/.codeium/windsurf/mcp_config.json");
+  }
+}
