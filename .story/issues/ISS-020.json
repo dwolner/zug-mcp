@@ -1,0 +1,17 @@
+{
+  "components": [
+    "story-skill",
+    "zug-integration"
+  ],
+  "discoveredDate": "2026-05-24",
+  "id": "ISS-020",
+  "impact": "When /story is the first command in a session, the Step 0.5 guard's whitelist is interpreted as blocking all non-permitted MCP calls — including zug_get_context. Zug's session start gate gets deferred until after the guard resolves, meaning the AI responds without a behavioral frame. Fix applied in zug-rule.md: gate now explicitly runs parallel with the skill's first call, not after. Story skill could also note that always-on companion gates (any tool named in global rules) are whitelisted during Step 0.5.",
+  "location": [],
+  "phase": null,
+  "relatedTickets": [],
+  "resolution": "Two-sided fix: (1) zug-rule.md Session Start Gate now explicitly requires zug_get_context to run in the same turn as the skill's first required call — parallel, not sequential (committed in 1d6d6f8). (2) story skill SKILL.md whitelist now includes item (e) — always-on companion gate calls declared in global rules are exempt and run in parallel with step 1. Both sides are now consistent.",
+  "resolvedDate": "2026-05-24",
+  "severity": "medium",
+  "status": "resolved",
+  "title": "story skill Step 0.5 whitelist displaces always-on companion gates (Zug)"
+}

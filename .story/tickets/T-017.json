@@ -1,0 +1,12 @@
+{
+  "blockedBy": [],
+  "completedDate": null,
+  "createdDate": "2026-05-23",
+  "description": "Observations accumulate as raw per-session data. Lessons are different: named, tagged, status-tracked behavioral rules that Zug acts on across sessions. Example: \"When this user says 'just do it,' ask one scoping question — they regret skipping it 3/4 times.\" The reinforcePattern() system is the data foundation — it already tracks cross-session frequency. A lesson system adds: (1) a zug_create_lesson tool that promotes an observation or pattern to a named lesson with tags and status, (2) a zug_lesson_digest tool that returns active lessons at session start as a behavioral frame supplement, (3) lesson status lifecycle (active, validated, deprecated). Modeled on Storybloq's lesson system but adapted for havruta behavioral rules rather than code patterns. Lessons should surface alongside Active Patterns in zug_get_context or as a separate lightweight call.",
+  "id": "T-017",
+  "order": 30,
+  "phase": "p6",
+  "status": "open",
+  "title": "Lesson system — promote reinforced patterns to named behavioral rules for Zug",
+  "type": "task"
+}

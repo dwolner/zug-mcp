@@ -2,11 +2,11 @@
   "blockedBy": [],
   "completedDate": null,
   "createdDate": "2026-05-22",
-  "description": "Spawn parallel specialized subagents to analyze a user's reasoning from multiple angles: conceptual clarity, assumption identification, logical consistency, knowledge gaps, analogical reasoning, meta-cognitive awareness. Each lens produces structured findings; a merger synthesizes; a judge produces a final verdict. Pattern directly from Storybloq's review-lenses system adapted for cognitive analysis instead of code review. Enables deeper havruta engagement than a single-perspective response.",
+  "description": "Spawn parallel specialized subagents to analyze a user's reasoning from multiple angles: conceptual clarity, assumption identification, logical consistency, knowledge gaps, analogical reasoning, meta-cognitive awareness. Pattern from Storybloq's review-lenses system adapted for cognitive analysis. BLOCKER: trigger logic is unsolved — firing on every message is too expensive, firing on demand is just \"ask Claude.\" Must define when a multi-lens analysis adds value (e.g. once per decision-mode session at a key inflection point) before implementation. Do not implement until the trigger contract is clear.",
   "id": "T-016",
   "order": 10,
   "phase": "p6",
   "status": "open",
-  "title": "Multi-lens reasoning analysis — parallel specialized agents",
+  "title": "Multi-lens reasoning analysis — parallel specialized agents (needs trigger design first)",
   "type": "task"
 }
