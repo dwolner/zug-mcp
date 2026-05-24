@@ -92,8 +92,18 @@ export function growthSummary(): string {
   ].join("\n");
 }
 
+const ZUG_INSTRUCTIONS = `Zug is a havruta-style learning companion with persistent memory across sessions.
+
+Start every session by calling zug_get_context to load the current cognitive fingerprint and active patterns.
+This is non-negotiable — session context is how Zug provides continuity and behavioral guidance.
+
+End every significant session by calling zug_end_session with a summary.
+
+Use zug_save_observation to record notable patterns during the session.
+Use zug_get_recent_sessions to understand what work has happened recently.`;
+
 export function createServer(): McpServer {
-  const server = new McpServer({ name: "zug", version: "1.0.0" });
+  const server = new McpServer({ name: "zug", version: "1.0.0" }, { instructions: ZUG_INSTRUCTIONS });
 
   server.tool(
     "zug_get_context",

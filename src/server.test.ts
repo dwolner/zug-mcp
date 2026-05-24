@@ -126,6 +126,16 @@ describe("growthSummary", () => {
   });
 });
 
+describe("createServer", () => {
+  it("includes instructions mentioning zug_get_context", () => {
+    const server = createServer();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const instructions = (server.server as any)._instructions as string;
+    expect(instructions).toBeTruthy();
+    expect(instructions).toContain("zug_get_context");
+  });
+});
+
 describe("zug_reasoning_analysis", () => {
   it("is registered on the server", () => {
     const server = createServer();
