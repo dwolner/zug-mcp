@@ -10,9 +10,9 @@
   ],
   "phase": null,
   "relatedTickets": [],
-  "resolution": null,
-  "resolvedDate": null,
+  "resolution": "Replaced hardcoded \"1.0.0\" string with a runtime read from package.json using fs.readFileSync + __dirname. The compiled CLI (dist/cli.js) reads ../package.json at startup, so version output will always match the installed package version without any code changes needed after version bumps.",
+  "resolvedDate": "2026-05-24",
   "severity": "low",
-  "status": "open",
+  "status": "resolved",
   "title": "[bug] CLI version hardcoded as \"1.0.0\" — lies after any version bump"
 }

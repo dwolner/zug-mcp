@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import { execSync } from "child_process";
+const { version } = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf-8")) as { version: string };
 import {
   getStats,
   getLastSessionDate,
@@ -220,7 +221,7 @@ switch (cmd) {
     break;
   case "--version":
   case "version":
-    console.log("1.0.0");
+    console.log(version);
     break;
   default:
     printUsage();
