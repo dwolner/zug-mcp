@@ -1,0 +1,3 @@
+# Exclude compiled test files from npm package
+dist/**/*.test.js
+dist/**/*.test.js.map

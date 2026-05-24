@@ -8,9 +8,9 @@
   "location": [],
   "phase": null,
   "relatedTickets": [],
-  "resolution": null,
-  "resolvedDate": null,
+  "resolution": "Added .npmignore to exclude dist/**/*.test.js and dist/**/*.test.js.map from the published package. Source test files (src/*.test.ts) are already excluded by the files field in package.json.",
+  "resolvedDate": "2026-05-24",
   "severity": "medium",
-  "status": "open",
+  "status": "resolved",
   "title": "[packaging] dist/ includes compiled test files (server.test.js, storage.test.js). Acceptable"
 }
