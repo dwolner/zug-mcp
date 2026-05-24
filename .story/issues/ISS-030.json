@@ -1,0 +1,19 @@
+{
+  "components": [
+    "http",
+    "oauth-provider"
+  ],
+  "discoveredDate": "2026-05-24",
+  "id": "ISS-030",
+  "impact": "The ZUG_REGISTER_TOKEN guard added in ISS-013 requires POST /register to include Authorization: Bearer &lt;token&gt;. claude.ai's dynamic client registration does not send this header — it posts the registration body directly per the base RFC 7591 spec. Setting ZUG_REGISTER_TOKEN renders the claude.ai web integration completely unusable. The existing registerClient redirect-URI allowlist (https://claude.ai/* only) is the only functional defense. ZUG_REGISTER_TOKEN is a security feature that cannot be used without breaking the product.",
+  "location": [
+    "src/http.ts"
+  ],
+  "phase": null,
+  "relatedTickets": [],
+  "resolution": null,
+  "resolvedDate": null,
+  "severity": "high",
+  "status": "open",
+  "title": "[bug] ZUG_REGISTER_TOKEN breaks claude.ai — RFC 7591 initial access token not supported by claude.ai client"
+}

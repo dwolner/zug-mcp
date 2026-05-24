@@ -1,0 +1,12 @@
+{
+  "blockedBy": [],
+  "completedDate": null,
+  "createdDate": "2026-05-24",
+  "description": "The claude.ai OAuth flow requires the Zug HTTP server to be publicly accessible, but nothing in the README, CONTRIBUTING.md, or CLI explains how to deploy it. Users who want Zug with claude.ai web must independently figure out a hosting solution. Add a deployment section to README.md covering: (1) fly.io one-command deploy as the recommended path, (2) required env vars (ZUG_URL, PORT, ANTHROPIC_API_KEY), (3) the ZUG_DATA_DIR persistence requirement (volume mount), (4) the OAuth flow walkthrough. Optionally add a fly.toml to the repo.",
+  "id": "T-030",
+  "order": 30,
+  "phase": null,
+  "status": "open",
+  "title": "HTTP transport deployment guide — make claude.ai web integration actually usable",
+  "type": "feature"
+}

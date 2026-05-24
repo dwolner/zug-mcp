@@ -1,0 +1,18 @@
+{
+  "components": [
+    "cli"
+  ],
+  "discoveredDate": "2026-05-24",
+  "id": "ISS-031",
+  "impact": "zug version and zug --version print \"1.0.0\" unconditionally. After any npm version bump the CLI will report stale version information, making it impossible to verify which version is installed via the CLI itself.",
+  "location": [
+    "src/cli.ts"
+  ],
+  "phase": null,
+  "relatedTickets": [],
+  "resolution": null,
+  "resolvedDate": null,
+  "severity": "low",
+  "status": "open",
+  "title": "[bug] CLI version hardcoded as \"1.0.0\" — lies after any version bump"
+}

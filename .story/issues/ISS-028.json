@@ -1,0 +1,19 @@
+{
+  "components": [
+    "server",
+    "http"
+  ],
+  "discoveredDate": "2026-05-24",
+  "id": "ISS-028",
+  "impact": "openThread is a module-level variable. Any HTTP server restart between sessions silently drops the active thread. The next session gets no indication that a question was left unresolved. For stdio (Claude Code) this is tolerable since restarts are rare, but for the HTTP transport with claude.ai web it's a real data-loss condition.",
+  "location": [
+    "src/server.ts"
+  ],
+  "phase": null,
+  "relatedTickets": [],
+  "resolution": null,
+  "resolvedDate": null,
+  "severity": "medium",
+  "status": "open",
+  "title": "[bug] Socratic thread lost on server restart — openThread is in-memory only"
+}

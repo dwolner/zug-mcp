@@ -1,0 +1,12 @@
+{
+  "blockedBy": [],
+  "completedDate": null,
+  "createdDate": "2026-05-24",
+  "description": "The three-tier system (observations → reinforced patterns → lessons) has no automated bridging. Lessons are created only when an agent explicitly calls zug_create_lesson, which requires deliberate AI action not guaranteed by any rule or system prompt. At session end (or during synthesis), detect patterns that have been reinforced 3+ times across sessions and surface them as lesson candidates in the zug_end_session response. The agent can then decide whether to promote them. This closes the feedback loop without requiring the agent to remember to check reinforcements manually.",
+  "id": "T-028",
+  "order": 10,
+  "phase": null,
+  "status": "open",
+  "title": "Automated observation→lesson pipeline — surface promotion suggestions at session end",
+  "type": "feature"
+}

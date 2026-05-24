@@ -1,0 +1,19 @@
+{
+  "components": [
+    "synthesis",
+    "server"
+  ],
+  "discoveredDate": "2026-05-24",
+  "id": "ISS-027",
+  "impact": "Every synthesis run receives the updated PERSONA as both persona and playbook inputs. PLAYBOOK.md is never passed to Haiku. The playbook output of synthesis is written based on persona content, not playbook content — causing PLAYBOOK.md to gradually drift toward a persona echo instead of cross-session universal patterns. This silently breaks one of the three synthesis outputs from day one.",
+  "location": [
+    "src/server.ts"
+  ],
+  "phase": null,
+  "relatedTickets": [],
+  "resolution": null,
+  "resolvedDate": null,
+  "severity": "critical",
+  "status": "open",
+  "title": "[bug] currentPlaybook: readPersona() — synthesis never sees the real PLAYBOOK.md"
+}

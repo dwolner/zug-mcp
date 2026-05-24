@@ -1,0 +1,12 @@
+{
+  "blockedBy": [],
+  "completedDate": null,
+  "createdDate": "2026-05-24",
+  "description": "merge.ts, synthesize-cli.ts, and onboard.ts are internal development tools with no user-facing CLI entry points and no documentation. Their compiled output (dist/merge.js, dist/synthesize-cli.js, dist/onboard.js) ships in the published npm package, adding dead weight. Add them to .npmignore or move them to a scripts/ directory outside the TypeScript build. Verify the published package contains only: dist/cli.js, dist/stdio.js, dist/server.js, dist/storage.js, dist/setup.js, dist/synthesize.js, dist/api-key.js, dist/http.js, dist/oauth-provider.js, dist/rate-limit.js, and their type declarations.",
+  "id": "T-029",
+  "order": 20,
+  "phase": null,
+  "status": "open",
+  "title": "Remove dev-only files from npm package — merge.ts, synthesize-cli.ts, onboard.ts",
+  "type": "chore"
+}

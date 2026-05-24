@@ -1,0 +1,20 @@
+{
+  "components": [
+    "storage",
+    "server"
+  ],
+  "discoveredDate": "2026-05-24",
+  "id": "ISS-029",
+  "impact": "reinforcements.jsonl stores pattern text verbatim and matches on equality. An agent observing \"user prefers concise answers\" this session and \"user wants brief responses\" next session creates two separate entries instead of reinforcing one. Without exact text copying, reinforcement counts never accumulate, the tool produces no signal, and zug_get_context surfaces stale or zero-count patterns as if equally weighted.",
+  "location": [
+    "src/storage.ts",
+    "src/server.ts"
+  ],
+  "phase": null,
+  "relatedTickets": [],
+  "resolution": null,
+  "resolvedDate": null,
+  "severity": "high",
+  "status": "open",
+  "title": "[usability] zug_reinforce_observation requires exact text match — unusable in practice"
+}

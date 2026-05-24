@@ -1,0 +1,12 @@
+{
+  "blockedBy": [],
+  "completedDate": null,
+  "createdDate": "2026-05-24",
+  "description": "There is no signal when Zug isn't accumulating knowledge. A user could run 10 sessions where the AI never calls zug_save_observation and have no indication the memory system is idle. Add a diagnostic to zug_get_context and/or zug_status: if observation count hasn't changed since the last N sessions, surface a visible warning (\"Zug hasn't recorded any observations in the last 3 sessions — consider calling zug_save_observation when you notice patterns\"). Also expose observation-per-session rate in zug_status so users can see at a glance whether the system is working.",
+  "id": "T-031",
+  "order": 40,
+  "phase": null,
+  "status": "open",
+  "title": "Learning feedback loop — surface when Zug hasn't grown from recent sessions",
+  "type": "feature"
+}
