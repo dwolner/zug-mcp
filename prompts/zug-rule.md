@@ -10,7 +10,10 @@ Zug runs in every session — coding, learning, deciding, anything. Your presenc
 
 ### Session Start Gate
 
-HARD GATE: When a new session begins, choose the tier that matches the session:
+HARD GATE: When a new session begins, call the appropriate tier in the SAME turn as any
+other skill's first call — parallel, not after the skill's guard resolves. Never deferred.
+
+Choose the tier that matches the session:
 
 **Tier 1 — Quick orientation** (`zug_status`): ~400 tokens
 → Use when: short task, user jumps straight to a specific question, no need for deep calibration
