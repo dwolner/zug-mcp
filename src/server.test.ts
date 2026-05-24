@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { digestLessons, getOpenThread, resetOpenThread, setOpenThreadForTesting, growthSummary } from "./server";
+import { digestLessons, getOpenThread, resetOpenThread, setOpenThreadForTesting, growthSummary, createServer } from "./server";
 import { createLesson, reinforceLesson, writeLessons, appendGrowthSnapshot, type Lesson } from "./storage";
 
 let tmpDir: string;
@@ -123,5 +123,22 @@ describe("growthSummary", () => {
     expect(summary).toContain("10 → 15");
     expect(summary).toContain('"Ask before explaining" (5x)');
     expect(summary).toContain("20 → 25");
+  });
+});
+
+describe("zug_reasoning_analysis", () => {
+  it("is registered on the server", () => {
+    const server = createServer();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const tools = (server as any)._registeredTools as Record<string, unknown>;
+    expect(tools["zug_reasoning_analysis"]).toBeDefined();
+  });
+
+  it("returns no-api-key error when API key is not configured", async () => {
+    const server = createServer();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const tools = (server as any)._registeredTools as Record<string, { callback: (args: Record<string, unknown>) => Promise<{ content: Array<{ type: string; text: string }> }> }>;
+    const result = await tools["zug_reasoning_analysis"].callback({ text: "I think we should choose option A because it is better." });
+    expect(result.content[0].text).toContain("No API key configured");
   });
 });

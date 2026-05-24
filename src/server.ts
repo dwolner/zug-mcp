@@ -1,5 +1,7 @@
+import Anthropic from "@anthropic-ai/sdk";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { loadApiKey, HAIKU_MODEL } from "./api-key.js";
 import {
   readPersona,
   readPlaybook,
@@ -483,6 +485,54 @@ export function createServer(): McpServer {
     async () => {
       try {
         return { content: [{ type: "text" as const, text: growthSummary() }] };
+      } catch (err) {
+        return { content: [{ type: "text" as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }] };
+      }
+    }
+  );
+
+  server.tool(
+    "zug_reasoning_analysis",
+    "Run parallel multi-lens analysis of a piece of reasoning or decision. Returns structured feedback across 6 cognitive lenses: conceptual clarity, assumption identification, logical consistency, knowledge gaps, analogical reasoning, and meta-cognitive awareness.",
+    {
+      text: z.string().min(10).max(2000).describe("The reasoning, argument, or decision text to analyze"),
+    },
+    async ({ text }) => {
+      try {
+        const apiKey = loadApiKey();
+        if (!apiKey) {
+          return { content: [{ type: "text" as const, text: "Error: No API key configured — set ANTHROPIC_API_KEY or add it to ~/.zug/.env" }] };
+        }
+        const client = new Anthropic({ apiKey, timeout: 30_000, maxRetries: 2 });
+
+        const lenses: Array<{ name: string; prompt: string }> = [
+          { name: "Conceptual Clarity", prompt: `Analyze this text for conceptual clarity. Are key terms defined and used consistently? Flag any ambiguous or shifting concepts. Be specific and concise (2-3 sentences):\n\n${text}` },
+          { name: "Assumption Identification", prompt: `What assumptions are being made in this text without being stated explicitly? List the most significant ones. Be specific and concise (2-3 sentences):\n\n${text}` },
+          { name: "Logical Consistency", prompt: `Assess the logical consistency of this reasoning. Are the inferences valid? Do conclusions follow from the premises? Be specific and concise (2-3 sentences):\n\n${text}` },
+          { name: "Knowledge Gaps", prompt: `What is unknown or uncertain in this reasoning that could materially affect the conclusion? Identify the most important gaps. Be specific and concise (2-3 sentences):\n\n${text}` },
+          { name: "Analogical Reasoning", prompt: `What analogies or comparisons are being used, implicitly or explicitly? Do they hold? Where do they break down? Be specific and concise (2-3 sentences):\n\n${text}` },
+          { name: "Meta-Cognitive Awareness", prompt: `Is the reasoner aware of their own reasoning process? Do they acknowledge uncertainty, bias, or limitations in their thinking? Be specific and concise (2-3 sentences):\n\n${text}` },
+        ];
+
+        const results = await Promise.all(
+          lenses.map(async (lens) => {
+            const response = await client.messages.create({
+              model: HAIKU_MODEL,
+              max_tokens: 200,
+              messages: [{ role: "user", content: lens.prompt }],
+            });
+            const block = response.content[0];
+            const analysis = block.type === "text" ? block.text.trim() : "(no response)";
+            return `### ${lens.name}\n${analysis}`;
+          })
+        );
+
+        return {
+          content: [{
+            type: "text" as const,
+            text: `## Reasoning Analysis\n\n${results.join("\n\n")}`,
+          }],
+        };
       } catch (err) {
         return { content: [{ type: "text" as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }] };
       }
