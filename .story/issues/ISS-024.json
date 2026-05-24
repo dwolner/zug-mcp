@@ -1,0 +1,16 @@
+{
+  "components": [
+    "autonomous"
+  ],
+  "discoveredDate": "2026-05-24",
+  "id": "ISS-024",
+  "impact": "Promise.all means a single lens failure returns error for the whole analysis rather than partial results. Acceptable for Phase 1 — partial results with failed lenses would be confusing.",
+  "location": [],
+  "phase": null,
+  "relatedTickets": [],
+  "resolution": null,
+  "resolvedDate": null,
+  "severity": "medium",
+  "status": "open",
+  "title": "[ux] Promise.all means a single lens failure returns error for the whole analysis rat"
+}

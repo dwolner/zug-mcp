@@ -1,0 +1,16 @@
+{
+  "components": [
+    "autonomous"
+  ],
+  "discoveredDate": "2026-05-24",
+  "id": "ISS-023",
+  "impact": "Tests access (server as any)._registeredTools — a private McpServer field. Fragile if SDK renames it, but acceptable for structural tests in Phase 1.",
+  "location": [],
+  "phase": null,
+  "relatedTickets": [],
+  "resolution": null,
+  "resolvedDate": null,
+  "severity": "medium",
+  "status": "open",
+  "title": "[testing] Tests access (server as any)._registeredTools — a private McpServer field. Fragi"
+}
