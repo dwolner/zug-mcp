@@ -11,9 +11,9 @@
   ],
   "phase": null,
   "relatedTickets": [],
-  "resolution": null,
-  "resolvedDate": null,
+  "resolution": "Moved openThread from an in-memory module-level variable to a persisted JSON file (~/.zug/open-thread.json). Added readOpenThread() and writeOpenThread() to storage.ts, exported the SocraticThread interface from there, and replaced all direct openThread mutations in server.ts with storage calls. The thread now survives HTTP server restarts. Writing null deletes the file; reading returns null if absent or malformed.",
+  "resolvedDate": "2026-05-24",
   "severity": "medium",
-  "status": "open",
+  "status": "resolved",
   "title": "[bug] Socratic thread lost on server restart — openThread is in-memory only"
 }

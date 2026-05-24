@@ -18,7 +18,34 @@ function getPaths() {
     reinforcementsFile: path.join(zugDir, "reinforcements.jsonl"),
     lessonsFile: path.join(zugDir, "lessons.jsonl"),
     growthFile: path.join(zugDir, "growth.jsonl"),
+    openThreadFile: path.join(zugDir, "open-thread.json"),
   };
+}
+
+export interface SocraticThread {
+  question: string;
+  openedAt: string;
+  sessionId: string;
+}
+
+export function readOpenThread(): SocraticThread | null {
+  const { openThreadFile } = getPaths();
+  if (!fs.existsSync(openThreadFile)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(openThreadFile, "utf-8")) as SocraticThread;
+  } catch {
+    return null;
+  }
+}
+
+export function writeOpenThread(thread: SocraticThread | null): void {
+  ensureDirs();
+  const { openThreadFile } = getPaths();
+  if (thread === null) {
+    if (fs.existsSync(openThreadFile)) fs.unlinkSync(openThreadFile);
+  } else {
+    fs.writeFileSync(openThreadFile, JSON.stringify(thread), "utf-8");
+  }
 }
 
 export type ObservationType =

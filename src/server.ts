@@ -30,24 +30,19 @@ import {
   getActiveLessons,
   appendGrowthSnapshot,
   readGrowthSnapshots,
+  readOpenThread,
+  writeOpenThread,
   type ObservationType,
   type Lesson,
+  type SocraticThread,
 } from "./storage.js";
 import { synthesize } from "./synthesize.js";
 
-interface SocraticThread {
-  question: string;
-  openedAt: string;
-  sessionId: string;
-}
-
-let openThread: SocraticThread | null = null;
-
-export function getOpenThread(): SocraticThread | null { return openThread; }
-export function resetOpenThread(): void { openThread = null; }
+export function getOpenThread(): SocraticThread | null { return readOpenThread(); }
+export function resetOpenThread(): void { writeOpenThread(null); }
 /** @internal test helper only */
 export function setOpenThreadForTesting(question: string, sessionId: string): void {
-  openThread = { question, openedAt: new Date().toISOString(), sessionId };
+  writeOpenThread({ question, openedAt: new Date().toISOString(), sessionId });
 }
 
 export function digestLessons(): string {
@@ -168,7 +163,8 @@ export function createServer(): McpServer {
         const recentObs = lastTimestamp ? getObservationsSince(lastTimestamp) : [];
         let lessonDigest = "";
         try { lessonDigest = digestLessons(); } catch { /* best-effort */ }
-        const threadBlock = openThread ? `## Open Thread\n${openThread.question}` : "";
+        const thread = readOpenThread();
+        const threadBlock = thread ? `## Open Thread\n${thread.question}` : "";
 
         const parts = [
           `# Zug Context (delta)\nSessions: ${stats.sessions} | Last: ${lastDate ?? "none"} | Observations: ${stats.observations}\n`,
@@ -191,7 +187,8 @@ export function createServer(): McpServer {
       const stats = getStats();
       let lessonDigest = "";
       try { lessonDigest = digestLessons(); } catch { /* best-effort */ }
-      const fullThreadBlock = openThread ? `## Open Thread\n${openThread.question}` : "";
+      const currentThread = readOpenThread();
+      const fullThreadBlock = currentThread ? `## Open Thread\n${currentThread.question}` : "";
 
       const parts = [
         `# Zug Context\nSessions: ${stats.sessions} | Observations: ${stats.observations}\n`,
@@ -254,7 +251,8 @@ export function createServer(): McpServer {
           ? observations.map((o) => `- [${o.type}/${o.confidence}] ${o.observation}`).join("\n")
           : "*No observations saved this session.*";
 
-      const unresolvedThread = openThread?.sessionId === session_id ? openThread : null;
+      const savedThread = readOpenThread();
+      const unresolvedThread = savedThread?.sessionId === session_id ? savedThread : null;
 
       const sessionLines = [
         `# Session ${session_id}`,
@@ -274,7 +272,7 @@ export function createServer(): McpServer {
 
       writeSession(session_id, sessionLines.join("\n"));
       // Synchronous reset before async synthesis; also clears orphaned threads from other sessions
-      if (openThread) openThread = null;
+      writeOpenThread(null);
 
       // Append observations immediately (synchronous, always succeeds)
       const meaningful = observations.filter((o) => o.confidence !== "low");
@@ -487,7 +485,7 @@ export function createServer(): McpServer {
     },
     async ({ question, session_id }) => {
       try {
-        openThread = { question, openedAt: new Date().toISOString(), sessionId: session_id };
+        writeOpenThread({ question, openedAt: new Date().toISOString(), sessionId: session_id });
         return { content: [{ type: "text" as const, text: `Thread opened: ${question}` }] };
       } catch (err) {
         return { content: [{ type: "text" as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }] };
@@ -501,8 +499,8 @@ export function createServer(): McpServer {
     {},
     async () => {
       try {
-        if (!openThread) return { content: [{ type: "text" as const, text: "No open thread" }] };
-        openThread = null;
+        if (!readOpenThread()) return { content: [{ type: "text" as const, text: "No open thread" }] };
+        writeOpenThread(null);
         return { content: [{ type: "text" as const, text: "Thread resolved" }] };
       } catch (err) {
         return { content: [{ type: "text" as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }] };
@@ -516,8 +514,9 @@ export function createServer(): McpServer {
     {},
     async () => {
       try {
-        if (!openThread) return { content: [{ type: "text" as const, text: "No open thread" }] };
-        return { content: [{ type: "text" as const, text: `Open thread (since ${openThread.openedAt}): ${openThread.question}` }] };
+        const t = readOpenThread();
+        if (!t) return { content: [{ type: "text" as const, text: "No open thread" }] };
+        return { content: [{ type: "text" as const, text: `Open thread (since ${t.openedAt}): ${t.question}` }] };
       } catch (err) {
         return { content: [{ type: "text" as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }] };
       }
