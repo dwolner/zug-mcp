@@ -8,9 +8,9 @@
   "location": [],
   "phase": null,
   "relatedTickets": [],
-  "resolution": null,
-  "resolvedDate": null,
+  "resolution": "Exported getDataDir() from storage.ts and updated cli.ts to use it instead of duplicating the env var logic inline. Single source of truth for data dir resolution.",
+  "resolvedDate": "2026-05-24",
   "severity": "medium",
-  "status": "open",
+  "status": "resolved",
   "title": "[code-quality] ZUG_DIR duplicated in cli.ts vs getPaths() — deferred"
 }

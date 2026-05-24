@@ -2,8 +2,12 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 
+export function getDataDir(): string {
+  return process.env.ZUG_DATA_DIR || path.join(os.homedir(), ".zug");
+}
+
 function getPaths() {
-  const zugDir = process.env.ZUG_DATA_DIR || path.join(os.homedir(), ".zug");
+  const zugDir = getDataDir();
   return {
     zugDir,
     sessionsDir: path.join(zugDir, "sessions"),

@@ -10,10 +10,11 @@ import {
   getObservationTrend,
   readPersona,
   readActive,
+  getDataDir,
 } from "./storage.js";
 import { runSetup } from "./setup.js";
 
-const ZUG_DIR = process.env.ZUG_DATA_DIR || path.join(os.homedir(), ".zug");
+const ZUG_DIR = getDataDir();
 const OBSERVATIONS_FILE = path.join(ZUG_DIR, "observations.jsonl");
 
 function cmdStatus() {
