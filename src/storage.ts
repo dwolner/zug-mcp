@@ -534,3 +534,13 @@ export function getGrowthTrend(limit: number): GrowthSnapshot[] {
     .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
     .slice(0, limit);
 }
+
+export function getStaleGrowthWarning(n = 3): string | null {
+  const snapshots = getGrowthTrend(n);
+  if (snapshots.length < 2) return null;
+  const counts = snapshots.map((s) => s.observationCount);
+  const min = Math.min(...counts);
+  const max = Math.max(...counts);
+  if (max > min) return null;
+  return `No new observations in the last ${snapshots.length} sessions. Call zug_save_observation when you notice patterns.`;
+}

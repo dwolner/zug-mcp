@@ -33,6 +33,7 @@ import {
   readOpenThread,
   writeOpenThread,
   getLessonCandidates,
+  getStaleGrowthWarning,
   type ObservationType,
   type Lesson,
   type SocraticThread,
@@ -166,12 +167,15 @@ export function createServer(): McpServer {
         try { lessonDigest = digestLessons(); } catch { /* best-effort */ }
         const thread = readOpenThread();
         const threadBlock = thread ? `## Open Thread\n${thread.question}` : "";
+        const staleWarningDelta = getStaleGrowthWarning();
+        const staleBlockDelta = staleWarningDelta ? `## Growth Alert\n${staleWarningDelta}` : "";
 
         const parts = [
           `# Zug Context (delta)\nSessions: ${stats.sessions} | Last: ${lastDate ?? "none"} | Observations: ${stats.observations}\n`,
           active ? `## Active Patterns\n${active}` : "",
           lessonDigest,
           threadBlock,
+          staleBlockDelta,
           lastSummary ? `## Last session\n${lastSummary}` : "",
           recentObs.length > 0
             ? `## New since last session (${recentObs.length})\n${recentObs.map((o) => `- [${o.type}/${o.confidence}] ${o.observation}`).join("\n")}`
@@ -190,12 +194,15 @@ export function createServer(): McpServer {
       try { lessonDigest = digestLessons(); } catch { /* best-effort */ }
       const currentThread = readOpenThread();
       const fullThreadBlock = currentThread ? `## Open Thread\n${currentThread.question}` : "";
+      const staleWarningFull = getStaleGrowthWarning();
+      const staleBlockFull = staleWarningFull ? `## Growth Alert\n${staleWarningFull}` : "";
 
       const parts = [
         `# Zug Context\nSessions: ${stats.sessions} | Observations: ${stats.observations}\n`,
         active ? `## Active Patterns\n${active}` : "",
         lessonDigest,
         fullThreadBlock,
+        staleBlockFull,
         persona
           ? `## Cognitive Fingerprint\n${persona}`
           : "## Cognitive Fingerprint\n*Not yet built. This is an early session.*",
@@ -367,20 +374,23 @@ export function createServer(): McpServer {
 
   server.tool(
     "zug_status",
-    "Returns Zug stats — session count, observation count, persona size, last session date, excerpt, weekly trend, and active patterns.",
+    "Returns Zug stats — session count, observation count, persona size, last session date, excerpt, weekly trend, active patterns, and a stale-growth warning if no new observations have been recorded recently.",
     async () => {
       const { sessions, observations, personaLines } = getStats();
       const lastDate = getLastSessionDate();
       const excerpt = getPersonaExcerpt(2);
       const trend = getObservationTrend(4);
       const active = readActive();
+      const obsRate = sessions > 0 ? (observations / sessions).toFixed(1) : "0";
+      const staleWarning = getStaleGrowthWarning();
 
       const lines = [
         `- Sessions: ${sessions}${lastDate ? ` | Last: ${lastDate}` : ""}`,
-        `- Observations: ${observations}`,
+        `- Observations: ${observations} (avg ${obsRate}/session)`,
         `- Persona lines: ${personaLines}`,
         excerpt ? `- Excerpt: ${excerpt}` : null,
         `- Trend (obs/week, last 4): ${trend.join(" → ")}`,
+        staleWarning ? `- Warning: ${staleWarning}` : null,
       ].filter(Boolean).join("\n");
 
       const parts = [

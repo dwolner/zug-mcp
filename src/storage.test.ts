@@ -29,6 +29,7 @@ import {
   readGrowthSnapshots,
   getGrowthTrend,
   getLessonCandidates,
+  getStaleGrowthWarning,
   type Observation,
   type Lesson,
   type GrowthSnapshot,
@@ -742,5 +743,44 @@ describe("getGrowthTrend", () => {
     appendGrowthSnapshot(makeSnapshot({ sessionId: "only" }));
     const trend = getGrowthTrend(10);
     expect(trend).toHaveLength(1);
+  });
+});
+
+describe("getStaleGrowthWarning", () => {
+  it("returns null when no snapshots", () => {
+    expect(getStaleGrowthWarning()).toBeNull();
+  });
+
+  it("returns null when only one snapshot", () => {
+    appendGrowthSnapshot(makeSnapshot({ observationCount: 5 }));
+    expect(getStaleGrowthWarning()).toBeNull();
+  });
+
+  it("returns null when observation count is growing", () => {
+    appendGrowthSnapshot(makeSnapshot({ timestamp: "2026-01-01T00:00:00.000Z", observationCount: 3 }));
+    appendGrowthSnapshot(makeSnapshot({ timestamp: "2026-01-02T00:00:00.000Z", observationCount: 5 }));
+    appendGrowthSnapshot(makeSnapshot({ timestamp: "2026-01-03T00:00:00.000Z", observationCount: 8 }));
+    expect(getStaleGrowthWarning()).toBeNull();
+  });
+
+  it("returns warning string when observation count is flat", () => {
+    appendGrowthSnapshot(makeSnapshot({ timestamp: "2026-01-01T00:00:00.000Z", observationCount: 10 }));
+    appendGrowthSnapshot(makeSnapshot({ timestamp: "2026-01-02T00:00:00.000Z", observationCount: 10 }));
+    appendGrowthSnapshot(makeSnapshot({ timestamp: "2026-01-03T00:00:00.000Z", observationCount: 10 }));
+    const warning = getStaleGrowthWarning();
+    expect(warning).not.toBeNull();
+    expect(warning).toContain("No new observations");
+    expect(warning).toContain("zug_save_observation");
+  });
+
+  it("respects custom n parameter — higher threshold requires more flat sessions", () => {
+    // 3 snapshots: first has growth, last two are flat
+    appendGrowthSnapshot(makeSnapshot({ timestamp: "2026-01-01T00:00:00.000Z", observationCount: 3 }));
+    appendGrowthSnapshot(makeSnapshot({ timestamp: "2026-01-02T00:00:00.000Z", observationCount: 5 }));
+    appendGrowthSnapshot(makeSnapshot({ timestamp: "2026-01-03T00:00:00.000Z", observationCount: 5 }));
+    // n=2: looks at newest 2 (both 5) → warns
+    expect(getStaleGrowthWarning(2)).not.toBeNull();
+    // n=3: looks at all 3 (3→5→5), min≠max → no warning
+    expect(getStaleGrowthWarning(3)).toBeNull();
   });
 });
