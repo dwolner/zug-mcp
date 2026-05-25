@@ -28,10 +28,54 @@ Over time: a cognitive fingerprint that makes every session smarter than the las
 | Agent | Support tier | Notes |
 |-------|-------------|-------|
 | Claude Code | First-class | Full rule injection via `~/.claude/rules/zug.md`. Hooks auto-run context at session start. |
+| claude.ai web | Via HTTP | Requires a deployed HTTP server. OAuth handled automatically by the server. |
 | Cursor | Best-effort | MCP config written. No automatic rule injection — add the rule manually if needed. |
 | Windsurf | Best-effort | MCP config written. Manual rule setup required. |
 
 Claude Code is the primary target. Other agents receive MCP connectivity but lack the automatic session gate behavior.
+
+## Deploy for claude.ai (HTTP Transport)
+
+claude.ai web connects to MCP servers over HTTP and requires a publicly accessible HTTPS URL. Zug ships a ready-to-deploy `fly.toml` and `Dockerfile` — the fastest path is [fly.io](https://fly.io).
+
+**Prerequisites:** [flyctl](https://fly.io/docs/flyctl/install/) installed, free fly.io account.
+
+```bash
+# 1. Clone the repo (or use your npm-installed copy)
+git clone https://github.com/dwolner/zug-mcp && cd zug-mcp
+
+# 2. Create the app (picks up fly.toml — do not deploy yet)
+fly launch --no-deploy
+
+# 3. Create a persistent volume for your data
+fly volumes create zug_data --size 1
+
+# 4. Set required secrets
+fly secrets set \
+  ANTHROPIC_API_KEY=sk-ant-... \
+  ZUG_URL=https://<your-app-name>.fly.dev
+
+# 5. Deploy
+fly deploy
+```
+
+Your server is now live at `https://<your-app-name>.fly.dev`.
+
+**Connect claude.ai:**
+
+1. Open [claude.ai](https://claude.ai) → Settings → Integrations
+2. Add MCP server URL: `https://<your-app-name>.fly.dev`
+3. Authorize — Zug handles the OAuth flow automatically
+
+**Persistence:** All data is written to the `/data/.zug` volume mount and survives restarts and redeploys.
+
+**Sleep behavior:** The default `fly.toml` uses `auto_stop_machines = 'stop'` (free tier). The first request after idle wakes the machine in ~2s; subsequent requests are instant.
+
+**Update:**
+
+```bash
+fly deploy  # redeploy after pulling latest changes
+```
 
 ## CLI
 
@@ -119,6 +163,10 @@ No database. No cloud sync. Plain files you can read, back up, or delete.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `ZUG_DATA_DIR` | `~/.zug` | Override the data directory location |
+| `ZUG_URL` | `http://localhost:PORT` | Public HTTPS base URL — required for HTTP transport; used as OAuth issuer |
+| `ANTHROPIC_API_KEY` | — | Enables Haiku background synthesis (PERSONA/PLAYBOOK rewrite) |
+| `PORT` | `8080` | HTTP server port |
+| `ZUG_TOKEN` | — | Optional bearer token for legacy non-OAuth clients (curl, scripts) |
 
 ## License
 
