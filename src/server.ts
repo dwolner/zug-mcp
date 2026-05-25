@@ -32,6 +32,7 @@ import {
   readGrowthSnapshots,
   readOpenThread,
   writeOpenThread,
+  getLessonCandidates,
   type ObservationType,
   type Lesson,
   type SocraticThread,
@@ -231,7 +232,7 @@ export function createServer(): McpServer {
 
   server.tool(
     "zug_end_session",
-    "Call when a session ends. Writes the session log and appends observations to PERSONA.md.",
+    "Call when a session ends. Writes the session log, appends observations, and surfaces reinforced patterns ready for promotion to lessons.",
     {
       session_id: z.string().describe("Session identifier used during this session"),
       summary: z.string().describe("What was explored, decided, or worked on — and any notable moments"),
@@ -332,10 +333,15 @@ export function createServer(): McpServer {
       ].filter(Boolean);
       const structuredLabel = structuredParts.length ? ` (${structuredParts.join(", ")})` : "";
 
+      const candidates = getLessonCandidates(3);
+      const candidatesBlock = candidates.length > 0
+        ? `\n\nLesson candidates (reinforced 3+ times, not yet promoted):\n${candidates.map((p) => `  • "${p.text}" (${p.count}x)`).join("\n")}\nCall zug_create_lesson to promote any of these to named behavioral rules.`
+        : "";
+
       return {
         content: [{
           type: "text" as const,
-          text: `Session saved${contextLabel}${structuredLabel}. ${observations.length} observations. Total: ${stats.sessions} sessions, ${stats.observations} observations. Synthesis running in background.`,
+          text: `Session saved${contextLabel}${structuredLabel}. ${observations.length} observations. Total: ${stats.sessions} sessions, ${stats.observations} observations. Synthesis running in background.${candidatesBlock}`,
         }],
       };
     }

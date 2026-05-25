@@ -482,6 +482,23 @@ export function getActiveLessons(): Lesson[] {
     );
 }
 
+export function getLessonCandidates(threshold = 3): ReinforcedPattern[] {
+  const { reinforcementsFile } = getPaths();
+  const patterns = loadPatterns(reinforcementsFile);
+  const lessons = getActiveLessons();
+
+  return patterns
+    .filter((p) => p.count >= threshold)
+    .filter((p) =>
+      !lessons.some(
+        (l) =>
+          wordSimilarity(p.text, l.title).sharedCount >= 2 ||
+          wordSimilarity(p.text, l.content).sharedCount >= 2
+      )
+    )
+    .sort((a, b) => b.count - a.count);
+}
+
 // --- Growth snapshots ---
 
 export interface GrowthSnapshot {

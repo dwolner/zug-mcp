@@ -28,6 +28,7 @@ import {
   appendGrowthSnapshot,
   readGrowthSnapshots,
   getGrowthTrend,
+  getLessonCandidates,
   type Observation,
   type Lesson,
   type GrowthSnapshot,
@@ -466,6 +467,63 @@ describe("reinforcePattern / getTopPatterns", () => {
     const result = reinforcePattern("Completely different topic here");
     expect(result.matched).toBe(false);
     expect(result.pattern.count).toBe(1);
+  });
+});
+
+describe("getLessonCandidates", () => {
+  it("returns empty array when no patterns exist", () => {
+    expect(getLessonCandidates(3)).toEqual([]);
+  });
+
+  it("returns empty array when no patterns meet threshold", () => {
+    reinforcePattern("Some pattern");
+    reinforcePattern("Some pattern");
+    expect(getLessonCandidates(3)).toHaveLength(0);
+  });
+
+  it("returns patterns at or above threshold", () => {
+    reinforcePattern("Thinks in systems and relationships");
+    reinforcePattern("Thinks in systems and relationships");
+    reinforcePattern("Thinks in systems and relationships");
+    const candidates = getLessonCandidates(3);
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0].text).toBe("Thinks in systems and relationships");
+    expect(candidates[0].count).toBe(3);
+  });
+
+  it("excludes patterns already covered by an existing lesson title", () => {
+    reinforcePattern("User prefers concise direct answers");
+    reinforcePattern("User prefers concise direct answers");
+    reinforcePattern("User prefers concise direct answers");
+    createLesson({ title: "User prefers concise direct answers", content: "Keep responses short.", context: "ctx", source: "manual", tags: [] });
+    expect(getLessonCandidates(3)).toHaveLength(0);
+  });
+
+  it("excludes patterns already covered by an existing lesson content", () => {
+    reinforcePattern("User builds systems thinking in layers");
+    reinforcePattern("User builds systems thinking in layers");
+    reinforcePattern("User builds systems thinking in layers");
+    createLesson({ title: "Layered thinking", content: "User builds systems thinking in layers with abstractions.", context: "ctx", source: "manual", tags: [] });
+    expect(getLessonCandidates(3)).toHaveLength(0);
+  });
+
+  it("respects custom threshold parameter", () => {
+    reinforcePattern("Consistent preference pattern");
+    reinforcePattern("Consistent preference pattern");
+    expect(getLessonCandidates(2)).toHaveLength(1);
+    expect(getLessonCandidates(3)).toHaveLength(0);
+  });
+
+  it("sorts results by count descending", () => {
+    reinforcePattern("First pattern reinforced more");
+    reinforcePattern("First pattern reinforced more");
+    reinforcePattern("First pattern reinforced more");
+    reinforcePattern("First pattern reinforced more");
+    reinforcePattern("Second pattern reinforced less");
+    reinforcePattern("Second pattern reinforced less");
+    reinforcePattern("Second pattern reinforced less");
+    const candidates = getLessonCandidates(3);
+    expect(candidates[0].count).toBeGreaterThanOrEqual(candidates[1].count);
   });
 });
 
