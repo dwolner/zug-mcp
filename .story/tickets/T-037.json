@@ -1,0 +1,13 @@
+{
+  "blockedBy": [],
+  "claimedBySession": "28d97175-1d41-4961-9160-6b722bb39372",
+  "completedDate": "2026-05-26",
+  "createdDate": "2026-05-26",
+  "description": "http.ts: log a warning if ZUG_TOKEN is empty and document in deploy docs. Fix cmdBackup to use path.join(os.homedir(), '.zug', 'config') directly. Fixes ISS-038, ISS-040.",
+  "id": "T-037",
+  "order": 60,
+  "phase": "first-run-ux",
+  "status": "complete",
+  "title": "Fix ZUG_TOKEN empty default warning and zug backup config path",
+  "type": "task"
+}

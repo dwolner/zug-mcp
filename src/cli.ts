@@ -182,9 +182,7 @@ async function cmdUpdate(): Promise<void> {
 }
 
 function cmdBackup(): void {
-  const configFile = path.join(ZUG_DIR, "..", ".zug", "config");
-  const altConfigFile = path.join(os.homedir(), ".zug", "config");
-  const configPath = fs.existsSync(configFile) ? configFile : altConfigFile;
+  const configPath = path.join(os.homedir(), ".zug", "config");
 
   // Parse ZUG_URL from ~/.zug/config
   let zugUrl: string | undefined;

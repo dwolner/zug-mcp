@@ -167,7 +167,7 @@ No database. Plain files you can read, back up, or delete. HTTP/Fly users get re
 | `ZUG_URL` | `http://localhost:PORT` | Public HTTPS base URL — required for HTTP transport; used as OAuth issuer |
 | `ANTHROPIC_API_KEY` | — | Enables Haiku background synthesis (PERSONA/PLAYBOOK rewrite) |
 | `PORT` | `8080` | HTTP server port |
-| `ZUG_TOKEN` | — | Optional bearer token for legacy non-OAuth clients (curl, scripts) |
+| `ZUG_TOKEN` | — | Optional bearer token for legacy non-OAuth clients (curl, scripts) — server warns at startup if unset |
 
 ## License
 

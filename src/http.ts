@@ -8,6 +8,9 @@ import { isRateLimited } from "./rate-limit.js";
 import { zugOAuthProvider } from "./oauth-provider.js";
 
 const ZUG_TOKEN = process.env.ZUG_TOKEN || "";
+if (!ZUG_TOKEN) {
+  console.warn("[zug] Warning: ZUG_TOKEN is not set — server accepts connections without a shared secret");
+}
 const PORT = parseInt(process.env.PORT || "8080", 10);
 const ZUG_URL = process.env.ZUG_URL || `http://localhost:${PORT}`;
 
