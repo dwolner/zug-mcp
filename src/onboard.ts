@@ -108,6 +108,10 @@ async function main() {
   console.log("\n[zug] Writing your cognitive fingerprint...");
 
   const synthesized = await synthesizePersona(answers);
+  if (!synthesized) {
+    console.log("\n[zug] No ANTHROPIC_API_KEY found — saving your answers as plain markdown.");
+    console.log("      Set ANTHROPIC_API_KEY for a richer, synthesized fingerprint.");
+  }
   const content = synthesized ?? buildPlainMarkdown(answers);
   const method = synthesized ? "synthesized by Haiku" : "saved from your answers";
 

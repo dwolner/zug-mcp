@@ -90,6 +90,7 @@ zug update          Update zug-mcp to latest (runs npm install -g)
 zug tail [n]        Show recent observations (default: 10)
 zug persona         Print full PERSONA.md
 zug compact         Print pre-compaction checkpoint (used by PreCompact hook)
+zug onboard         Seed your cognitive fingerprint (ANTHROPIC_API_KEY optional, improves output)
 ```
 
 ## MCP Tools

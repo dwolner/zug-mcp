@@ -1,0 +1,13 @@
+{
+  "blockedBy": [],
+  "claimedBySession": "28d97175-1d41-4961-9160-6b722bb39372",
+  "completedDate": "2026-05-26",
+  "createdDate": "2026-05-26",
+  "description": "Add zug onboard to the CLI table. Note ANTHROPIC_API_KEY is optional but improves output. Warn explicitly in onboard.ts when falling back to plain markdown. Fixes ISS-035, ISS-036.",
+  "id": "T-034",
+  "order": 30,
+  "phase": "first-run-ux",
+  "status": "complete",
+  "title": "Add zug onboard to README and warn on API key fallback in onboard.ts",
+  "type": "chore"
+}
