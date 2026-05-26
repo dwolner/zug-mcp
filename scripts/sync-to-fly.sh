@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Merges local ~/.zug/ data with Fly.io volume, then pushes the result up.
-# Run once before switching Claude Code from stdio → mcp-remote.
+# Run once (from the machine with the richest local data) before switching
+# Claude Code from stdio → mcp-remote.
 #
 # Strategy:
 #   observations.jsonl  — merge both sides, dedup by full line
@@ -9,6 +10,16 @@
 #   lessons/reinforcements/growth — local wins
 
 set -euo pipefail
+
+if ! command -v fly &>/dev/null; then
+  echo "Error: flyctl is required. Install it with:"
+  echo "  brew install flyctl        # macOS"
+  echo "  curl -L https://fly.io/install.sh | sh  # Linux"
+  echo ""
+  echo "Note: this script only needs to run once, from the machine with"
+  echo "the richest local data. Other machines just need mcp-remote configured."
+  exit 1
+fi
 
 APP="zug-mcp"
 REMOTE="/data/.zug"
