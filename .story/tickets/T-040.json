@@ -1,0 +1,15 @@
+{
+  "blockedBy": [
+    "T-041"
+  ],
+  "claimedBySession": "28d97175-1d41-4961-9160-6b722bb39372",
+  "completedDate": "2026-05-26",
+  "createdDate": "2026-05-26",
+  "description": "After Haiku synthesis rewrites PERSONA.md from observations.jsonl, observations older than the synthesis timestamp are already distilled and redundant. Truncate observations.jsonl to post-synthesis entries only, moving the rest to observations.archive.jsonl. Prevents unbounded growth of the raw observation log. Synthesis is the scaling mechanism — this makes it effective.",
+  "id": "T-040",
+  "order": 90,
+  "phase": "first-run-ux",
+  "status": "complete",
+  "title": "Prune observations.jsonl after synthesis — archive pre-synthesis entries",
+  "type": "task"
+}

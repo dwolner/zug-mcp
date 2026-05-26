@@ -34,6 +34,7 @@ import {
   writeOpenThread,
   getLessonCandidates,
   getStaleGrowthWarning,
+  archiveObservations,
   type ObservationType,
   type Lesson,
   type SocraticThread,
@@ -310,6 +311,7 @@ export function createServer(): McpServer {
             writePersona(result.persona);
             writePlaybook(result.playbook);
             if (result.active) writeActive(result.active);
+            archiveObservations();
           }
         }).catch((err: unknown) => {
           console.error("[zug] synthesis failed:", err instanceof Error ? err.message : err);

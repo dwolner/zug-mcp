@@ -6,7 +6,7 @@ import {
   readPersona, writePersona,
   readPlaybook, writePlaybook,
   readActive, writeActive,
-  appendObservation, getObservationsBySession,
+  appendObservation, getObservationsBySession, archiveObservations,
   writeSession, getRecentSessions,
   getStats,
   getLastSessionDate,
@@ -782,5 +782,56 @@ describe("getStaleGrowthWarning", () => {
     expect(getStaleGrowthWarning(2)).not.toBeNull();
     // n=3: looks at all 3 (3→5→5), min≠max → no warning
     expect(getStaleGrowthWarning(3)).toBeNull();
+  });
+});
+
+describe("archiveObservations", () => {
+  const obs: Observation = {
+    timestamp: "2026-01-01T00:00:00.000Z",
+    type: "cognitive_pattern",
+    observation: "Test observation",
+    session_id: "session-x",
+    confidence: "high",
+  };
+
+  it("moves all observations to observations.archive.jsonl", () => {
+    appendObservation(obs);
+    archiveObservations();
+    const archivePath = path.join(tmpDir, "observations.archive.jsonl");
+    const archived = fs.readFileSync(archivePath, "utf-8").split("\n").filter(Boolean);
+    expect(archived).toHaveLength(1);
+    expect(JSON.parse(archived[0])).toEqual(obs);
+  });
+
+  it("truncates observations.jsonl to empty after archiving", () => {
+    appendObservation(obs);
+    archiveObservations();
+    const obsPath = path.join(tmpDir, "observations.jsonl");
+    const remaining = fs.readFileSync(obsPath, "utf-8").split("\n").filter(Boolean);
+    expect(remaining).toHaveLength(0);
+  });
+
+  it("appends to existing archive across multiple calls", () => {
+    appendObservation(obs);
+    archiveObservations();
+    const obs2: Observation = { ...obs, observation: "Second observation" };
+    appendObservation(obs2);
+    archiveObservations();
+    const archivePath = path.join(tmpDir, "observations.archive.jsonl");
+    const archived = fs.readFileSync(archivePath, "utf-8").split("\n").filter(Boolean);
+    expect(archived).toHaveLength(2);
+  });
+
+  it("is a no-op when observations.jsonl is empty", () => {
+    fs.writeFileSync(path.join(tmpDir, "observations.jsonl"), "", "utf-8");
+    expect(() => archiveObservations()).not.toThrow();
+    const archivePath = path.join(tmpDir, "observations.archive.jsonl");
+    expect(fs.existsSync(archivePath)).toBe(false);
+  });
+
+  it("is a no-op when observations.jsonl does not exist", () => {
+    expect(() => archiveObservations()).not.toThrow();
+    const archivePath = path.join(tmpDir, "observations.archive.jsonl");
+    expect(fs.existsSync(archivePath)).toBe(false);
   });
 });

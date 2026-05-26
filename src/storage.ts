@@ -115,6 +115,16 @@ export function appendObservation(obs: Observation): void {
   fs.appendFileSync(observationsFile, JSON.stringify(obs) + "\n", "utf-8");
 }
 
+export function archiveObservations(): void {
+  const { observationsFile } = getPaths();
+  if (!fs.existsSync(observationsFile)) return;
+  const lines = fs.readFileSync(observationsFile, "utf-8").split("\n").filter(Boolean);
+  if (lines.length === 0) return;
+  const archiveFile = path.join(path.dirname(observationsFile), "observations.archive.jsonl");
+  fs.appendFileSync(archiveFile, lines.join("\n") + "\n", "utf-8");
+  fs.writeFileSync(observationsFile, "", "utf-8");
+}
+
 export function getObservationsBySession(session_id: string): Observation[] {
   ensureDirs();
   const { observationsFile } = getPaths();
