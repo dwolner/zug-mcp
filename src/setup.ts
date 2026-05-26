@@ -271,4 +271,11 @@ export async function runSetup(opts?: SetupOptions): Promise<void> {
     mergeMcpConfig(path.join(home, ".codeium", "windsurf", "mcp_config.json"));
     if (!quiet) console.log("✓ Windsurf: updated ~/.codeium/windsurf/mcp_config.json");
   }
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    if (!quiet) console.log(
+      "⚠ Zug: ANTHROPIC_API_KEY not set — PERSONA.md synthesis won't run. " +
+      "Set it (or add to ~/.zug/.env) for automatic distillation and long-term scaling."
+    );
+  }
 }

@@ -23,7 +23,14 @@ export interface SynthesisResult {
 
 export async function synthesize(input: SynthesisInput): Promise<SynthesisResult | null> {
   const apiKey = loadApiKey();
-  if (!apiKey) return null;
+  if (!apiKey) {
+    console.warn(
+      "[zug] Warning: ANTHROPIC_API_KEY is not set — PERSONA.md synthesis skipped. " +
+      "Without synthesis, PERSONA.md grows unboundedly. " +
+      "Set ANTHROPIC_API_KEY (or add to ~/.zug/.env) to enable automatic distillation."
+    );
+    return null;
+  }
 
   const client = new Anthropic({ apiKey, timeout: 30_000, maxRetries: 2 });
 

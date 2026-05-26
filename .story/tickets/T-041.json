@@ -1,0 +1,13 @@
+{
+  "blockedBy": [],
+  "claimedBySession": "28d97175-1d41-4961-9160-6b722bb39372",
+  "completedDate": "2026-05-26",
+  "createdDate": "2026-05-26",
+  "description": "When synthesis would run but ANTHROPIC_API_KEY is absent, log a visible warning to the user explaining that PERSONA.md will not be distilled and will grow unboundedly. Add a note to zug setup and README that the API key is required for long-term scaling. Resolves ISS-041.",
+  "id": "T-041",
+  "order": 100,
+  "phase": "first-run-ux",
+  "status": "complete",
+  "title": "Warn when ANTHROPIC_API_KEY missing and synthesis is skipped",
+  "type": "task"
+}
