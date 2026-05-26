@@ -35,25 +35,29 @@ info()    { echo -e "${BLUE}[sync]${NC} $1"; }
 success() { echo -e "${GREEN}[sync]${NC} $1"; }
 warn()    { echo -e "${YELLOW}[sync]${NC} $1"; }
 
-rget() { fly sftp get -a "$APP" -q "$1" "$2" 2>/dev/null; }
-rput() { fly ssh console -a "$APP" -C "sh -c 'cat > $2'" < "$1"; }
-rssh() { fly ssh console -a "$APP" -C "sh -c '$*'" 2>/dev/null; }
+# ── 1. Pull everything from Fly in one tar pipe ───────────────────────────────
+info "Pulling from Fly..."
+mkdir -p "$TMP/fly"
+fly ssh console -a "$APP" -C "sh -c 'tar czf - -C $REMOTE .'" 2>/dev/null \
+  | tar xzf - -C "$TMP/fly" 2>/dev/null || true
 
-# ── 1. Pull Fly observations ──────────────────────────────────────────────────
-info "Pulling observations from Fly..."
-rget "$REMOTE/observations.jsonl" "$TMP/fly-obs.jsonl" || touch "$TMP/fly-obs.jsonl"
+FLY_OBS=$(wc -l < "$TMP/fly/observations.jsonl" 2>/dev/null | tr -d ' ') || FLY_OBS=0
+FLY_SESSIONS=$(ls "$TMP/fly/sessions/"*.md 2>/dev/null | wc -l | tr -d ' ') || FLY_SESSIONS=0
+info "  pulled: $FLY_OBS observations, $FLY_SESSIONS sessions"
 
+# ── 2. Merge observations (dedup by full line, preserve order) ────────────────
+info "Merging observations..."
 LOCAL_OBS=$(wc -l < "$LOCAL/observations.jsonl" | tr -d ' ')
-FLY_OBS=$(wc -l < "$TMP/fly-obs.jsonl" | tr -d ' ')
-info "  local: $LOCAL_OBS lines, fly: $FLY_OBS lines"
+cat "$LOCAL/observations.jsonl" "$TMP/fly/observations.jsonl" 2>/dev/null \
+  | awk '!seen[$0]++' \
+  > "$TMP/merged-obs.jsonl"
+MERGED=$(wc -l < "$TMP/merged-obs.jsonl" | tr -d ' ')
+info "  local: $LOCAL_OBS, fly: $FLY_OBS → merged: $MERGED"
+cp "$TMP/merged-obs.jsonl" "$LOCAL/observations.jsonl"
 
-# ── 2. Pull Fly sessions not present locally ──────────────────────────────────
-info "Checking Fly sessions..."
-mkdir -p "$TMP/fly-sessions"
-fly sftp get -a "$APP" -q -R "$REMOTE/sessions" "$TMP/fly-sessions" 2>/dev/null || true
-
+# Copy any Fly sessions not present locally
 PULLED=0
-for f in "$TMP/fly-sessions/sessions/"*.md; do
+for f in "$TMP/fly/sessions/"*.md; do
   [[ -f "$f" ]] || continue
   filename="$(basename "$f")"
   if [[ ! -f "$LOCAL/sessions/$filename" ]]; then
@@ -63,45 +67,20 @@ for f in "$TMP/fly-sessions/sessions/"*.md; do
 done
 info "  pulled $PULLED new sessions from Fly"
 
-# ── 3. Merge observations (dedup by full line, preserve order) ────────────────
-info "Merging observations..."
-cat "$LOCAL/observations.jsonl" "$TMP/fly-obs.jsonl" \
-  | awk '!seen[$0]++' \
-  > "$TMP/merged-obs.jsonl"
-MERGED=$(wc -l < "$TMP/merged-obs.jsonl" | tr -d ' ')
-info "  merged: $MERGED lines"
-cp "$TMP/merged-obs.jsonl" "$LOCAL/observations.jsonl"
-
-# ── 4. Push everything to Fly ─────────────────────────────────────────────────
+# ── 3. Push everything to Fly in one tar pipe ─────────────────────────────────
 info "Pushing to Fly..."
+TOTAL_SESSIONS=$(ls "$LOCAL/sessions/"*.md 2>/dev/null | wc -l | tr -d ' ')
+TOTAL_OBS=$(wc -l < "$LOCAL/observations.jsonl" | tr -d ' ')
 
-rput "$LOCAL/observations.jsonl" "$REMOTE/observations.jsonl"
-success "  observations.jsonl"
+tar czf - -C "$LOCAL" . 2>/dev/null \
+  | fly ssh console -a "$APP" -C "sh -c 'tar xzf - -C $REMOTE'"
 
-for f in PERSONA.md PLAYBOOK.md ACTIVE.md; do
-  [[ -f "$LOCAL/$f" ]] && rput "$LOCAL/$f" "$REMOTE/$f" && success "  $f"
-done
-
-for f in lessons.jsonl reinforcements.jsonl growth.jsonl; do
-  [[ -f "$LOCAL/$f" ]] && rput "$LOCAL/$f" "$REMOTE/$f" && success "  $f"
-done
-
-info "Pushing sessions..."
-PUSHED=0
-for session_file in "$LOCAL/sessions/"*.md; do
-  [[ -f "$session_file" ]] || continue
-  filename="$(basename "$session_file")"
-  rput "$session_file" "$REMOTE/sessions/$filename"
-  PUSHED=$((PUSHED + 1))
-done
-success "  pushed $PUSHED sessions"
+success "  pushed: $TOTAL_SESSIONS sessions, $TOTAL_OBS observations"
 
 # ── Done ──────────────────────────────────────────────────────────────────────
 echo ""
 success "Sync complete."
 echo ""
-TOTAL_SESSIONS=$(ls "$LOCAL/sessions/"*.md 2>/dev/null | wc -l | tr -d ' ')
-TOTAL_OBS=$(wc -l < "$LOCAL/observations.jsonl" | tr -d ' ')
 echo "  Fly volume now has: $TOTAL_SESSIONS sessions, $TOTAL_OBS observations"
 echo ""
 echo "Restart Claude Code to connect via mcp-remote → Fly.io"
