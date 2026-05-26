@@ -1,0 +1,13 @@
+{
+  "blockedBy": [],
+  "claimedBySession": "28d97175-1d41-4961-9160-6b722bb39372",
+  "completedDate": "2026-05-26",
+  "createdDate": "2026-05-26",
+  "description": "Update 'No database. No cloud sync. Plain files.' to reflect that HTTP/Fly users have remote storage. Fixes ISS-034.",
+  "id": "T-035",
+  "order": 40,
+  "phase": "first-run-ux",
+  "status": "complete",
+  "title": "Fix README data directory cloud sync copy",
+  "type": "chore"
+}

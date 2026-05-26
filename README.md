@@ -157,7 +157,7 @@ All data lives in `~/.zug/` (or `$ZUG_DATA_DIR`):
   growth.jsonl        Growth snapshots (appended on session end)
 ```
 
-No database. No cloud sync. Plain files you can read, back up, or delete.
+No database. Plain files you can read, back up, or delete. HTTP/Fly users get remote storage on a persistent Fly volume, synced across machines automatically.
 
 ## Configuration
 
