@@ -180,6 +180,44 @@ function cmdUpdate(): void {
   }
 }
 
+function cmdBackup(): void {
+  const configFile = path.join(ZUG_DIR, "..", ".zug", "config");
+  const altConfigFile = path.join(os.homedir(), ".zug", "config");
+  const configPath = fs.existsSync(configFile) ? configFile : altConfigFile;
+
+  // Parse ZUG_URL from ~/.zug/config
+  let zugUrl: string | undefined;
+  if (fs.existsSync(configPath)) {
+    for (const line of fs.readFileSync(configPath, "utf-8").split("\n")) {
+      const m = line.match(/^ZUG_URL=(.+)$/);
+      if (m) zugUrl = m[1].trim();
+    }
+  }
+
+  const date = new Date().toISOString().slice(0, 10);
+  const backupDir = path.join(os.homedir(), ".zug-backup", date);
+  fs.mkdirSync(backupDir, { recursive: true });
+
+  if (zugUrl) {
+    // Extract app name from https://<app>.fly.dev
+    const appMatch = zugUrl.match(/https?:\/\/([^.]+)\.fly\.dev/);
+    const app = appMatch ? appMatch[1] : "zug-mcp";
+    console.log(`Backing up Fly volume (${app}) → ${backupDir}`);
+    try {
+      execSync(`fly sftp get -a "${app}" -R /data/.zug "${backupDir}"`, { stdio: "inherit" });
+      console.log(`Backup complete: ${backupDir}`);
+    } catch {
+      console.error("Backup failed. Make sure flyctl is installed and you are logged in.");
+      process.exit(1);
+    }
+  } else {
+    // No Fly config — back up local data dir
+    console.log(`No Fly config found. Backing up local ${ZUG_DIR} → ${backupDir}`);
+    execSync(`cp -r "${ZUG_DIR}/." "${backupDir}"`, { stdio: "inherit" });
+    console.log(`Backup complete: ${backupDir}`);
+  }
+}
+
 function printUsage() {
   console.error(`Usage: zug <command>
   zug status          Show sessions, observations, config status, and data dir size
@@ -191,7 +229,8 @@ function printUsage() {
     --cursor          Configure Cursor only
     --windsurf        Configure Windsurf only
     --all             Configure all agents
-  zug update          Update zug-mcp to latest (runs npm install -g)`);
+  zug update          Update zug-mcp to latest (runs npm install -g)
+  zug backup          Snapshot Fly volume (or local data) to ~/.zug-backup/YYYY-MM-DD/`);
   process.exit(1);
 }
 
@@ -218,6 +257,9 @@ switch (cmd) {
     break;
   case "update":
     cmdUpdate();
+    break;
+  case "backup":
+    cmdBackup();
     break;
   case "--version":
   case "version":
