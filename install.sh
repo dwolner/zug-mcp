@@ -84,6 +84,9 @@ info "Installing dependencies..."
 cd "$SERVER_DIR"
 pnpm install --frozen-lockfile
 
+info "Building..."
+pnpm build
+
 # ── Install zug CLI globally ──────────────────────────────────────────────────
 info "Installing zug CLI..."
 if pnpm link --global 2>/dev/null; then
