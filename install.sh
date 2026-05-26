@@ -102,7 +102,7 @@ fi
 # ── Register PreCompact hook ──────────────────────────────────────────────────
 SETTINGS_JSON="$HOME/.claude/settings.json"
 ZUG_BIN="$(command -v zug 2>/dev/null)"
-if [[ -n "$ZUG_BIN" && -f "$SETTINGS_JSON" ]] && "$ZUG_BIN" --version > /dev/null 2>&1; then
+if [[ -n "$ZUG_BIN" && -f "$SETTINGS_JSON" ]]; then
   info "Registering PreCompact hook..."
   node - "$SETTINGS_JSON" "$ZUG_BIN" << 'JSEOF'
 const fs = require('fs');
@@ -126,7 +126,7 @@ fi
 
 # ── Register SessionStart hook (post-compaction resume) ───────────────────────
 # ZUG_BIN and SETTINGS_JSON already resolved above
-if [[ -n "$ZUG_BIN" && -f "$SETTINGS_JSON" ]] && "$ZUG_BIN" --version > /dev/null 2>&1; then
+if [[ -n "$ZUG_BIN" && -f "$SETTINGS_JSON" ]]; then
   info "Registering SessionStart hook..."
   node - "$SETTINGS_JSON" "$ZUG_BIN" << 'JSEOF'
 const fs = require('fs');
@@ -181,6 +181,10 @@ if [[ "$1" == "--configure-http" ]]; then
     exit 1
   fi
 
+  # Persist so future installs auto-use HTTP mode
+  printf 'ZUG_URL=%s\nZUG_TOKEN=%s\n' "$HTTP_URL" "$HTTP_TOKEN" > "$ZUG_DIR/config"
+  success "Saved HTTP config to $ZUG_DIR/config"
+
   info "Configuring clients for HTTP transport: $HTTP_URL"
 
   # Claude Code (~/.claude.json)
@@ -208,6 +212,23 @@ if [[ "$1" == "--configure-http" ]]; then
   echo "Note: Claude.ai web requires OAuth — raw token headers are not supported."
   echo ""
   exit 0
+fi
+
+# ── Auto-detect HTTP mode from saved config ───────────────────────────────────
+ZUG_CONFIG="$ZUG_DIR/config"
+if [[ -f "$ZUG_CONFIG" ]]; then
+  source "$ZUG_CONFIG"
+  if [[ -n "$ZUG_URL" && -n "$ZUG_TOKEN" ]]; then
+    info "Found saved HTTP config — configuring for remote server ($ZUG_URL)"
+    [[ -f "$HOME/.claude.json" ]] && patch_http_config "$HOME/.claude.json" "$ZUG_URL" "$ZUG_TOKEN" && success "Claude Code configured for HTTP"
+    [[ -n "$CLAUDE_DESKTOP" && -f "$CLAUDE_DESKTOP" ]] && patch_http_config "$CLAUDE_DESKTOP" "$ZUG_URL" "$ZUG_TOKEN" && success "Claude desktop configured for HTTP"
+    echo ""
+    success "Zug installed successfully (HTTP mode)!"
+    echo ""
+    echo "Restart Claude Code and Claude desktop to pick up the changes."
+    echo ""
+    exit 0
+  fi
 fi
 
 # ── Register with Claude Code (~/.claude.json) ────────────────────────────────
