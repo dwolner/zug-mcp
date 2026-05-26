@@ -33,7 +33,7 @@ success() { echo -e "${GREEN}[sync]${NC} $1"; }
 warn()    { echo -e "${YELLOW}[sync]${NC} $1"; }
 
 rget() { fly sftp get -a "$APP" -q "$1" "$2" 2>/dev/null; }
-rput() { fly sftp put -a "$APP" -q "$1" "$2" 2>/dev/null; }
+rput() { fly ssh console -a "$APP" -C "cat > $2" < "$1"; }
 rssh() { fly ssh console -a "$APP" -C "sh -c '$*'" 2>/dev/null; }
 
 # ── 1. Pull Fly observations ──────────────────────────────────────────────────
