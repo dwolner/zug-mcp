@@ -1,0 +1,13 @@
+{
+  "blockedBy": [],
+  "claimedBySession": "28d97175-1d41-4961-9160-6b722bb39372",
+  "completedDate": "2026-05-26",
+  "createdDate": "2026-05-26",
+  "description": "fly sftp put refuses to overwrite files that already exist on the volume. rput() must use 'fly ssh console -C cat > $2 < $1' to pipe stdin into the remote file, which overwrites cleanly. Current behavior: re-running the script after first run leaves stale data on Fly. Fix: rput() { fly ssh console -a \"$APP\" -C \"cat > $2\" < \"$1\"; }",
+  "id": "T-038",
+  "order": 70,
+  "phase": "first-run-ux",
+  "status": "complete",
+  "title": "sync-to-fly.sh rput fails silently — fly sftp put refuses to overwrite existing files",
+  "type": "task"
+}
