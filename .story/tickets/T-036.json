@@ -1,0 +1,13 @@
+{
+  "blockedBy": [],
+  "claimedBySession": "28d97175-1d41-4961-9160-6b722bb39372",
+  "completedDate": "2026-05-26",
+  "createdDate": "2026-05-26",
+  "description": "cmdUpdate() should call runSetup({ claude: true, quiet: true }) after npm install to refresh the rule file. Add type: 'stdio' to the entry written by mergeMcpConfig. Fixes ISS-037, ISS-039.",
+  "id": "T-036",
+  "order": 50,
+  "phase": "first-run-ux",
+  "status": "complete",
+  "title": "Re-write rule file on zug update and add type stdio to MCP entry",
+  "type": "task"
+}

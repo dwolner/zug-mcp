@@ -44,7 +44,7 @@ describe("mergeMcpConfig", () => {
     const configPath = path.join(tmpDir, "config.json");
     mergeMcpConfig(configPath);
     const written = JSON.parse(fs.readFileSync(configPath, "utf-8"));
-    expect(written.mcpServers.zug).toEqual({ command: "zug-mcp", args: [] });
+    expect(written.mcpServers.zug).toEqual({ type: "stdio", command: "zug-mcp", args: [] });
   });
 
   it("adds mcpServers.zug when file exists without mcpServers key", () => {
@@ -53,7 +53,7 @@ describe("mergeMcpConfig", () => {
     mergeMcpConfig(configPath);
     const written = JSON.parse(fs.readFileSync(configPath, "utf-8"));
     expect(written.otherKey).toBe("value");
-    expect(written.mcpServers.zug).toEqual({ command: "zug-mcp", args: [] });
+    expect(written.mcpServers.zug).toEqual({ type: "stdio", command: "zug-mcp", args: [] });
   });
 
   it("preserves existing mcpServers entries and adds zug", () => {
@@ -66,7 +66,7 @@ describe("mergeMcpConfig", () => {
     mergeMcpConfig(configPath);
     const written = JSON.parse(fs.readFileSync(configPath, "utf-8"));
     expect(written.mcpServers.other).toEqual({ command: "other-mcp", args: [] });
-    expect(written.mcpServers.zug).toEqual({ command: "zug-mcp", args: [] });
+    expect(written.mcpServers.zug).toEqual({ type: "stdio", command: "zug-mcp", args: [] });
   });
 
   it("is idempotent — calling twice produces the same result", () => {
@@ -74,7 +74,7 @@ describe("mergeMcpConfig", () => {
     mergeMcpConfig(configPath);
     mergeMcpConfig(configPath);
     const written = JSON.parse(fs.readFileSync(configPath, "utf-8"));
-    expect(written.mcpServers.zug).toEqual({ command: "zug-mcp", args: [] });
+    expect(written.mcpServers.zug).toEqual({ type: "stdio", command: "zug-mcp", args: [] });
     expect(Object.keys(written.mcpServers)).toHaveLength(1);
   });
 
@@ -83,7 +83,7 @@ describe("mergeMcpConfig", () => {
     fs.writeFileSync(configPath, "not valid json {{{{", "utf-8");
     mergeMcpConfig(configPath);
     const written = JSON.parse(fs.readFileSync(configPath, "utf-8"));
-    expect(written.mcpServers.zug).toEqual({ command: "zug-mcp", args: [] });
+    expect(written.mcpServers.zug).toEqual({ type: "stdio", command: "zug-mcp", args: [] });
   });
 });
 

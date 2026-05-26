@@ -156,7 +156,7 @@ export function detectAgents(opts?: { home?: string }): DetectedAgents {
 
 export function mergeMcpConfig(
   configPath: string,
-  entry: Record<string, unknown> = { command: "zug-mcp", args: [] }
+  entry: Record<string, unknown> = { type: "stdio", command: "zug-mcp", args: [] }
 ): void {
   fs.mkdirSync(path.dirname(configPath), { recursive: true });
 

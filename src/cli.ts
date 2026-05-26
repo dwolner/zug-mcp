@@ -169,11 +169,12 @@ async function cmdSetup(args: string[]): Promise<void> {
   }
 }
 
-function cmdUpdate(): void {
+async function cmdUpdate(): Promise<void> {
   console.log("Updating zug-mcp to latest...");
   try {
     execSync("npm install -g zug-mcp@latest", { stdio: "inherit" });
     console.log("Update complete.");
+    await runSetup({ claude: true, quiet: true });
   } catch {
     console.error("Update failed. Try: npm install -g zug-mcp@latest");
     process.exit(1);
@@ -256,7 +257,7 @@ switch (cmd) {
     cmdSetup(rest).then(() => process.exit(0));
     break;
   case "update":
-    cmdUpdate();
+    cmdUpdate().then(() => process.exit(0));
     break;
   case "backup":
     cmdBackup();
