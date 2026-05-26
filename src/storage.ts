@@ -115,6 +115,27 @@ export function appendObservation(obs: Observation): void {
   fs.appendFileSync(observationsFile, JSON.stringify(obs) + "\n", "utf-8");
 }
 
+export function archiveSessions(ageDays = 90): { archived: number } {
+  ensureDirs();
+  const { sessionsDir } = getPaths();
+  const archiveDir = path.join(sessionsDir, "archive");
+  const cutoff = Date.now() - ageDays * 24 * 60 * 60 * 1000;
+
+  const files = fs.readdirSync(sessionsDir).filter((f) => f.endsWith(".md"));
+  let archived = 0;
+
+  for (const f of files) {
+    const dateStr = f.slice(0, 10);
+    const ts = new Date(dateStr).getTime();
+    if (isNaN(ts) || ts >= cutoff) continue;
+    fs.mkdirSync(archiveDir, { recursive: true });
+    fs.renameSync(path.join(sessionsDir, f), path.join(archiveDir, f));
+    archived++;
+  }
+
+  return { archived };
+}
+
 export function archiveObservations(): void {
   const { observationsFile } = getPaths();
   if (!fs.existsSync(observationsFile)) return;

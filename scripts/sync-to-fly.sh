@@ -72,7 +72,7 @@ info "Pushing to Fly..."
 TOTAL_SESSIONS=$(ls "$LOCAL/sessions/"*.md 2>/dev/null | wc -l | tr -d ' ')
 TOTAL_OBS=$(wc -l < "$LOCAL/observations.jsonl" | tr -d ' ')
 
-tar czf - -C "$LOCAL" . 2>/dev/null \
+tar czf - -C "$LOCAL" --exclude=./sessions/archive . 2>/dev/null \
   | fly ssh console -a "$APP" -C "sh -c 'tar xzf - -C $REMOTE'"
 
 success "  pushed: $TOTAL_SESSIONS sessions, $TOTAL_OBS observations"

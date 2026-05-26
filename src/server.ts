@@ -35,6 +35,7 @@ import {
   getLessonCandidates,
   getStaleGrowthWarning,
   archiveObservations,
+  archiveSessions,
   type ObservationType,
   type Lesson,
   type SocraticThread,
@@ -282,6 +283,7 @@ export function createServer(): McpServer {
       writeSession(session_id, sessionLines.join("\n"));
       // Synchronous reset before async synthesis; also clears orphaned threads from other sessions
       writeOpenThread(null);
+      archiveSessions();
 
       // Append observations immediately (synchronous, always succeeds)
       const meaningful = observations.filter((o) => o.confidence !== "low");

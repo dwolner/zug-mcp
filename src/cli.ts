@@ -12,6 +12,7 @@ import {
   readPersona,
   readActive,
   getDataDir,
+  archiveSessions,
 } from "./storage.js";
 import { runSetup } from "./setup.js";
 
@@ -217,12 +218,23 @@ function cmdBackup(): void {
   }
 }
 
+function cmdArchive(): void {
+  const { archived } = archiveSessions();
+  const archiveDir = path.join(ZUG_DIR, "sessions", "archive");
+  if (archived === 0) {
+    console.log("No sessions older than 90 days to archive.");
+  } else {
+    console.log(`Archived ${archived} session${archived > 1 ? "s" : ""} to ${archiveDir}`);
+  }
+}
+
 function printUsage() {
   console.error(`Usage: zug <command>
   zug status          Show sessions, observations, config status, and data dir size
   zug tail [n]        Show recent observations (default: 10)
   zug persona         Print full PERSONA.md
   zug compact         Print pre-compaction checkpoint (used by PreCompact hook)
+  zug archive         Move sessions older than 90 days to sessions/archive/
   zug setup           Auto-detect agents and write MCP configs
     --claude-code     Configure Claude Code only
     --cursor          Configure Cursor only
@@ -256,6 +268,9 @@ switch (cmd) {
     break;
   case "update":
     cmdUpdate().then(() => process.exit(0));
+    break;
+  case "archive":
+    cmdArchive();
     break;
   case "backup":
     cmdBackup();

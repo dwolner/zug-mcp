@@ -1,0 +1,15 @@
+{
+  "blockedBy": [
+    "T-040"
+  ],
+  "claimedBySession": "28d97175-1d41-4961-9160-6b722bb39372",
+  "completedDate": "2026-05-26",
+  "createdDate": "2026-05-26",
+  "description": "Move sessions older than 90 days to sessions/archive/ on zug_end_session or via a zug archive CLI command. Update sync-to-fly.sh to exclude sessions/archive from tar (local-only history). zug_get_recent_sessions already uses a limit param so it naturally skips old sessions. Keeps sync fast and hot data bounded regardless of total session count.",
+  "id": "T-039",
+  "order": 80,
+  "phase": "first-run-ux",
+  "status": "complete",
+  "title": "Archive sessions older than 90 days to sessions/archive/",
+  "type": "task"
+}

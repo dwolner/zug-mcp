@@ -7,6 +7,7 @@ import {
   readPlaybook, writePlaybook,
   readActive, writeActive,
   appendObservation, getObservationsBySession, archiveObservations,
+  archiveSessions,
   writeSession, getRecentSessions,
   getStats,
   getLastSessionDate,
@@ -782,6 +783,55 @@ describe("getStaleGrowthWarning", () => {
     expect(getStaleGrowthWarning(2)).not.toBeNull();
     // n=3: looks at all 3 (3→5→5), min≠max → no warning
     expect(getStaleGrowthWarning(3)).toBeNull();
+  });
+});
+
+describe("archiveSessions", () => {
+  const sessionsDir = () => path.join(tmpDir, "sessions");
+  const archiveDir = () => path.join(tmpDir, "sessions", "archive");
+
+  function writeOldSession(name: string, daysAgo: number): string {
+    const d = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000);
+    const dateStr = d.toISOString().slice(0, 10);
+    const filename = `${dateStr}-${name}.md`;
+    fs.mkdirSync(sessionsDir(), { recursive: true });
+    fs.writeFileSync(path.join(sessionsDir(), filename), `# Session ${name}`, "utf-8");
+    return filename;
+  }
+
+  it("moves sessions older than the threshold to sessions/archive/", () => {
+    const filename = writeOldSession("old", 100);
+    const { archived } = archiveSessions(90);
+    expect(archived).toBe(1);
+    expect(fs.existsSync(path.join(sessionsDir(), filename))).toBe(false);
+    expect(fs.existsSync(path.join(archiveDir(), filename))).toBe(true);
+  });
+
+  it("leaves recent sessions in place", () => {
+    const filename = writeOldSession("recent", 10);
+    const { archived } = archiveSessions(90);
+    expect(archived).toBe(0);
+    expect(fs.existsSync(path.join(sessionsDir(), filename))).toBe(true);
+    expect(fs.existsSync(archiveDir())).toBe(false);
+  });
+
+  it("creates the archive directory if it does not exist", () => {
+    writeOldSession("old", 91);
+    expect(fs.existsSync(archiveDir())).toBe(false);
+    archiveSessions(90);
+    expect(fs.existsSync(archiveDir())).toBe(true);
+  });
+
+  it("is idempotent — re-running does not re-archive already archived files", () => {
+    writeOldSession("old", 100);
+    archiveSessions(90);
+    const { archived } = archiveSessions(90);
+    expect(archived).toBe(0);
+  });
+
+  it("returns archived count of zero when no sessions exist", () => {
+    const { archived } = archiveSessions(90);
+    expect(archived).toBe(0);
   });
 });
 
