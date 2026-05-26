@@ -1,0 +1,13 @@
+{
+  "blockedBy": [],
+  "claimedBySession": "28d97175-1d41-4961-9160-6b722bb39372",
+  "completedDate": "2026-05-26",
+  "createdDate": "2026-05-26",
+  "description": "After writing MCP config, runSetup() should create a minimal PERSONA.md if missing and print a clear message: 'Run zug onboard to seed your cognitive fingerprint.' Relates to ISS-033.",
+  "id": "T-033",
+  "order": 20,
+  "phase": "first-run-ux",
+  "status": "complete",
+  "title": "Seed PERSONA.md and prompt onboarding in zug setup",
+  "type": "task"
+}

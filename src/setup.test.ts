@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { detectAgents, mergeMcpConfig, mergeClaudeHooks } from "./setup";
+import { detectAgents, mergeMcpConfig, mergeClaudeHooks, runSetup } from "./setup";
 
 let tmpDir: string;
 
@@ -146,5 +146,23 @@ describe("mergeClaudeHooks", () => {
     const settingsPath = path.join(tmpDir, "subdir", "settings.json");
     mergeClaudeHooks(settingsPath, ZUG);
     expect(fs.existsSync(settingsPath)).toBe(true);
+  });
+});
+
+describe("runSetup — PERSONA seeding", () => {
+  it("creates PERSONA.md when it does not exist", async () => {
+    const dataDir = path.join(tmpDir, ".zug");
+    await runSetup({ home: tmpDir, dataDir, quiet: true });
+    const content = fs.readFileSync(path.join(dataDir, "PERSONA.md"), "utf-8");
+    expect(content).toMatch(/^# Cognitive Fingerprint/);
+  });
+
+  it("does not overwrite existing PERSONA.md", async () => {
+    const dataDir = path.join(tmpDir, ".zug");
+    fs.mkdirSync(dataDir, { recursive: true });
+    fs.writeFileSync(path.join(dataDir, "PERSONA.md"), "sentinel content", "utf-8");
+    await runSetup({ home: tmpDir, dataDir, quiet: true });
+    const content = fs.readFileSync(path.join(dataDir, "PERSONA.md"), "utf-8");
+    expect(content).toBe("sentinel content");
   });
 });
