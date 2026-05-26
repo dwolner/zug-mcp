@@ -1,0 +1,13 @@
+{
+  "blockedBy": [],
+  "claimedBySession": "28d97175-1d41-4961-9160-6b722bb39372",
+  "completedDate": "2026-05-26",
+  "createdDate": "2026-05-26",
+  "description": "Move hook-registration logic from install.sh into runSetup() in setup.ts so npm users get the same Claude Code experience as install.sh users. Relates to ISS-032.",
+  "id": "T-032",
+  "order": 10,
+  "phase": "first-run-ux",
+  "status": "complete",
+  "title": "Register PreCompact and SessionStart hooks in zug setup",
+  "type": "task"
+}

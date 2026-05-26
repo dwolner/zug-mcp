@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { detectAgents, mergeMcpConfig } from "./setup";
+import { detectAgents, mergeMcpConfig, mergeClaudeHooks } from "./setup";
 
 let tmpDir: string;
 
@@ -84,5 +84,67 @@ describe("mergeMcpConfig", () => {
     mergeMcpConfig(configPath);
     const written = JSON.parse(fs.readFileSync(configPath, "utf-8"));
     expect(written.mcpServers.zug).toEqual({ command: "zug-mcp", args: [] });
+  });
+});
+
+describe("mergeClaudeHooks", () => {
+  const ZUG = "zug";
+
+  it("creates settings.json with both hooks when file does not exist", () => {
+    const settingsPath = path.join(tmpDir, "settings.json");
+    mergeClaudeHooks(settingsPath, ZUG);
+    const written = JSON.parse(fs.readFileSync(settingsPath, "utf-8"));
+    expect(written.hooks.PreCompact).toHaveLength(1);
+    expect(written.hooks.PreCompact[0]).toEqual({
+      matcher: "",
+      hooks: [{ type: "command", command: "zug compact" }],
+    });
+    expect(written.hooks.SessionStart).toHaveLength(1);
+    expect(written.hooks.SessionStart[0]).toEqual({
+      matcher: "compact",
+      hooks: [{ type: "command", command: "zug resume" }],
+    });
+  });
+
+  it("adds hooks to existing settings without a hooks key", () => {
+    const settingsPath = path.join(tmpDir, "settings.json");
+    fs.writeFileSync(settingsPath, JSON.stringify({ theme: "dark" }), "utf-8");
+    mergeClaudeHooks(settingsPath, ZUG);
+    const written = JSON.parse(fs.readFileSync(settingsPath, "utf-8"));
+    expect(written.theme).toBe("dark");
+    expect(written.hooks.PreCompact).toHaveLength(1);
+    expect(written.hooks.SessionStart).toHaveLength(1);
+  });
+
+  it("is idempotent — calling twice does not duplicate hooks", () => {
+    const settingsPath = path.join(tmpDir, "settings.json");
+    mergeClaudeHooks(settingsPath, ZUG);
+    mergeClaudeHooks(settingsPath, ZUG);
+    const written = JSON.parse(fs.readFileSync(settingsPath, "utf-8"));
+    expect(written.hooks.PreCompact).toHaveLength(1);
+    expect(written.hooks.SessionStart).toHaveLength(1);
+  });
+
+  it("preserves non-zug entries in PreCompact and SessionStart", () => {
+    const settingsPath = path.join(tmpDir, "settings.json");
+    const existing = {
+      hooks: {
+        PreCompact: [{ matcher: "other", hooks: [{ type: "command", command: "other-tool run" }] }],
+        SessionStart: [{ matcher: "", hooks: [{ type: "command", command: "other-tool start" }] }],
+      },
+    };
+    fs.writeFileSync(settingsPath, JSON.stringify(existing), "utf-8");
+    mergeClaudeHooks(settingsPath, ZUG);
+    const written = JSON.parse(fs.readFileSync(settingsPath, "utf-8"));
+    expect(written.hooks.PreCompact).toHaveLength(2);
+    expect(written.hooks.PreCompact[0].hooks[0].command).toBe("other-tool run");
+    expect(written.hooks.SessionStart).toHaveLength(2);
+    expect(written.hooks.SessionStart[0].hooks[0].command).toBe("other-tool start");
+  });
+
+  it("creates parent directory if it does not exist", () => {
+    const settingsPath = path.join(tmpDir, "subdir", "settings.json");
+    mergeClaudeHooks(settingsPath, ZUG);
+    expect(fs.existsSync(settingsPath)).toBe(true);
   });
 });

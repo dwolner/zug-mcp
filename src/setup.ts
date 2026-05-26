@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import os from "os";
+import { execSync } from "child_process";
 
 export interface DetectedAgents {
   claude: boolean;
@@ -129,6 +130,55 @@ export function mergeMcpConfig(
   fs.writeFileSync(configPath, JSON.stringify(existing, null, 2) + "\n", "utf-8");
 }
 
+interface HookEntry {
+  matcher: string;
+  hooks: Array<{ type: string; command: string }>;
+}
+
+interface ClaudeSettings {
+  hooks?: { PreCompact?: HookEntry[]; SessionStart?: HookEntry[]; [k: string]: HookEntry[] | undefined };
+  [k: string]: unknown;
+}
+
+export function mergeClaudeHooks(settingsPath: string, zugBin: string): void {
+  let settings: ClaudeSettings = {};
+  try {
+    const raw = fs.readFileSync(settingsPath, "utf-8");
+    settings = JSON.parse(raw) as ClaudeSettings;
+  } catch {
+    // ENOENT or malformed — start fresh
+  }
+
+  if (!settings.hooks) settings.hooks = {};
+
+  settings.hooks.PreCompact = (settings.hooks.PreCompact ?? []).filter(
+    (h) => !h.hooks?.some((e) => e.command?.includes("zug compact"))
+  );
+  settings.hooks.PreCompact.push({
+    matcher: "",
+    hooks: [{ type: "command", command: `${zugBin} compact` }],
+  });
+
+  settings.hooks.SessionStart = (settings.hooks.SessionStart ?? []).filter(
+    (h) => !h.hooks?.some((e) => e.command?.includes("zug resume"))
+  );
+  settings.hooks.SessionStart.push({
+    matcher: "compact",
+    hooks: [{ type: "command", command: `${zugBin} resume` }],
+  });
+
+  fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
+  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n", "utf-8");
+}
+
+function resolveZugBin(): string {
+  try {
+    return execSync("which zug", { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }).trim();
+  } catch {
+    return "zug";
+  }
+}
+
 export async function runSetup(opts?: SetupOptions): Promise<void> {
   const home = opts?.home ?? os.homedir();
   const dataDir = opts?.dataDir ?? path.join(home, ".zug");
@@ -150,6 +200,14 @@ export async function runSetup(opts?: SetupOptions): Promise<void> {
     fs.mkdirSync(rulesDir, { recursive: true });
     fs.writeFileSync(path.join(rulesDir, "zug.md"), ZUG_RULE_CONTENT, "utf-8");
     if (!quiet) console.log("✓ Claude Code: wrote ~/.claude/rules/zug.md");
+
+    try {
+      const zugBin = resolveZugBin();
+      mergeClaudeHooks(path.join(home, ".claude", "settings.json"), zugBin);
+      if (!quiet) console.log("✓ Claude Code: registered PreCompact and SessionStart hooks");
+    } catch {
+      if (!quiet) console.log("⚠ Claude Code: could not register hooks — add manually to ~/.claude/settings.json");
+    }
   }
 
   if (targets.cursor) {
