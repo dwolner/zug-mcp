@@ -11,6 +11,9 @@
 
 set -euo pipefail
 
+# curl installer puts flyctl in ~/.fly/bin — add to PATH if needed
+[[ -d "$HOME/.fly/bin" ]] && export PATH="$HOME/.fly/bin:$PATH"
+
 if ! command -v fly &>/dev/null; then
   echo "Error: flyctl is required. Install it with:"
   echo "  brew install flyctl        # macOS"
