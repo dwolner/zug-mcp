@@ -1,0 +1,14 @@
+{
+  "components": [],
+  "discoveredDate": "2026-05-26",
+  "id": "ISS-035",
+  "impact": "onboard.ts calls synthesizePersona() which returns null if no API key. Falls back to buildPlainMarkdown() with no warning to the user. They get a worse PERSONA.md without knowing it and have no idea why Zug seems less capable.",
+  "location": [],
+  "phase": null,
+  "relatedTickets": ["T-034"],
+  "resolution": "onboard.ts now prints a visible warning when synthesis is skipped due to missing ANTHROPIC_API_KEY, explaining the degradation and telling the user to set the key for a richer fingerprint.",
+  "resolvedDate": "2026-05-26",
+  "severity": "high",
+  "status": "resolved",
+  "title": "zug onboard silently degrades to plain markdown when ANTHROPIC_API_KEY is missing"
+}

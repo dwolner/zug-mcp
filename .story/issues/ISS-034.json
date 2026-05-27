@@ -1,0 +1,14 @@
+{
+  "components": [],
+  "discoveredDate": "2026-05-26",
+  "id": "ISS-034",
+  "impact": "The Data Directory section ends with 'No database. No cloud sync. Plain files.' This directly contradicts the HTTP transport / Fly.io deployment path and will confuse users who followed the deploy guide.",
+  "location": [],
+  "phase": null,
+  "relatedTickets": ["T-037"],
+  "resolution": "Updated README Data Directory section: replaced 'No database. No cloud sync.' with accurate description noting HTTP/Fly users get remote storage on a persistent Fly volume synced across machines automatically.",
+  "resolvedDate": "2026-05-26",
+  "severity": "high",
+  "status": "resolved",
+  "title": "README data dir section says 'No cloud sync' — wrong for HTTP/Fly users"
+}

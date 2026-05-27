@@ -1,0 +1,14 @@
+{
+  "components": [],
+  "discoveredDate": "2026-05-26",
+  "id": "ISS-037",
+  "impact": "The rule file is embedded in setup.ts at build time. After npm install -g zug-mcp@latest, the rule on disk is stale. Users must manually re-run zug setup to get the updated rule, but nothing tells them to.",
+  "location": [],
+  "phase": null,
+  "relatedTickets": ["T-036"],
+  "resolution": "cmdUpdate() now calls runSetup({ claude: true, quiet: true }) after npm install completes. This re-writes ~/.claude/rules/zug.md and re-registers hooks automatically on every update.",
+  "resolvedDate": "2026-05-26",
+  "severity": "medium",
+  "status": "resolved",
+  "title": "zug update does not refresh ~/.claude/rules/zug.md after upgrade"
+}

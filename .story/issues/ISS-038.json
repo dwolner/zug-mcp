@@ -1,0 +1,14 @@
+{
+  "components": [],
+  "discoveredDate": "2026-05-26",
+  "id": "ISS-038",
+  "impact": "http.ts: const ZUG_TOKEN = process.env.ZUG_TOKEN || ''. timingSafeEqual against empty string means no raw-token client can authenticate unless the env var is explicitly set. Deploy docs don't call this out clearly enough.",
+  "location": [],
+  "phase": null,
+  "relatedTickets": ["T-037"],
+  "resolution": "http.ts now emits a startup warning when ZUG_TOKEN is not set: '[zug] Warning: ZUG_TOKEN is not set — server accepts connections without a shared secret'. README updated to note the warning behavior.",
+  "resolvedDate": "2026-05-26",
+  "severity": "medium",
+  "status": "resolved",
+  "title": "ZUG_TOKEN defaults to empty string — X-Zug-Token auth path silently broken if env var unset"
+}

@@ -1,0 +1,14 @@
+{
+  "components": [],
+  "discoveredDate": "2026-05-26",
+  "id": "ISS-033",
+  "impact": "runSetup() creates ~/.zug/ but writes no PERSONA.md or PLAYBOOK.md. A new user's first call to zug_get_context returns nothing. No prompt or guidance to run zug onboard. The tool appears broken.",
+  "location": [],
+  "phase": null,
+  "relatedTickets": ["T-035"],
+  "resolution": "runSetup() now writes PERSONA.md template from embedded PERSONA_TEMPLATE_CONTENT constant if the file does not exist. Includes instructions and section prompts. Also prints 'run zug onboard to seed your cognitive fingerprint' on first setup.",
+  "resolvedDate": "2026-05-26",
+  "severity": "critical",
+  "status": "resolved",
+  "title": "zug setup does not seed PERSONA.md — first zug_get_context returns empty"
+}

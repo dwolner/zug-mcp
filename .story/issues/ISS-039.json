@@ -1,0 +1,14 @@
+{
+  "components": [],
+  "discoveredDate": "2026-05-26",
+  "id": "ISS-039",
+  "impact": "mergeMcpConfig writes { command: 'zug-mcp', args: [] } without type: 'stdio'. Some Claude Code versions and future agent clients may require the explicit type field. Low risk now, forward-compat risk.",
+  "location": [],
+  "phase": null,
+  "relatedTickets": ["T-032"],
+  "resolution": "mergeMcpConfig() default entry updated to { type: 'stdio', command: 'zug-mcp', args: [] }. The explicit type field is now always written to MCP config files for all agents.",
+  "resolvedDate": "2026-05-26",
+  "severity": "low",
+  "status": "resolved",
+  "title": "setup.ts MCP entry missing type: stdio field"
+}

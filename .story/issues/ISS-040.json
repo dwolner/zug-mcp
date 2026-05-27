@@ -1,0 +1,14 @@
+{
+  "components": [],
+  "discoveredDate": "2026-05-26",
+  "id": "ISS-040",
+  "impact": "cmdBackup resolves configPath as path.join(ZUG_DIR, '..', '.zug', 'config') which equals ~/.zug/config only when ZUG_DATA_DIR is the default. If ZUG_DATA_DIR is set to a non-standard path the first lookup is wrong and only the altConfigFile fallback saves it. Both variables resolve to the same path in the default case — dead code.",
+  "location": [],
+  "phase": null,
+  "relatedTickets": ["T-036"],
+  "resolution": "cmdBackup() simplified to a single configPath = path.join(os.homedir(), '.zug', 'config') which is always correct regardless of ZUG_DATA_DIR. The redundant double-lookup that depended on ZUG_DATA_DIR for the config file was removed.",
+  "resolvedDate": "2026-05-26",
+  "severity": "low",
+  "status": "resolved",
+  "title": "zug backup config path lookup is redundant and fragile when ZUG_DATA_DIR is set"
+}

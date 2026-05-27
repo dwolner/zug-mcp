@@ -1,0 +1,14 @@
+{
+  "components": [],
+  "discoveredDate": "2026-05-26",
+  "id": "ISS-036",
+  "impact": "The README CLI section lists status, setup, update, tail, persona, compact but omits onboard. A new npm user has no way to discover they should seed their fingerprint.",
+  "location": [],
+  "phase": null,
+  "relatedTickets": ["T-036"],
+  "resolution": "Added 'zug onboard' to the README CLI section with description. Also documented 'zug compact' and 'zug persona' which were missing. README and printUsage() in cli.ts are now aligned.",
+  "resolvedDate": "2026-05-26",
+  "severity": "high",
+  "status": "resolved",
+  "title": "zug onboard command not documented in README CLI section"
+}
