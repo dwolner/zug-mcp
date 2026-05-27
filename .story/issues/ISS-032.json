@@ -1,0 +1,14 @@
+{
+  "components": [],
+  "discoveredDate": "2026-05-26",
+  "id": "ISS-032",
+  "impact": "Users following the README (npm install -g + zug setup) never get hooks registered. Context is not persisted at compaction and not injected on resume. The README promises this as a first-class Claude Code feature but setup.ts never calls the hook-writing code from install.sh.",
+  "location": [],
+  "phase": null,
+  "relatedTickets": ["T-033"],
+  "resolution": "Added mergeClaudeHooks() to runSetup() in setup.ts. Now registers PreCompact (zug compact) and SessionStart (zug resume) hooks in ~/.claude/settings.json whenever claude target is configured. Also added resolveZugBin() to find the installed binary path.",
+  "resolvedDate": "2026-05-26",
+  "severity": "critical",
+  "status": "resolved",
+  "title": "zug setup skips hook registration — PreCompact and SessionStart hooks never written"
+}

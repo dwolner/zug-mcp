@@ -1,0 +1,14 @@
+{
+  "components": [],
+  "discoveredDate": "2026-05-26",
+  "id": "ISS-041",
+  "impact": "Context load and observation pruning both depend on Haiku synthesis distilling raw data into PERSONA/PLAYBOOK. If synthesis silently skips (no API key, no warning), PERSONA.md grows as an append log with no pruning. At 1000+ sessions this makes zug_get_context progressively slower and more expensive. Users need to know synthesis requires an API key and what happens without it.",
+  "location": [],
+  "phase": null,
+  "relatedTickets": ["T-041"],
+  "resolution": "synthesize.ts now warns when ANTHROPIC_API_KEY is missing, explaining that synthesis is skipped and PERSONA.md will grow unboundedly. README and setup API key warning also updated. archiveObservations() called after synthesis so old observations are pruned even without synthesis.",
+  "resolvedDate": "2026-05-26",
+  "severity": "high",
+  "status": "resolved",
+  "title": "Synthesis may not run reliably without ANTHROPIC_API_KEY — defeats the scaling strategy"
+}
