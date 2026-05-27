@@ -50,6 +50,12 @@
       "label": "PHASE 7",
       "name": "OSS Distribution",
       "summary": "npm install -g zug-mcp — installable, agent-agnostic, MIT"
+    },
+    {
+      "description": "Fix critical gaps in the npm install + zug setup path for new public users. Discovered during post-publish audit.",
+      "id": "first-run-ux",
+      "label": "PHASE 8",
+      "name": "First-Run UX"
     }
   ],
   "title": "zug"
