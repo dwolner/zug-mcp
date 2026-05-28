@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import os from "os";
-import crypto from "crypto";
+import { getSourceId } from "./sync-state.js";
 
 export function getDataDir(): string {
   return process.env.ZUG_DATA_DIR || path.join(os.homedir(), ".zug");
@@ -454,15 +454,7 @@ function mutateLessons(fn: (lessons: Lesson[]) => Lesson[]): void {
   writeLessons(fn(readLessons()));
 }
 
-function sourceTag(): string {
-  const { zugDir } = getPaths();
-  const file = path.join(zugDir, "source-id");
-  if (fs.existsSync(file)) return fs.readFileSync(file, "utf-8").trim();
-  ensureDirs();
-  const tag = crypto.randomBytes(3).toString("hex"); // 6 hex chars
-  fs.writeFileSync(file, tag, "utf-8");
-  return tag;
-}
+function sourceTag(): string { return getSourceId(); }
 
 export function createLesson(
   data: Omit<Lesson, "id" | "createdAt" | "lastReinforced" | "reinforcementCount" | "status">
