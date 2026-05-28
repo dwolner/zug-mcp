@@ -23,7 +23,7 @@ const payloadFrom = (sourceId: string): SyncPayload => ({
 describe("two clients converge through the canonical server", () => {
   let server: string, a: string, b: string;
   beforeEach(() => { server = mkdir(); a = mkdir(); b = mkdir(); });
-  afterEach(() => { for (const d of [server, a, b]) fs.rmSync(d, { recursive: true, force: true }); });
+  afterEach(() => { for (const d of [server, a, b]) fs.rmSync(d, { recursive: true, force: true }); delete process.env.ZUG_DATA_DIR; });
 
   it("an observation made on A appears on B after sync", async () => {
     use(a);
