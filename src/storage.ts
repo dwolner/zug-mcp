@@ -454,13 +454,11 @@ function mutateLessons(fn: (lessons: Lesson[]) => Lesson[]): void {
   writeLessons(fn(readLessons()));
 }
 
-function sourceTag(): string { return getSourceId(); }
-
 export function createLesson(
   data: Omit<Lesson, "id" | "createdAt" | "lastReinforced" | "reinforcementCount" | "status">
 ): Lesson {
   let created!: Lesson;
-  const tag = sourceTag();
+  const tag = getSourceId();
   mutateLessons((lessons) => {
     const maxSeq = lessons.reduce((max, l) => {
       const m = l.id.match(new RegExp(`^L-${tag}-(\\d+)$`));

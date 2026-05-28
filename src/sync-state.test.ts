@@ -37,6 +37,19 @@ describe("getSyncMode", () => {
     expect(getSyncMode()).toBe("synced");
     expect(resolveSyncConfig()).toEqual({ url: "https://zug-mcp.fly.dev", token: "secret" });
   });
+
+  it("prefers ZUG_SYNC_URL over ZUG_URL", () => {
+    process.env.ZUG_SYNC_URL = "https://sync.example";
+    process.env.ZUG_URL = "https://other.example";
+    process.env.ZUG_TOKEN = "t";
+    expect(resolveSyncConfig()).toEqual({ url: "https://sync.example", token: "t" });
+  });
+
+  it("resolves config from <dataDir>/config when env is absent", () => {
+    fs.writeFileSync(path.join(dir, "config"), "ZUG_URL=https://from-file.example/\nZUG_TOKEN=filetok\n", "utf-8");
+    expect(getSyncMode()).toBe("synced");
+    expect(resolveSyncConfig()).toEqual({ url: "https://from-file.example", token: "filetok" });
+  });
 });
 
 describe("sync state round-trip", () => {

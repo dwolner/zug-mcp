@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+// Function-level import only: getDataDir is called inside functions, never at module init, so the storage<->sync-state cycle is safe.
 import { getDataDir } from "./storage.js";
 
 export type SyncMode = "canonical" | "synced" | "local-only";
