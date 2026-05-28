@@ -159,6 +159,9 @@ describe("synced-mode gate behavior", () => {
   });
 
   it("zug_end_session does NOT append persona locally in synced mode (server owns synthesis)", async () => {
+    const { getSyncMode } = await import("./sync-state.js");
+    expect(getSyncMode()).toBe("synced");
+
     // Stub fetch so push() succeeds without a real server
     vi.stubGlobal("fetch", vi.fn(async () =>
       new Response(

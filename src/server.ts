@@ -276,10 +276,14 @@ export async function runEndSession(args: {
     ? `\n\nLesson candidates (reinforced 3+ times, not yet promoted):\n${candidates.map((p) => `  • "${p.text}" (${p.count}x)`).join("\n")}\nCall zug_create_lesson to promote any of these to named behavioral rules.`
     : "";
 
+  const syncNote = mode === "synced"
+    ? "Sync push queued; synthesis runs on the server."
+    : "Synthesis running in background.";
+
   return {
     content: [{
       type: "text" as const,
-      text: `Session saved${contextLabel}${structuredLabel}. ${observations.length} observations. Total: ${stats.sessions} sessions, ${stats.observations} observations. Synthesis running in background.${candidatesBlock}`,
+      text: `Session saved${contextLabel}${structuredLabel}. ${observations.length} observations. Total: ${stats.sessions} sessions, ${stats.observations} observations. ${syncNote}${candidatesBlock}`,
     }],
   };
 }
