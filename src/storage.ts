@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import os from "os";
+import crypto from "crypto";
 
 export function getDataDir(): string {
   return process.env.ZUG_DATA_DIR || path.join(os.homedir(), ".zug");
@@ -453,16 +454,27 @@ function mutateLessons(fn: (lessons: Lesson[]) => Lesson[]): void {
   writeLessons(fn(readLessons()));
 }
 
+function sourceTag(): string {
+  const { zugDir } = getPaths();
+  const file = path.join(zugDir, "source-id");
+  if (fs.existsSync(file)) return fs.readFileSync(file, "utf-8").trim();
+  ensureDirs();
+  const tag = crypto.randomBytes(3).toString("hex"); // 6 hex chars
+  fs.writeFileSync(file, tag, "utf-8");
+  return tag;
+}
+
 export function createLesson(
   data: Omit<Lesson, "id" | "createdAt" | "lastReinforced" | "reinforcementCount" | "status">
 ): Lesson {
   let created!: Lesson;
+  const tag = sourceTag();
   mutateLessons((lessons) => {
-    const maxNum = lessons.reduce((max, l) => {
-      const match = l.id.match(/^L-(\d+)$/);
-      return match ? Math.max(max, parseInt(match[1], 10)) : max;
+    const maxSeq = lessons.reduce((max, l) => {
+      const m = l.id.match(new RegExp(`^L-${tag}-(\\d+)$`));
+      return m ? Math.max(max, parseInt(m[1], 10)) : max;
     }, 0);
-    const id = `L-${String(maxNum + 1).padStart(3, "0")}`;
+    const id = `L-${tag}-${maxSeq + 1}`;
     const now = new Date().toISOString();
     created = { ...data, id, status: "active", createdAt: now, lastReinforced: now, reinforcementCount: 0 };
     return [...lessons, created];

@@ -530,21 +530,19 @@ describe("getLessonCandidates", () => {
 });
 
 describe("createLesson", () => {
-  it("generates sequential IDs starting at L-001", () => {
-    const a = createLesson({ title: "A", content: "ca", context: "ctx", source: "manual", tags: [] });
-    const b = createLesson({ title: "B", content: "cb", context: "ctx", source: "manual", tags: [] });
-    expect(a.id).toBe("L-001");
-    expect(b.id).toBe("L-002");
+  it("mints source-safe ids of the form L-<tag>-<seq>", () => {
+    const a = createLesson({ title: "A", content: "ca", context: "x", source: "manual", tags: [] });
+    const b = createLesson({ title: "B", content: "cb", context: "x", source: "manual", tags: [] });
+    expect(a.id).toMatch(/^L-[a-z0-9]{6}-1$/);
+    expect(b.id).toMatch(/^L-[a-z0-9]{6}-2$/);
+    expect(a.id.slice(0, 9)).toBe(b.id.slice(0, 9)); // same source tag prefix "L-xxxxxx"
   });
 
-  it("uses max+1 strategy when IDs have gaps", () => {
-    const now = new Date().toISOString();
-    writeLessons([
-      { id: "L-001", title: "A", content: "ca", context: "ctx", source: "manual", tags: [], status: "active", createdAt: now, lastReinforced: now, reinforcementCount: 0 },
-      { id: "L-003", title: "C", content: "cc", context: "ctx", source: "manual", tags: [], status: "active", createdAt: now, lastReinforced: now, reinforcementCount: 0 },
-    ]);
-    const next = createLesson({ title: "D", content: "cd", context: "ctx", source: "manual", tags: [] });
-    expect(next.id).toBe("L-004");
+  it("continues the per-source sequence from existing max", () => {
+    createLesson({ title: "A", content: "c", context: "x", source: "manual", tags: [] });
+    createLesson({ title: "B", content: "c", context: "x", source: "manual", tags: [] });
+    const c = createLesson({ title: "C", content: "c", context: "x", source: "manual", tags: [] });
+    expect(c.id).toMatch(/-3$/);
   });
 
   it("sets status=active, timestamps, reinforcementCount=0", () => {

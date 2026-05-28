@@ -32,12 +32,12 @@ describe("digestLessons", () => {
   });
 
   it("returns ranked markdown with N active lessons", () => {
-    createLesson({ title: "Alpha", content: "Do alpha things.", context: "ctx", source: "manual", tags: [] });
-    createLesson({ title: "Beta", content: "Do beta things.", context: "ctx", source: "review", tags: [] });
+    const alpha = createLesson({ title: "Alpha", content: "Do alpha things.", context: "ctx", source: "manual", tags: [] });
+    const beta = createLesson({ title: "Beta", content: "Do beta things.", context: "ctx", source: "review", tags: [] });
     const digest = digestLessons();
     expect(digest).toContain("## Lessons (2 active)");
-    expect(digest).toContain("[L-001] Alpha");
-    expect(digest).toContain("[L-002] Beta");
+    expect(digest).toContain(`[${alpha.id}] Alpha`);
+    expect(digest).toContain(`[${beta.id}] Beta`);
   });
 
   it("omits reinforcement suffix when reinforcementCount is 0", () => {

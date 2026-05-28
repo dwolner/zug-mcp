@@ -440,7 +440,7 @@ export function createServer(): McpServer {
       context: z.string().max(5000).describe("Evidence, ticket/issue references"),
       source: z.enum(["review", "correction", "postmortem", "manual"]).describe("How this lesson was identified"),
       tags: z.array(z.string().max(50)).max(10).optional().describe("Optional tags"),
-      supersedes: z.string().regex(/^L-\d{3,}$/).optional().describe("ID of lesson this supersedes"),
+      supersedes: z.string().regex(/^L-[a-z0-9-]+$/).optional().describe("ID of lesson this supersedes"),
     },
     async ({ title, content, context, source, tags, supersedes }) => {
       try {
@@ -470,13 +470,13 @@ export function createServer(): McpServer {
     "zug_lesson_update",
     "Update status or content of an existing lesson.",
     {
-      id: z.string().regex(/^L-\d{3,}$/).describe("Lesson ID to update"),
+      id: z.string().regex(/^L-[a-z0-9-]+$/).describe("Lesson ID to update"),
       title: z.string().max(500).optional(),
       content: z.string().max(10000).optional(),
       context: z.string().max(5000).optional(),
       tags: z.array(z.string().max(50)).max(10).optional(),
       status: z.enum(["active", "validated", "deprecated"]).optional(),
-      supersedes: z.string().regex(/^L-\d{3,}$/).optional(),
+      supersedes: z.string().regex(/^L-[a-z0-9-]+$/).optional(),
     },
     async ({ id, title, content, context, tags, status, supersedes }) => {
       try {
@@ -547,7 +547,7 @@ export function createServer(): McpServer {
     "zug_reinforce_lesson",
     "Increment reinforcement count for a lesson — call when the lesson's pattern recurs across sessions.",
     {
-      id: z.string().regex(/^L-\d{3,}$/).describe("Lesson ID to reinforce"),
+      id: z.string().regex(/^L-[a-z0-9-]+$/).describe("Lesson ID to reinforce"),
     },
     async ({ id }) => {
       try {
