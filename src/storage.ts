@@ -595,6 +595,7 @@ export function getAllObservations(): Observation[] {
 
 export function getObservationsForSync(sinceISO: string): Observation[] {
   const since = new Date(sinceISO).getTime();
+  if (isNaN(since)) return [];
   return getAllObservations().filter((o) => new Date(o.timestamp).getTime() > since);
 }
 
@@ -620,6 +621,7 @@ export function getGrowthSince(sinceISO: string): GrowthSnapshot[] {
 
 /** Append growth snapshots not already present (by timestamp|sessionId). Returns count added. */
 export function addGrowth(incoming: GrowthSnapshot[]): number {
+  ensureDirs();
   const seen = new Set(readGrowthSnapshots().map((g) => `${g.timestamp}|${g.sessionId}`));
   let added = 0;
   for (const g of incoming) {
@@ -655,7 +657,7 @@ export function writeActiveAtomic(content: string): void { atomicWrite(getPaths(
 export function getAllSessionFiles(): { filename: string; content: string }[] {
   ensureDirs();
   const { sessionsDir } = getPaths();
-  return fs.readdirSync(sessionsDir).filter((f) => f.endsWith(".md"))
+  return fs.readdirSync(sessionsDir).filter((f) => f.endsWith(".md")).sort()
     .map((filename) => ({ filename, content: fs.readFileSync(path.join(sessionsDir, filename), "utf-8") }));
 }
 

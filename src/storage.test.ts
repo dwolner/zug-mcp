@@ -31,15 +31,14 @@ import {
   getGrowthTrend,
   getLessonCandidates,
   getStaleGrowthWarning,
+  getAllObservations, getObservationsForSync, getGrowthSince,
+  getAllReinforcements, writeReinforcements, addObservations, addGrowth,
+  writePersonaAtomic, getAllSessionFiles, addSessionFile,
+  writePlaybookAtomic, writeActiveAtomic,
   type Observation,
   type Lesson,
   type GrowthSnapshot,
 } from "./storage";
-import {
-  getAllObservations, getObservationsForSync, getGrowthSince,
-  getAllReinforcements, writeReinforcements, addObservations, addGrowth,
-  writePersonaAtomic, getAllSessionFiles, addSessionFile,
-} from "./storage.js";
 
 let tmpDir: string;
 
@@ -940,5 +939,17 @@ describe("sync storage helpers", () => {
   it("writePersonaAtomic writes via temp+rename", () => {
     writePersonaAtomic("HELLO");
     expect(readPersona()).toBe("HELLO");
+  });
+
+  it("getObservationsForSync returns [] for an invalid date", () => {
+    appendObservation({ timestamp: "2026-01-01T00:00:00Z", type: "context", observation: "a", session_id: "s", confidence: "high" });
+    expect(getObservationsForSync("not-a-date")).toEqual([]);
+  });
+
+  it("writePlaybookAtomic and writeActiveAtomic round-trip", () => {
+    writePlaybookAtomic("PLAYBOOK-X");
+    writeActiveAtomic("ACTIVE-X");
+    expect(readPlaybook()).toBe("PLAYBOOK-X");
+    expect(readActive()).toBe("ACTIVE-X");
   });
 });
