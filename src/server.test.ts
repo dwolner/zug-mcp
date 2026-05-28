@@ -1,9 +1,9 @@
 import fs from "fs";
 import path from "path";
 import os from "os";
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { digestLessons, getOpenThread, resetOpenThread, setOpenThreadForTesting, growthSummary, createServer, ZUG_INSTRUCTIONS, handleReasoningAnalysis } from "./server";
-import { createLesson, reinforceLesson, writeLessons, appendGrowthSnapshot, type Lesson } from "./storage";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { digestLessons, getOpenThread, resetOpenThread, setOpenThreadForTesting, growthSummary, createServer, ZUG_INSTRUCTIONS, handleReasoningAnalysis, runEndSession } from "./server";
+import { createLesson, reinforceLesson, writeLessons, appendGrowthSnapshot, appendObservation, type Lesson } from "./storage";
 
 let tmpDir: string;
 
@@ -32,12 +32,12 @@ describe("digestLessons", () => {
   });
 
   it("returns ranked markdown with N active lessons", () => {
-    createLesson({ title: "Alpha", content: "Do alpha things.", context: "ctx", source: "manual", tags: [] });
-    createLesson({ title: "Beta", content: "Do beta things.", context: "ctx", source: "review", tags: [] });
+    const alpha = createLesson({ title: "Alpha", content: "Do alpha things.", context: "ctx", source: "manual", tags: [] });
+    const beta = createLesson({ title: "Beta", content: "Do beta things.", context: "ctx", source: "review", tags: [] });
     const digest = digestLessons();
     expect(digest).toContain("## Lessons (2 active)");
-    expect(digest).toContain("[L-001] Alpha");
-    expect(digest).toContain("[L-002] Beta");
+    expect(digest).toContain(`[${alpha.id}] Alpha`);
+    expect(digest).toContain(`[${beta.id}] Beta`);
   });
 
   it("omits reinforcement suffix when reinforcementCount is 0", () => {
@@ -138,5 +138,73 @@ describe("handleReasoningAnalysis", () => {
     delete process.env.ANTHROPIC_API_KEY;
     const result = await handleReasoningAnalysis("I think we should choose option A because it is better.");
     expect(result.content[0].text).toContain("No API key configured");
+  });
+});
+
+describe("synced-mode gate behavior", () => {
+  const today = new Date().toISOString().slice(0, 10);
+
+  beforeEach(() => {
+    // synced mode: ZUG_URL + ZUG_TOKEN set, ZUG_CANONICAL unset
+    process.env.ZUG_URL = "https://example.test";
+    process.env.ZUG_TOKEN = "tok";
+    delete process.env.ZUG_CANONICAL;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    delete process.env.ZUG_URL;
+    delete process.env.ZUG_TOKEN;
+    delete process.env.ZUG_CANONICAL;
+  });
+
+  it("zug_end_session does NOT append persona locally in synced mode (server owns synthesis)", async () => {
+    const { getSyncMode } = await import("./sync-state.js");
+    expect(getSyncMode()).toBe("synced");
+
+    // Stub fetch so push() succeeds without a real server
+    vi.stubGlobal("fetch", vi.fn(async () =>
+      new Response(
+        JSON.stringify({ accepted: {}, highWater: "2026-05-28T00:00:00.000Z" }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      )
+    ));
+
+    // Record a meaningful (high-confidence) observation for this session
+    appendObservation({
+      timestamp: new Date().toISOString(),
+      type: "preference",
+      observation: "synced-mode obs",
+      session_id: "2026-05-28-x",
+      confidence: "high",
+    });
+
+    await runEndSession({ session_id: "2026-05-28-x", summary: "did things" });
+
+    const personaPath = path.join(tmpDir, "PERSONA.md");
+    const persona = fs.existsSync(personaPath) ? fs.readFileSync(personaPath, "utf-8") : "";
+    expect(persona).not.toContain("synced-mode obs");
+  });
+
+  it("local-only mode still appends persona synchronously (regression guard)", async () => {
+    // local-only: remove ZUG_URL and ZUG_TOKEN
+    delete process.env.ZUG_URL;
+    delete process.env.ZUG_TOKEN;
+
+    appendObservation({
+      timestamp: new Date().toISOString(),
+      type: "preference",
+      observation: "local-mode obs",
+      session_id: "2026-05-28-y",
+      confidence: "high",
+    });
+
+    await runEndSession({ session_id: "2026-05-28-y", summary: "did things" });
+
+    const personaPath = path.join(tmpDir, "PERSONA.md");
+    const persona = fs.readFileSync(personaPath, "utf-8");
+    // local mode appends lines like: - [preference] local-mode obs *(2026-05-28)*
+    expect(persona).toContain("local-mode obs");
+    expect(persona).toContain(`*(${today})*`);
   });
 });

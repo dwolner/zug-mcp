@@ -4,6 +4,7 @@ import path from "path";
 import os from "os";
 import { synthesize } from "./synthesize.js";
 import { writeActive } from "./storage.js";
+import { mergeObservations } from "./merge-core.js";
 
 const ZUG_DIR = path.join(os.homedir(), ".zug");
 
@@ -36,40 +37,21 @@ async function main() {
   const importObsFile = path.join(abs, "observations.jsonl");
 
   if (fs.existsSync(importObsFile)) {
+    const parseObs = (lines: string[]) =>
+      lines.map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+
     const localLines = fs.existsSync(localObsFile)
       ? fs.readFileSync(localObsFile, "utf-8").split("\n").filter(Boolean)
       : [];
     const importLines = fs.readFileSync(importObsFile, "utf-8").split("\n").filter(Boolean);
 
-    // Deduplicate by timestamp + observation text
-    const seen = new Set(localLines.map((l) => {
-      try { const o = JSON.parse(l); return `${o.timestamp}|${o.observation}`; } catch { return l; }
-    }));
+    const baseObs = parseObs(localLines);
+    const incomingObs = parseObs(importLines);
+    const merged = mergeObservations(baseObs, incomingObs);
+    const added = Math.max(0, merged.length - baseObs.length);
 
-    let added = 0;
-    for (const line of importLines) {
-      try {
-        const o = JSON.parse(line);
-        const key = `${o.timestamp}|${o.observation}`;
-        if (!seen.has(key)) {
-          localLines.push(line);
-          seen.add(key);
-          added++;
-        }
-      } catch {
-        // Skip malformed lines
-      }
-    }
-
-    // Sort by timestamp
-    localLines.sort((a, b) => {
-      try {
-        return JSON.parse(a).timestamp.localeCompare(JSON.parse(b).timestamp);
-      } catch { return 0; }
-    });
-
-    fs.writeFileSync(localObsFile, localLines.join("\n") + "\n", "utf-8");
-    console.log(`observations.jsonl: ${added} new observations merged (${localLines.length} total)`);
+    fs.writeFileSync(localObsFile, merged.map((o) => JSON.stringify(o)).join("\n") + "\n", "utf-8");
+    console.log(`observations.jsonl: ${added} new observations merged (${merged.length} total)`);
   } else {
     console.log("observations.jsonl: not found in import, skipped");
   }

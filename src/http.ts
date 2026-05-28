@@ -6,6 +6,7 @@ import { requireBearerAuth } from "@modelcontextprotocol/sdk/server/auth/middlew
 import { createServer } from "./server.js";
 import { isRateLimited } from "./rate-limit.js";
 import { zugOAuthProvider } from "./oauth-provider.js";
+import { handleSyncPull, handleSyncPush } from "./sync-server.js";
 
 const ZUG_TOKEN = process.env.ZUG_TOKEN || "";
 if (!ZUG_TOKEN) {
@@ -38,18 +39,18 @@ const app = express();
 // OAuth endpoints: /.well-known/oauth-authorization-server, /authorize, /token, /register, /revoke
 app.use(mcpAuthRouter({ provider: zugOAuthProvider, issuerUrl }));
 
-// Rate limit middleware for /mcp
-app.use("/mcp", (req, res, next) => {
+// Rate limit middleware (shared by /mcp and /sync)
+function rateLimitMw(req: express.Request, res: express.Response, next: express.NextFunction): void {
   const ip = getClientIp(req);
   if (isRateLimited(ip)) {
     res.status(429).json({ error: "Too Many Requests" });
     return;
   }
   next();
-});
+}
 
-// Auth middleware: Bearer token (OAuth) OR X-Zug-Token header (legacy)
-app.use("/mcp", (req, res, next) => {
+// Auth middleware: Bearer token (OAuth) OR X-Zug-Token header (legacy) (shared by /mcp and /sync)
+function zugAuth(req: express.Request, res: express.Response, next: express.NextFunction): void {
   if (req.headers.authorization) {
     // Any Authorization header must be Bearer — reject others immediately
     if (!req.headers.authorization.startsWith("Bearer ")) {
@@ -73,7 +74,10 @@ app.use("/mcp", (req, res, next) => {
   }
 
   res.status(401).json({ error: "Unauthorized" });
-});
+}
+
+app.use("/mcp", rateLimitMw);
+app.use("/mcp", zugAuth);
 
 // MCP session handling
 app.use("/mcp", express.raw({ type: "*/*" }));
@@ -114,6 +118,25 @@ app.all("/mcp", async (req, res) => {
     if (!res.headersSent) {
       res.status(500).json({ error: "Internal Server Error" });
     }
+  }
+});
+
+// Sync endpoints
+app.use("/sync", rateLimitMw);
+app.use("/sync", zugAuth);
+app.use("/sync", express.json({ limit: "16mb" }));
+
+app.get("/sync/pull", (req, res) => {
+  const since = typeof req.query.since === "string" ? req.query.since : "1970-01-01T00:00:00.000Z";
+  res.json(handleSyncPull(since));
+});
+
+app.post("/sync/push", async (req, res) => {
+  try {
+    res.json(await handleSyncPush(req.body));
+  } catch (err) {
+    console.error("sync push error:", err);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 

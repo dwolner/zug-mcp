@@ -15,6 +15,8 @@ import {
   archiveSessions,
 } from "./storage.js";
 import { runSetup } from "./setup.js";
+import { sync as runSync, pull as runPull, push as runPush } from "./sync.js";
+import { getSyncMode } from "./sync-state.js";
 
 const ZUG_DIR = getDataDir();
 const OBSERVATIONS_FILE = path.join(ZUG_DIR, "observations.jsonl");
@@ -101,7 +103,11 @@ function cmdPersona() {
   console.log(content);
 }
 
-function cmdResume() {
+async function cmdResume(): Promise<void> {
+  if (getSyncMode() === "synced") {
+    await runPull({ timeoutMs: 3000 }).catch(() => {});
+  }
+
   const { sessions, observations } = getStats();
   const lastDate = getLastSessionDate();
   const active = readActive();
@@ -129,7 +135,11 @@ function cmdResume() {
   console.log(parts.join("\n"));
 }
 
-function cmdCompact() {
+async function cmdCompact(): Promise<void> {
+  if (getSyncMode() === "synced") {
+    await runPush().catch(() => {});
+  }
+
   const { sessions, observations } = getStats();
   const lastDate = getLastSessionDate();
   const active = readActive();
@@ -218,6 +228,16 @@ function cmdBackup(): void {
   }
 }
 
+async function cmdSync(kind: "sync" | "pull" | "push"): Promise<void> {
+  if (getSyncMode() === "local-only") {
+    console.log("Sync is not configured (local-only mode). Set ZUG_URL and ZUG_TOKEN in ~/.zug/config to enable.");
+    return;
+  }
+  const fn = kind === "pull" ? runPull : kind === "push" ? runPush : runSync;
+  const result = await fn();
+  console.log(`zug ${kind}: ${JSON.stringify(result)}`);
+}
+
 function cmdArchive(): void {
   const { archived } = archiveSessions();
   const archiveDir = path.join(ZUG_DIR, "sessions", "archive");
@@ -241,7 +261,10 @@ function printUsage() {
     --windsurf        Configure Windsurf only
     --all             Configure all agents
   zug update          Update zug-mcp to latest (runs npm install -g)
-  zug backup          Snapshot Fly volume (or local data) to ~/.zug-backup/YYYY-MM-DD/`);
+  zug backup          Snapshot Fly volume (or local data) to ~/.zug-backup/YYYY-MM-DD/
+  zug sync            Push local changes then pull canonical state (if sync configured)
+  zug pull            Pull canonical state from the server
+  zug push            Push local changes to the server`);
   process.exit(1);
 }
 
@@ -258,10 +281,10 @@ switch (cmd) {
     cmdPersona();
     break;
   case "compact":
-    cmdCompact();
+    cmdCompact().then(() => process.exit(0));
     break;
   case "resume":
-    cmdResume();
+    cmdResume().then(() => process.exit(0));
     break;
   case "setup":
     cmdSetup(rest).then(() => process.exit(0));
@@ -275,6 +298,9 @@ switch (cmd) {
   case "backup":
     cmdBackup();
     break;
+  case "sync": cmdSync("sync").then(() => process.exit(0)); break;
+  case "pull": cmdSync("pull").then(() => process.exit(0)); break;
+  case "push": cmdSync("push").then(() => process.exit(0)); break;
   case "--version":
   case "version":
     console.log(version);

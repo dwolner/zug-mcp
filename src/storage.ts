@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import os from "os";
+import { getSourceId } from "./sync-state.js";
 
 export function getDataDir(): string {
   return process.env.ZUG_DATA_DIR || path.join(os.homedir(), ".zug");
@@ -341,7 +342,7 @@ export interface ReinforceResult {
   similarity: number;
 }
 
-function normalizeText(text: string): string {
+export function normalizeText(text: string): string {
   return text.toLowerCase().replace(/[^\w\s]/g, " ").replace(/\s+/g, " ").trim();
 }
 
@@ -457,12 +458,13 @@ export function createLesson(
   data: Omit<Lesson, "id" | "createdAt" | "lastReinforced" | "reinforcementCount" | "status">
 ): Lesson {
   let created!: Lesson;
+  const tag = getSourceId();
   mutateLessons((lessons) => {
-    const maxNum = lessons.reduce((max, l) => {
-      const match = l.id.match(/^L-(\d+)$/);
-      return match ? Math.max(max, parseInt(match[1], 10)) : max;
+    const maxSeq = lessons.reduce((max, l) => {
+      const m = l.id.match(new RegExp(`^L-${tag}-(\\d+)$`));
+      return m ? Math.max(max, parseInt(m[1], 10)) : max;
     }, 0);
-    const id = `L-${String(maxNum + 1).padStart(3, "0")}`;
+    const id = `L-${tag}-${maxSeq + 1}`;
     const now = new Date().toISOString();
     created = { ...data, id, status: "active", createdAt: now, lastReinforced: now, reinforcementCount: 0 };
     return [...lessons, created];
@@ -574,4 +576,97 @@ export function getStaleGrowthWarning(n = 3): string | null {
   const max = Math.max(...counts);
   if (max > min) return null;
   return `No new observations in the last ${snapshots.length} sessions. Call zug_save_observation when you notice patterns.`;
+}
+
+// --- Sync storage helpers ---
+
+function parseJsonl<T>(file: string): T[] {
+  if (!fs.existsSync(file)) return [];
+  return fs.readFileSync(file, "utf-8").split("\n").filter(Boolean)
+    .map((l) => { try { return JSON.parse(l) as T; } catch { return null; } })
+    .filter((x): x is T => x !== null);
+}
+
+export function getAllObservations(): Observation[] {
+  const { observationsFile, zugDir } = getPaths();
+  const archive = path.join(zugDir, "observations.archive.jsonl");
+  return [...parseJsonl<Observation>(observationsFile), ...parseJsonl<Observation>(archive)];
+}
+
+export function getObservationsForSync(sinceISO: string): Observation[] {
+  const since = new Date(sinceISO).getTime();
+  if (isNaN(since)) return [];
+  return getAllObservations().filter((o) => new Date(o.timestamp).getTime() > since);
+}
+
+/** Append observations whose timestamp|observation key is not already present. Returns count added. */
+export function addObservations(incoming: Observation[]): number {
+  ensureDirs();
+  const { observationsFile } = getPaths();
+  const seen = new Set(getAllObservations().map((o) => `${o.timestamp}|${o.observation}`));
+  let added = 0;
+  for (const o of incoming) {
+    const k = `${o.timestamp}|${o.observation}`;
+    if (seen.has(k)) continue;
+    fs.appendFileSync(observationsFile, JSON.stringify(o) + "\n", "utf-8");
+    seen.add(k); added++;
+  }
+  return added;
+}
+
+export function getGrowthSince(sinceISO: string): GrowthSnapshot[] {
+  const since = new Date(sinceISO).getTime();
+  return readGrowthSnapshots().filter((g) => new Date(g.timestamp).getTime() > since);
+}
+
+/** Append growth snapshots not already present (by timestamp|sessionId). Returns count added. */
+export function addGrowth(incoming: GrowthSnapshot[]): number {
+  ensureDirs();
+  const seen = new Set(readGrowthSnapshots().map((g) => `${g.timestamp}|${g.sessionId}`));
+  let added = 0;
+  for (const g of incoming) {
+    if (seen.has(`${g.timestamp}|${g.sessionId}`)) continue;
+    appendGrowthSnapshot(g); seen.add(`${g.timestamp}|${g.sessionId}`); added++;
+  }
+  return added;
+}
+
+/** Reads all reinforced patterns. Delegates to loadPatterns to stay DRY. */
+export function getAllReinforcements(): ReinforcedPattern[] {
+  return loadPatterns(getPaths().reinforcementsFile);
+}
+
+export function writeReinforcements(patterns: ReinforcedPattern[]): void {
+  ensureDirs();
+  const { reinforcementsFile } = getPaths();
+  fs.writeFileSync(reinforcementsFile, patterns.map((p) => JSON.stringify(p)).join("\n") + "\n", "utf-8");
+}
+
+function atomicWrite(file: string, content: string): void {
+  ensureDirs();
+  const tmp = `${file}.tmp-${process.pid}-${Date.now()}`;
+  fs.writeFileSync(tmp, content, "utf-8");
+  fs.renameSync(tmp, file);
+}
+
+export function writePersonaAtomic(content: string): void { atomicWrite(getPaths().personaFile, content); }
+export function writePlaybookAtomic(content: string): void { atomicWrite(getPaths().playbookFile, content); }
+export function writeActiveAtomic(content: string): void { atomicWrite(getPaths().activeFile, content); }
+
+/** Return all session files as {filename, content}, excluding the archive subdir. */
+export function getAllSessionFiles(): { filename: string; content: string }[] {
+  ensureDirs();
+  const { sessionsDir } = getPaths();
+  return fs.readdirSync(sessionsDir).filter((f) => f.endsWith(".md")).sort()
+    .map((filename) => ({ filename, content: fs.readFileSync(path.join(sessionsDir, filename), "utf-8") }));
+}
+
+/** Write a session file by exact filename if absent. Returns true if written. */
+export function addSessionFile(filename: string, content: string): boolean {
+  ensureDirs();
+  const { sessionsDir } = getPaths();
+  const dest = path.join(sessionsDir, filename);
+  if (fs.existsSync(dest)) return false;
+  fs.writeFileSync(dest, content, "utf-8");
+  return true;
 }

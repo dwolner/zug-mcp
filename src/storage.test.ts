@@ -31,6 +31,10 @@ import {
   getGrowthTrend,
   getLessonCandidates,
   getStaleGrowthWarning,
+  getAllObservations, getObservationsForSync, getGrowthSince,
+  getAllReinforcements, writeReinforcements, addObservations, addGrowth,
+  writePersonaAtomic, getAllSessionFiles, addSessionFile,
+  writePlaybookAtomic, writeActiveAtomic,
   type Observation,
   type Lesson,
   type GrowthSnapshot,
@@ -530,21 +534,19 @@ describe("getLessonCandidates", () => {
 });
 
 describe("createLesson", () => {
-  it("generates sequential IDs starting at L-001", () => {
-    const a = createLesson({ title: "A", content: "ca", context: "ctx", source: "manual", tags: [] });
-    const b = createLesson({ title: "B", content: "cb", context: "ctx", source: "manual", tags: [] });
-    expect(a.id).toBe("L-001");
-    expect(b.id).toBe("L-002");
+  it("mints source-safe ids of the form L-<tag>-<seq>", () => {
+    const a = createLesson({ title: "A", content: "ca", context: "x", source: "manual", tags: [] });
+    const b = createLesson({ title: "B", content: "cb", context: "x", source: "manual", tags: [] });
+    expect(a.id).toMatch(/^L-[a-z0-9]{6}-1$/);
+    expect(b.id).toMatch(/^L-[a-z0-9]{6}-2$/);
+    expect(a.id.slice(0, 9)).toBe(b.id.slice(0, 9)); // same source tag prefix "L-xxxxxx"
   });
 
-  it("uses max+1 strategy when IDs have gaps", () => {
-    const now = new Date().toISOString();
-    writeLessons([
-      { id: "L-001", title: "A", content: "ca", context: "ctx", source: "manual", tags: [], status: "active", createdAt: now, lastReinforced: now, reinforcementCount: 0 },
-      { id: "L-003", title: "C", content: "cc", context: "ctx", source: "manual", tags: [], status: "active", createdAt: now, lastReinforced: now, reinforcementCount: 0 },
-    ]);
-    const next = createLesson({ title: "D", content: "cd", context: "ctx", source: "manual", tags: [] });
-    expect(next.id).toBe("L-004");
+  it("continues the per-source sequence from existing max", () => {
+    createLesson({ title: "A", content: "c", context: "x", source: "manual", tags: [] });
+    createLesson({ title: "B", content: "c", context: "x", source: "manual", tags: [] });
+    const c = createLesson({ title: "C", content: "c", context: "x", source: "manual", tags: [] });
+    expect(c.id).toMatch(/-3$/);
   });
 
   it("sets status=active, timestamps, reinforcementCount=0", () => {
@@ -883,5 +885,71 @@ describe("archiveObservations", () => {
     expect(() => archiveObservations()).not.toThrow();
     const archivePath = path.join(tmpDir, "observations.archive.jsonl");
     expect(fs.existsSync(archivePath)).toBe(false);
+  });
+});
+
+describe("sync storage helpers", () => {
+  it("getAllObservations reads live + archive", () => {
+    appendObservation({ timestamp: "2026-01-02T00:00:00Z", type: "context", observation: "live", session_id: "s", confidence: "high" });
+    archiveObservations(); // moves live -> archive
+    appendObservation({ timestamp: "2026-01-03T00:00:00Z", type: "context", observation: "newlive", session_id: "s", confidence: "high" });
+    const all = getAllObservations().map((o) => o.observation).sort();
+    expect(all).toEqual(["live", "newlive"]);
+  });
+
+  it("getObservationsForSync filters by timestamp across live+archive", () => {
+    appendObservation({ timestamp: "2026-01-01T00:00:00Z", type: "context", observation: "old", session_id: "s", confidence: "high" });
+    appendObservation({ timestamp: "2026-01-05T00:00:00Z", type: "context", observation: "new", session_id: "s", confidence: "high" });
+    const out = getObservationsForSync("2026-01-02T00:00:00Z").map((o) => o.observation);
+    expect(out).toEqual(["new"]);
+  });
+
+  it("addObservations appends only entries not already present", () => {
+    appendObservation({ timestamp: "2026-01-01T00:00:00Z", type: "context", observation: "a", session_id: "s", confidence: "high" });
+    const added = addObservations([
+      { timestamp: "2026-01-01T00:00:00Z", type: "context", observation: "a", session_id: "s", confidence: "high" },
+      { timestamp: "2026-01-02T00:00:00Z", type: "context", observation: "b", session_id: "s", confidence: "high" },
+    ]);
+    expect(added).toBe(1);
+    expect(getAllObservations()).toHaveLength(2);
+  });
+
+  it("addGrowth appends only new snapshots", () => {
+    const g = (ts: string, sid: string) => ({ timestamp: ts, sessionId: sid, sessionCount: 1, observationCount: 1, personaLines: 1, topPatterns: [], activePatternCount: 0, lessonCount: 0 });
+    appendGrowthSnapshot(g("2026-01-01T00:00:00Z", "s1"));
+    const added = addGrowth([g("2026-01-01T00:00:00Z", "s1"), g("2026-01-02T00:00:00Z", "s2")]);
+    expect(added).toBe(1);
+    expect(getGrowthSince("2026-01-01T12:00:00Z").map((x) => x.sessionId)).toEqual(["s2"]);
+  });
+
+  it("reinforcements round-trip via getAllReinforcements/writeReinforcements", () => {
+    writeReinforcements([{ text: "p1", count: 3, lastSeen: "2026-01-01T00:00:00Z" }]);
+    expect(getAllReinforcements()).toHaveLength(1);
+    expect(getAllReinforcements()[0].count).toBe(3);
+  });
+
+  it("getAllSessionFiles + addSessionFile (idempotent by filename)", () => {
+    expect(addSessionFile("2026-01-01-s.md", "BODY")).toBe(true);
+    expect(addSessionFile("2026-01-01-s.md", "DIFFERENT")).toBe(false);
+    const files = getAllSessionFiles();
+    expect(files).toHaveLength(1);
+    expect(files[0].content).toBe("BODY");
+  });
+
+  it("writePersonaAtomic writes via temp+rename", () => {
+    writePersonaAtomic("HELLO");
+    expect(readPersona()).toBe("HELLO");
+  });
+
+  it("getObservationsForSync returns [] for an invalid date", () => {
+    appendObservation({ timestamp: "2026-01-01T00:00:00Z", type: "context", observation: "a", session_id: "s", confidence: "high" });
+    expect(getObservationsForSync("not-a-date")).toEqual([]);
+  });
+
+  it("writePlaybookAtomic and writeActiveAtomic round-trip", () => {
+    writePlaybookAtomic("PLAYBOOK-X");
+    writeActiveAtomic("ACTIVE-X");
+    expect(readPlaybook()).toBe("PLAYBOOK-X");
+    expect(readActive()).toBe("ACTIVE-X");
   });
 });
