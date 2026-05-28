@@ -35,6 +35,11 @@ import {
   type Lesson,
   type GrowthSnapshot,
 } from "./storage";
+import {
+  getAllObservations, getObservationsForSync, getGrowthSince,
+  getAllReinforcements, writeReinforcements, addObservations, addGrowth,
+  writePersonaAtomic, getAllSessionFiles, addSessionFile,
+} from "./storage.js";
 
 let tmpDir: string;
 
@@ -881,5 +886,59 @@ describe("archiveObservations", () => {
     expect(() => archiveObservations()).not.toThrow();
     const archivePath = path.join(tmpDir, "observations.archive.jsonl");
     expect(fs.existsSync(archivePath)).toBe(false);
+  });
+});
+
+describe("sync storage helpers", () => {
+  it("getAllObservations reads live + archive", () => {
+    appendObservation({ timestamp: "2026-01-02T00:00:00Z", type: "context", observation: "live", session_id: "s", confidence: "high" });
+    archiveObservations(); // moves live -> archive
+    appendObservation({ timestamp: "2026-01-03T00:00:00Z", type: "context", observation: "newlive", session_id: "s", confidence: "high" });
+    const all = getAllObservations().map((o) => o.observation).sort();
+    expect(all).toEqual(["live", "newlive"]);
+  });
+
+  it("getObservationsForSync filters by timestamp across live+archive", () => {
+    appendObservation({ timestamp: "2026-01-01T00:00:00Z", type: "context", observation: "old", session_id: "s", confidence: "high" });
+    appendObservation({ timestamp: "2026-01-05T00:00:00Z", type: "context", observation: "new", session_id: "s", confidence: "high" });
+    const out = getObservationsForSync("2026-01-02T00:00:00Z").map((o) => o.observation);
+    expect(out).toEqual(["new"]);
+  });
+
+  it("addObservations appends only entries not already present", () => {
+    appendObservation({ timestamp: "2026-01-01T00:00:00Z", type: "context", observation: "a", session_id: "s", confidence: "high" });
+    const added = addObservations([
+      { timestamp: "2026-01-01T00:00:00Z", type: "context", observation: "a", session_id: "s", confidence: "high" },
+      { timestamp: "2026-01-02T00:00:00Z", type: "context", observation: "b", session_id: "s", confidence: "high" },
+    ]);
+    expect(added).toBe(1);
+    expect(getAllObservations()).toHaveLength(2);
+  });
+
+  it("addGrowth appends only new snapshots", () => {
+    const g = (ts: string, sid: string) => ({ timestamp: ts, sessionId: sid, sessionCount: 1, observationCount: 1, personaLines: 1, topPatterns: [], activePatternCount: 0, lessonCount: 0 });
+    appendGrowthSnapshot(g("2026-01-01T00:00:00Z", "s1"));
+    const added = addGrowth([g("2026-01-01T00:00:00Z", "s1"), g("2026-01-02T00:00:00Z", "s2")]);
+    expect(added).toBe(1);
+    expect(getGrowthSince("2026-01-01T12:00:00Z").map((x) => x.sessionId)).toEqual(["s2"]);
+  });
+
+  it("reinforcements round-trip via getAllReinforcements/writeReinforcements", () => {
+    writeReinforcements([{ text: "p1", count: 3, lastSeen: "2026-01-01T00:00:00Z" }]);
+    expect(getAllReinforcements()).toHaveLength(1);
+    expect(getAllReinforcements()[0].count).toBe(3);
+  });
+
+  it("getAllSessionFiles + addSessionFile (idempotent by filename)", () => {
+    expect(addSessionFile("2026-01-01-s.md", "BODY")).toBe(true);
+    expect(addSessionFile("2026-01-01-s.md", "DIFFERENT")).toBe(false);
+    const files = getAllSessionFiles();
+    expect(files).toHaveLength(1);
+    expect(files[0].content).toBe("BODY");
+  });
+
+  it("writePersonaAtomic writes via temp+rename", () => {
+    writePersonaAtomic("HELLO");
+    expect(readPersona()).toBe("HELLO");
   });
 });
