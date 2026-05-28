@@ -1,0 +1,12 @@
+{
+  "blockedBy": [],
+  "completedDate": null,
+  "createdDate": "2026-05-28",
+  "description": "Implements docs/adr/004-local-first-sync-and-tiering.md. Make fs-capable clients (CLI, desktop) local-first with background sync to the canonical remote, so a server outage degrades to sync-paused rather than total failure (root cause of the 2026-05-27 Session not found outage; see T-042). Tiering: free = local-only single source with BYOK local synthesis (OSS feature, user supplies ANTHROPIC_API_KEY; falls back to append-only per ADR-002 if absent); paid = canonical remote sync with server-side synthesis over the merged log (guarantees one unified persona across CLI/desktop/web/multi-machine). Work items: (1) local append-log hot path on fs clients via existing stdio transport; (2) background sync client with per-source cursor — push new local log entries, pull+merge remote via merge.ts, idempotent/resumable; (3) projection rule: never sync persona/playbook/active, regenerate from merged log (paid=server, free=local BYOK); (4) free->paid migration: bulk-upload local history on first sync; (5) graceful degradation when remote unreachable. Prerequisite/related: T-042 (always-on remote for paid/web path) and durable OAuth/account model (ADR-003 in-memory state won't survive redeploys) — split that out if it grows. Acceptance: an fs-client session keeps working and recording locally with the remote down, then reconciles on reconnect; a paid user sees the same persona on web and CLI.",
+  "id": "T-043",
+  "order": 60,
+  "phase": null,
+  "status": "open",
+  "title": "Local-first resilience + canonical sync + tiering (ADR-004)",
+  "type": "feature"
+}
