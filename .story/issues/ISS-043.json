@@ -1,0 +1,22 @@
+{
+  "components": [
+    "sync",
+    "sync-server"
+  ],
+  "discoveredDate": "2026-05-28",
+  "id": "ISS-043",
+  "impact": "The local-first sync engine advances the observation/growth cursors (pullSince/pushSince) to the server's highWater = new Date().toISOString() (wall-clock), while log entries carry their own (possibly earlier) timestamps and the server filters with `timestamp > since`. This creates a narrow data-loss window for the two cursor-gated append logs (observations, growth): under client/server clock skew (server clock leads on push) or a back-dated entry becoming visible after another machine's pull stamped highWater, an entry whose timestamp ends up <= an already-advanced cursor can be permanently skipped — dedup never recovers it because the cursor gates what the server SENDS. Acceptable for v1 single-user (sync at session boundaries, rarely concurrent; spec states correctness rests on dedup keys, not cursor precision; sessions use forgiving day-granularity resend; reinforcements/lessons are sent in full so have no window). Follow-up: advance the observation/growth cursor to max(entry timestamp actually seen) rather than server wall-clock now(), which closes the clock-skew skip entirely. Surfaced by the T-043 final holistic review.",
+  "location": [
+    "src/sync.ts (pull/push cursor advance)",
+    "src/sync-server.ts (handleSyncPull/handleSyncPush highWater)"
+  ],
+  "phase": null,
+  "relatedTickets": [
+    "T-043"
+  ],
+  "resolution": null,
+  "resolvedDate": null,
+  "severity": "low",
+  "status": "open",
+  "title": "Sync cursor uses server wall-clock highWater; advance to max entry timestamp to close clock-skew skip window"
+}

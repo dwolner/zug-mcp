@@ -1,0 +1,19 @@
+{
+  "content": "For multi-task features, run subagent-driven development with a fresh implementer per task plus a two-stage (spec-compliance then code-quality) review each task, and a final holistic review at the end. The per-task quality pass reliably catches real defects the implementer's own self-review misses; the final pass catches cross-cutting issues (cursor coherence, dead code, package shipping) that per-task reviews can't see.",
+  "context": "T-043 (15 tasks): per-task reviews caught a negative observation-count log, a PushResult contract bug (reinforcements count reported submitted-not-net-new) plus a post-await race, and unsynced-mode behavior preservation. The final holistic review verified the projection-never-pushed invariant and traced package.json `files` completeness for npm publish. Reviewers ran on sonnet; final review on opus.",
+  "createdDate": "2026-05-28",
+  "id": "L-003",
+  "lastValidated": "2026-05-28",
+  "reinforcements": 0,
+  "source": "postmortem",
+  "status": "active",
+  "supersedes": null,
+  "tags": [
+    "process",
+    "review",
+    "subagent-driven",
+    "t-043"
+  ],
+  "title": "Per-task two-stage review catches bugs implementers miss on large features",
+  "updatedDate": "2026-05-28"
+}

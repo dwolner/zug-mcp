@@ -1,0 +1,19 @@
+{
+  "content": "For ids that must merge across independent sources (e.g. multi-machine sync), make them globally unique AT creation (per-source prefix/tag + local sequence) instead of building a reactive collision-detection + remap protocol. The proactive scheme is strictly simpler: plain union-by-id merge, no remap, no reference-rewrite cascade.",
+  "context": "T-043 lesson ids: chose `L-<sourceTag>-<seq>` (6-hex per-install tag) over an earlier plan to have the server re-mint colliding L-NNN ids and return a remap. Reviewer challenged the original \"switching to uuids breaks UX\" justification — it didn't (ids are agent-facing, ~0 migration cost), and the proactive scheme deleted an entire remap mechanism from the design.",
+  "createdDate": "2026-05-28",
+  "id": "L-002",
+  "lastValidated": "2026-05-28",
+  "reinforcements": 0,
+  "source": "review",
+  "status": "active",
+  "supersedes": null,
+  "tags": [
+    "architecture",
+    "sync",
+    "ids",
+    "t-043"
+  ],
+  "title": "Design id collisions out at creation rather than detecting and remapping",
+  "updatedDate": "2026-05-28"
+}

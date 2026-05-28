@@ -1,0 +1,18 @@
+{
+  "content": "Only the SessionStart hook's stdout is added to the model's context. PreCompact and SessionEnd stdout are NOT injected — treat those as side-effect-only hooks (e.g. run a sync/push), and rely on SessionStart for any post-compaction context reload.",
+  "context": "Verified against the Claude Code hooks docs (code.claude.com/docs/en/hooks.md) during T-043. This revealed that zug's existing PreCompact→`zug compact` checkpoint print never reached the model (logged as ISS-042); post-compaction reload actually works via SessionStart/compact→`zug resume`. SessionStart matchers: startup, resume, clear, compact. SessionEnd fires once at session termination (vs Stop, per-turn).",
+  "createdDate": "2026-05-28",
+  "id": "L-001",
+  "lastValidated": "2026-05-28",
+  "reinforcements": 0,
+  "source": "manual",
+  "status": "active",
+  "supersedes": null,
+  "tags": [
+    "hooks",
+    "claude-code",
+    "t-043"
+  ],
+  "title": "PreCompact hook stdout is not injected into Claude Code context",
+  "updatedDate": "2026-05-28"
+}
