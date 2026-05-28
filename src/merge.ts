@@ -48,7 +48,7 @@ async function main() {
     const baseObs = parseObs(localLines);
     const incomingObs = parseObs(importLines);
     const merged = mergeObservations(baseObs, incomingObs);
-    const added = merged.length - baseObs.length;
+    const added = Math.max(0, merged.length - baseObs.length);
 
     fs.writeFileSync(localObsFile, merged.map((o) => JSON.stringify(o)).join("\n") + "\n", "utf-8");
     console.log(`observations.jsonl: ${added} new observations merged (${merged.length} total)`);

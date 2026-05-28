@@ -29,10 +29,11 @@ export function mergeReinforcements(base: ReinforcedPattern[], incoming: Reinfor
     const k = normalizeText(p.text);
     const cur = byKey.get(k);
     if (!cur) { byKey.set(k, { ...p }); continue; }
+    const useP = p.lastSeen.localeCompare(cur.lastSeen) > 0;
     byKey.set(k, {
-      text: cur.lastSeen.localeCompare(p.lastSeen) >= 0 ? cur.text : p.text,
+      text: useP ? p.text : cur.text,
       count: Math.max(cur.count, p.count),
-      lastSeen: cur.lastSeen.localeCompare(p.lastSeen) >= 0 ? cur.lastSeen : p.lastSeen,
+      lastSeen: useP ? p.lastSeen : cur.lastSeen,
     });
   }
   return [...byKey.values()];

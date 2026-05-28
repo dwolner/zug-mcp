@@ -46,6 +46,14 @@ describe("mergeReinforcements", () => {
     expect(out[0].count).toBe(5);
     expect(out[0].lastSeen).toBe("2026-02-01T00:00:00Z");
   });
+  it("keeps base count when base has the higher count", () => {
+    const base: ReinforcedPattern[] = [{ text: "tabs", count: 9, lastSeen: "2026-03-01T00:00:00Z" }];
+    const incoming: ReinforcedPattern[] = [{ text: "tabs", count: 2, lastSeen: "2026-01-01T00:00:00Z" }];
+    const out = mergeReinforcements(base, incoming);
+    expect(out).toHaveLength(1);
+    expect(out[0].count).toBe(9);
+    expect(out[0].lastSeen).toBe("2026-03-01T00:00:00Z");
+  });
 });
 
 describe("mergeLessons", () => {
@@ -60,5 +68,13 @@ describe("mergeLessons", () => {
     );
     expect(out).toHaveLength(2);
     expect(out.find((l) => l.id === "L-a-1")!.title).toBe("new");
+  });
+  it("on equal lastReinforced, keeps the later-created lesson", () => {
+    const out = mergeLessons(
+      [lesson("L-a-1", "2026-05-01T00:00:00Z", "earlier-created")],   // createdAt 2026-01-01 (from helper)
+      [{ ...lesson("L-a-1", "2026-05-01T00:00:00Z", "later-created"), createdAt: "2026-02-01T00:00:00Z" }],
+    );
+    expect(out).toHaveLength(1);
+    expect(out.find((l) => l.id === "L-a-1")!.title).toBe("later-created");
   });
 });
