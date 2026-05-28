@@ -182,36 +182,37 @@ interface HookEntry {
 }
 
 interface ClaudeSettings {
-  hooks?: { PreCompact?: HookEntry[]; SessionStart?: HookEntry[]; [k: string]: HookEntry[] | undefined };
+  hooks?: {
+    PreCompact?: HookEntry[];
+    SessionStart?: HookEntry[];
+    SessionEnd?: HookEntry[];
+    [k: string]: HookEntry[] | undefined;
+  };
   [k: string]: unknown;
 }
 
 export function mergeClaudeHooks(settingsPath: string, zugBin: string): void {
   let settings: ClaudeSettings = {};
   try {
-    const raw = fs.readFileSync(settingsPath, "utf-8");
-    settings = JSON.parse(raw) as ClaudeSettings;
-  } catch {
-    // ENOENT or malformed — start fresh
-  }
-
+    settings = JSON.parse(fs.readFileSync(settingsPath, "utf-8")) as ClaudeSettings;
+  } catch { /* fresh */ }
   if (!settings.hooks) settings.hooks = {};
 
-  settings.hooks.PreCompact = (settings.hooks.PreCompact ?? []).filter(
-    (h) => !h.hooks?.some((e) => e.command?.includes("zug compact"))
-  );
-  settings.hooks.PreCompact.push({
-    matcher: "",
-    hooks: [{ type: "command", command: `${zugBin} compact` }],
-  });
+  const dropZug = (arr: HookEntry[] = [], needle: string) =>
+    arr.filter((h) => !h.hooks?.some((e) => e.command?.includes(needle)));
 
-  settings.hooks.SessionStart = (settings.hooks.SessionStart ?? []).filter(
-    (h) => !h.hooks?.some((e) => e.command?.includes("zug resume"))
-  );
-  settings.hooks.SessionStart.push({
-    matcher: "compact",
-    hooks: [{ type: "command", command: `${zugBin} resume` }],
-  });
+  // PreCompact -> push (durability checkpoint). stdout not injected; side effect only.
+  settings.hooks.PreCompact = dropZug(settings.hooks.PreCompact, "zug compact");
+  settings.hooks.PreCompact.push({ matcher: "", hooks: [{ type: "command", command: `${zugBin} compact` }] });
+
+  // SessionStart: cold start (startup) pulls; compaction-resume (compact) reloads.
+  settings.hooks.SessionStart = dropZug(dropZug(settings.hooks.SessionStart, "zug resume"), "zug pull");
+  settings.hooks.SessionStart.push({ matcher: "startup", hooks: [{ type: "command", command: `${zugBin} pull` }] });
+  settings.hooks.SessionStart.push({ matcher: "compact", hooks: [{ type: "command", command: `${zugBin} resume` }] });
+
+  // SessionEnd: push once when the session terminates.
+  settings.hooks.SessionEnd = dropZug(settings.hooks.SessionEnd, "zug push");
+  settings.hooks.SessionEnd.push({ matcher: "", hooks: [{ type: "command", command: `${zugBin} push` }] });
 
   fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
   fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n", "utf-8");
@@ -256,7 +257,7 @@ export async function runSetup(opts?: SetupOptions): Promise<void> {
     try {
       const zugBin = resolveZugBin();
       mergeClaudeHooks(path.join(home, ".claude", "settings.json"), zugBin);
-      if (!quiet) console.log("✓ Claude Code: registered PreCompact and SessionStart hooks");
+      if (!quiet) console.log("✓ Claude Code: registered SessionStart, SessionEnd, and PreCompact hooks");
     } catch {
       if (!quiet) console.log("⚠ Claude Code: could not register hooks — add manually to ~/.claude/settings.json");
     }

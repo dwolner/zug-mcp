@@ -103,7 +103,11 @@ function cmdPersona() {
   console.log(content);
 }
 
-function cmdResume() {
+async function cmdResume(): Promise<void> {
+  if (getSyncMode() === "synced") {
+    await runPull({ timeoutMs: 3000 }).catch(() => {});
+  }
+
   const { sessions, observations } = getStats();
   const lastDate = getLastSessionDate();
   const active = readActive();
@@ -131,7 +135,11 @@ function cmdResume() {
   console.log(parts.join("\n"));
 }
 
-function cmdCompact() {
+async function cmdCompact(): Promise<void> {
+  if (getSyncMode() === "synced") {
+    await runPush().catch(() => {});
+  }
+
   const { sessions, observations } = getStats();
   const lastDate = getLastSessionDate();
   const active = readActive();
@@ -273,10 +281,10 @@ switch (cmd) {
     cmdPersona();
     break;
   case "compact":
-    cmdCompact();
+    cmdCompact().then(() => process.exit(0));
     break;
   case "resume":
-    cmdResume();
+    cmdResume().then(() => process.exit(0));
     break;
   case "setup":
     cmdSetup(rest).then(() => process.exit(0));

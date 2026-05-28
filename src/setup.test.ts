@@ -90,7 +90,24 @@ describe("mergeMcpConfig", () => {
 describe("mergeClaudeHooks", () => {
   const ZUG = "zug";
 
-  it("creates settings.json with both hooks when file does not exist", () => {
+  const cmds = (arr: Array<{ matcher: string; hooks: Array<{ command: string }> }> = []) =>
+    arr.flatMap((e) => e.hooks.map((h) => `${e.matcher}:${h.command}`));
+
+  it("registers SessionStart(startup+compact), SessionEnd, and PreCompact hooks", () => {
+    const settingsPath = path.join(tmpDir, ".claude", "settings.json");
+    mergeClaudeHooks(settingsPath, "/usr/local/bin/zug");
+    const s = JSON.parse(fs.readFileSync(settingsPath, "utf-8"));
+    expect(cmds(s.hooks.SessionStart)).toEqual(
+      expect.arrayContaining([
+        "startup:/usr/local/bin/zug pull",
+        "compact:/usr/local/bin/zug resume",
+      ])
+    );
+    expect(cmds(s.hooks.SessionEnd).some((c) => c.endsWith("zug push"))).toBe(true);
+    expect(cmds(s.hooks.PreCompact).some((c) => c.endsWith("zug compact"))).toBe(true);
+  });
+
+  it("creates settings.json with all hooks when file does not exist", () => {
     const settingsPath = path.join(tmpDir, "settings.json");
     mergeClaudeHooks(settingsPath, ZUG);
     const written = JSON.parse(fs.readFileSync(settingsPath, "utf-8"));
@@ -99,10 +116,17 @@ describe("mergeClaudeHooks", () => {
       matcher: "",
       hooks: [{ type: "command", command: "zug compact" }],
     });
-    expect(written.hooks.SessionStart).toHaveLength(1);
-    expect(written.hooks.SessionStart[0]).toEqual({
-      matcher: "compact",
-      hooks: [{ type: "command", command: "zug resume" }],
+    expect(written.hooks.SessionStart).toHaveLength(2);
+    expect(written.hooks.SessionStart).toEqual(
+      expect.arrayContaining([
+        { matcher: "startup", hooks: [{ type: "command", command: "zug pull" }] },
+        { matcher: "compact", hooks: [{ type: "command", command: "zug resume" }] },
+      ])
+    );
+    expect(written.hooks.SessionEnd).toHaveLength(1);
+    expect(written.hooks.SessionEnd[0]).toEqual({
+      matcher: "",
+      hooks: [{ type: "command", command: "zug push" }],
     });
   });
 
@@ -113,7 +137,8 @@ describe("mergeClaudeHooks", () => {
     const written = JSON.parse(fs.readFileSync(settingsPath, "utf-8"));
     expect(written.theme).toBe("dark");
     expect(written.hooks.PreCompact).toHaveLength(1);
-    expect(written.hooks.SessionStart).toHaveLength(1);
+    expect(written.hooks.SessionStart).toHaveLength(2);
+    expect(written.hooks.SessionEnd).toHaveLength(1);
   });
 
   it("is idempotent — calling twice does not duplicate hooks", () => {
@@ -122,15 +147,17 @@ describe("mergeClaudeHooks", () => {
     mergeClaudeHooks(settingsPath, ZUG);
     const written = JSON.parse(fs.readFileSync(settingsPath, "utf-8"));
     expect(written.hooks.PreCompact).toHaveLength(1);
-    expect(written.hooks.SessionStart).toHaveLength(1);
+    expect(written.hooks.SessionStart).toHaveLength(2);
+    expect(written.hooks.SessionEnd).toHaveLength(1);
   });
 
-  it("preserves non-zug entries in PreCompact and SessionStart", () => {
+  it("preserves non-zug entries in PreCompact, SessionStart, and SessionEnd", () => {
     const settingsPath = path.join(tmpDir, "settings.json");
     const existing = {
       hooks: {
         PreCompact: [{ matcher: "other", hooks: [{ type: "command", command: "other-tool run" }] }],
         SessionStart: [{ matcher: "", hooks: [{ type: "command", command: "other-tool start" }] }],
+        SessionEnd: [{ matcher: "", hooks: [{ type: "command", command: "other-tool end" }] }],
       },
     };
     fs.writeFileSync(settingsPath, JSON.stringify(existing), "utf-8");
@@ -138,8 +165,10 @@ describe("mergeClaudeHooks", () => {
     const written = JSON.parse(fs.readFileSync(settingsPath, "utf-8"));
     expect(written.hooks.PreCompact).toHaveLength(2);
     expect(written.hooks.PreCompact[0].hooks[0].command).toBe("other-tool run");
-    expect(written.hooks.SessionStart).toHaveLength(2);
+    expect(written.hooks.SessionStart).toHaveLength(3);
     expect(written.hooks.SessionStart[0].hooks[0].command).toBe("other-tool start");
+    expect(written.hooks.SessionEnd).toHaveLength(2);
+    expect(written.hooks.SessionEnd[0].hooks[0].command).toBe("other-tool end");
   });
 
   it("creates parent directory if it does not exist", () => {
