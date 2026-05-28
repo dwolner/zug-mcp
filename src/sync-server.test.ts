@@ -2,8 +2,9 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { handleSyncPull } from "./sync-server.js";
-import { appendObservation, writePersona } from "./storage.js";
+import { handleSyncPull, handleSyncPush } from "./sync-server.js";
+import { appendObservation, writePersona, getAllObservations, readLessons } from "./storage.js";
+import type { SyncPayload } from "./sync-types.js";
 
 let dir: string;
 beforeEach(() => { dir = fs.mkdtempSync(path.join(os.tmpdir(), "zug-")); process.env.ZUG_DATA_DIR = dir; });
@@ -20,10 +21,6 @@ describe("handleSyncPull", () => {
     expect(typeof res.highWater).toBe("string");
   });
 });
-
-import { handleSyncPush } from "./sync-server.js";
-import { getAllObservations, readLessons } from "./storage.js";
-import type { SyncPayload } from "./sync-types.js";
 
 const emptyPayload = (over: Partial<SyncPayload>): SyncPayload => ({
   sourceId: "client-a", observations: [], sessions: [], growth: [], reinforcements: [], lessons: [], ...over,
@@ -49,5 +46,21 @@ describe("handleSyncPush", () => {
     await handleSyncPush(emptyPayload({ lessons: [l("L-a-1")] }));
     await handleSyncPush(emptyPayload({ lessons: [l("L-b-1")] }));
     expect(readLessons().map((x) => x.id).sort()).toEqual(["L-a-1", "L-b-1"]);
+  });
+
+  it("reports 0 new reinforcements on re-push of the same set", async () => {
+    const r = { text: "likes tabs", count: 2, lastSeen: "2026-01-01T00:00:00Z" };
+    const r1 = await handleSyncPush(emptyPayload({ reinforcements: [r] }));
+    expect(r1.accepted.reinforcements).toBe(1);
+    const r2 = await handleSyncPush(emptyPayload({ reinforcements: [r] }));
+    expect(r2.accepted.reinforcements).toBe(0);
+  });
+
+  it("merges growth idempotently", async () => {
+    const g = { timestamp: "2026-03-01T00:00:00Z", sessionId: "s1", sessionCount: 1, observationCount: 1, personaLines: 1, topPatterns: [], activePatternCount: 0, lessonCount: 0 };
+    const r1 = await handleSyncPush(emptyPayload({ growth: [g] }));
+    expect(r1.accepted.growth).toBe(1);
+    const r2 = await handleSyncPush(emptyPayload({ growth: [g] }));
+    expect(r2.accepted.growth).toBe(0);
   });
 });

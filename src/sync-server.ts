@@ -14,12 +14,20 @@ export async function handleSyncPush(payload: SyncPayload): Promise<PushResult> 
   for (const s of payload.sessions) if (addSessionFile(s.filename, s.content)) sessAdded++;
   const growthAdded = addGrowth(payload.growth);
 
+  let reinforcementsAdded = 0;
   if (payload.reinforcements.length) {
-    writeReinforcements(mergeReinforcements(getAllReinforcements(), payload.reinforcements));
+    const before = getAllReinforcements();
+    const merged = mergeReinforcements(before, payload.reinforcements);
+    writeReinforcements(merged);
+    reinforcementsAdded = merged.length - before.length;
   }
-  const lessonsBefore = readLessons().length;
+
+  let lessonsAdded = 0;
   if (payload.lessons.length) {
-    writeLessons(mergeLessons(readLessons(), payload.lessons));
+    const before = readLessons();
+    const merged = mergeLessons(before, payload.lessons);
+    writeLessons(merged);
+    lessonsAdded = merged.length - before.length;
   }
 
   // Canonical synthesis over newly-pushed meaningful observations.
@@ -46,7 +54,7 @@ export async function handleSyncPush(payload: SyncPayload): Promise<PushResult> 
   return {
     accepted: {
       observations: obsAdded, sessions: sessAdded, growth: growthAdded,
-      reinforcements: payload.reinforcements.length, lessons: Math.max(0, readLessons().length - lessonsBefore),
+      reinforcements: reinforcementsAdded, lessons: lessonsAdded,
     },
     highWater: new Date().toISOString(),
   };
