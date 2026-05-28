@@ -1,0 +1,23 @@
+{
+  "components": [
+    "hooks",
+    "cli",
+    "setup"
+  ],
+  "discoveredDate": "2026-05-28",
+  "id": "ISS-042",
+  "impact": "The PreCompact hook runs `zug compact`, which prints a checkpoint (stats + Active Patterns) to stdout expecting it to be injected as post-compaction context. Per the Claude Code hooks docs (verified 2026-05-28), PreCompact stdout is NOT added to the model's context — only SessionStart stdout is. So the printed checkpoint is dead: the model never sees it. No functional loss today because post-compaction reload is actually handled by the separate SessionStart/`compact` → `zug resume` hook (SessionStart stdout IS injected). Net effect: `zug compact`'s output is redundant/misleading dead code, and the PreCompact hook currently does nothing useful. T-043 repurposes PreCompact for a durability push (`zug push`); this issue tracks cleaning up or removing the ineffective print so the codebase doesn't imply a context-injection that never happens.",
+  "location": [
+    "src/cli.ts (cmdCompact)",
+    "src/setup.ts (mergeClaudeHooks PreCompact registration)"
+  ],
+  "phase": null,
+  "relatedTickets": [
+    "T-043"
+  ],
+  "resolution": null,
+  "resolvedDate": null,
+  "severity": "low",
+  "status": "open",
+  "title": "PreCompact hook checkpoint (zug compact) never reaches the model — stdout not injected"
+}
