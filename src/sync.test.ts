@@ -2,9 +2,10 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { pull } from "./sync.js";
-import { getAllObservations, readPersona, readLessons } from "./storage.js";
-import type { PullResponse } from "./sync-types.js";
+import { pull, push, sync } from "./sync.js";
+import { getAllObservations, readPersona, readLessons, appendObservation, writeSession } from "./storage.js";
+import { readSyncState } from "./sync-state.js";
+import type { PullResponse, PushResult } from "./sync-types.js";
 
 let dir: string;
 beforeEach(() => {
@@ -29,6 +30,7 @@ describe("pull", () => {
     })), { status: 200 })));
     const result = await pull();
     expect(result.status).toBe("ok");
+    expect(readSyncState().pullSince).toBe("2026-05-28T00:00:00.000Z");
     expect(getAllObservations().map((o) => o.observation)).toContain("from-server");
     expect(readPersona()).toBe("SERVER-PERSONA");
     expect(readLessons().map((l) => l.id)).toContain("L-z-1");
@@ -39,11 +41,34 @@ describe("pull", () => {
     const result = await pull();
     expect(result.status).toBe("paused");
     expect(result.error).toContain("ECONNREFUSED");
+    expect(readSyncState().status).toBe("paused");
   });
 
   it("returns skipped when no sync config", async () => {
     delete process.env.ZUG_URL; delete process.env.ZUG_TOKEN;
     const result = await pull();
     expect(result.status).toBe("skipped");
+  });
+});
+
+describe("push", () => {
+  it("posts entries since cursor and advances pushSince", async () => {
+    appendObservation({ timestamp: "2026-05-10T00:00:00Z", type: "context", observation: "local", session_id: "s", confidence: "high" });
+    writeSession("s", "# Session s\nDate: 2026-05-10T00:00:00Z\n## Summary\nx");
+    let captured: any = null;
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init: RequestInit) => {
+      captured = JSON.parse(init.body as string);
+      return new Response(JSON.stringify({ accepted: { observations: 1 }, highWater: "2026-05-11T00:00:00.000Z" } satisfies PushResult), { status: 200 });
+    }));
+    const result = await push();
+    expect(result.status).toBe("ok");
+    expect(captured.observations).toHaveLength(1);
+    expect(captured.sourceId).toMatch(/^[a-z0-9]{6}$/);
+    expect(readSyncState().pushSince).toBe("2026-05-11T00:00:00.000Z");
+  });
+
+  it("degrades to paused on error", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("boom"); }));
+    expect((await push()).status).toBe("paused");
   });
 });

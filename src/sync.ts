@@ -1,10 +1,11 @@
 import {
   addObservations, addGrowth, addSessionFile, getAllReinforcements, writeReinforcements,
   readLessons, writeLessons, writePersonaAtomic, writePlaybookAtomic, writeActiveAtomic,
+  getObservationsForSync, getGrowthSince, getAllSessionFiles,
 } from "./storage.js";
 import { mergeReinforcements, mergeLessons } from "./merge-core.js";
-import { resolveSyncConfig, readSyncState, writeSyncState } from "./sync-state.js";
-import type { PullResponse } from "./sync-types.js";
+import { resolveSyncConfig, readSyncState, writeSyncState, getSourceId } from "./sync-state.js";
+import type { PullResponse, SyncPayload, PushResult } from "./sync-types.js";
 
 export interface SyncResult { status: "ok" | "paused" | "skipped"; error?: string; }
 
@@ -45,4 +46,38 @@ export async function pull(opts: { timeoutMs?: number } = {}): Promise<SyncResul
     writeSyncState({ ...state, status: "paused", lastError: msg });
     return { status: "paused", error: msg };
   }
+}
+
+export async function push(opts: { timeoutMs?: number } = {}): Promise<SyncResult> {
+  const cfg = resolveSyncConfig();
+  if (!cfg) return { status: "skipped" };
+  const state = readSyncState();
+  const sinceDay = state.pushSince.slice(0, 10);
+  const payload: SyncPayload = {
+    sourceId: getSourceId(),
+    observations: getObservationsForSync(state.pushSince),
+    sessions: getAllSessionFiles().filter((s) => s.filename.slice(0, 10) >= sinceDay),
+    growth: getGrowthSince(state.pushSince),
+    reinforcements: getAllReinforcements(),
+    lessons: readLessons(),
+  };
+  try {
+    const result = await fetchJson(
+      `${cfg.url}/sync/push`,
+      { method: "POST", headers: { "X-Zug-Token": cfg.token, "Content-Type": "application/json" }, body: JSON.stringify(payload) },
+      opts.timeoutMs ?? 15000,
+    ) as PushResult;
+    writeSyncState({ ...state, pushSince: result.highWater, lastSyncedAt: new Date().toISOString(), status: "ok", lastError: undefined });
+    return { status: "ok" };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    writeSyncState({ ...state, status: "paused", lastError: msg });
+    return { status: "paused", error: msg };
+  }
+}
+
+export async function sync(opts: { timeoutMs?: number } = {}): Promise<{ push: SyncResult; pull: SyncResult }> {
+  const pushed = await push(opts);
+  const pulled = await pull(opts);
+  return { push: pushed, pull: pulled };
 }
