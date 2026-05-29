@@ -78,11 +78,11 @@
 
 ---
 
-## Phase 5 — Session Fidelity 📋
+## Phase 5 — Session Fidelity ✅
 
 **Goal:** Deeper session continuity and pattern reinforcement. Sessions survive compaction, priming is fast and accurate, patterns accumulate weight over time.
 
-**What to build (ordered by prerequisite chain):**
+**What was built:**
 - `.claude/rules/` injection — write cognitive fingerprint as always-on structural gate; no hook or tool call required (T-012) — no deps, highest value
 - PreCompact hook — checkpoint session state before Claude compacts context (T-001) — no deps
 - Structured end_session — typed fields: decisions, blockers, next_steps (T-003) — no deps; enriches data for T-005
@@ -94,13 +94,53 @@
 
 ---
 
-## Phase 6 — Advanced Persistence 📋
+## Phase 6 — Advanced Persistence ✅
 
 **Goal:** Structural reliability for long-running and autonomous modes; multi-agent cognitive analysis.
 
-**What to build:**
+**What was built:**
 - Multi-lens reasoning analysis — parallel specialized subagents analyzing reasoning from multiple angles (conceptual clarity, assumptions, knowledge gaps, logical consistency), merged and judged (T-016) — independent, no deps
 - Multi-signal session health — compute session pressure from independent signals (observation count, topic depth, compaction proximity, open Socratic threads) (T-015) — needs a proactive mode ticket to anchor it
+
+---
+
+## Phase 7 — OSS Distribution ✅
+
+**Goal:** `npm install -g zug-mcp` — installable, agent-agnostic, MIT-licensed.
+
+**What was built:**
+- Published to npm as `zug-mcp` with `zug` / `zug-mcp` bins
+- `zug setup` auto-detects installed agents (Claude Code, Cursor, Windsurf) and writes MCP config to each
+- Embedded rule + PERSONA template content (no reliance on shipping a `templates/`/`prompts/` dir)
+- `zug update` refreshes the rule file and hooks after upgrade
+
+---
+
+## Phase 8 — First-Run UX ✅
+
+**Goal:** Close the critical gaps in the npm install + `zug setup` path for new public users.
+
+**What was built:**
+- MCP config entries always include `type: 'stdio'`; idempotent hook registration (`SessionStart`, `SessionEnd`, `PreCompact`)
+- Visible warnings when `ANTHROPIC_API_KEY` is missing (degrades to plain-markdown append; PERSONA growth risk)
+- `PERSONA.md` seeded from an embedded template on first setup
+- Local history hygiene — `archiveObservations()` after synthesis, `archiveSessions()` / `zug archive` for >90-day logs (archive stays local)
+
+---
+
+## Phase 9 — Local-First Sync (ADR-004) ✅ — released in 1.1.0
+
+**Goal:** Make fs-capable clients local-first with background sync to a canonical remote, so a server outage degrades to "sync paused" rather than total failure, and a single fingerprint is shared across machines.
+
+**What was built:**
+- Three modes via `getSyncMode()`: `canonical` (the Fly server), `synced` (fs client with `ZUG_URL`+`ZUG_TOKEN`), `local-only` (unchanged default)
+- Server-canonical model: clients write locally and push raw logs; server merges and synthesizes; PERSONA/PLAYBOOK/ACTIVE are pulled only, never pushed
+- `GET /sync/pull` + `POST /sync/push` behind the same auth + rate-limit as `/mcp`
+- Sync hooks (`SessionStart`→pull, `SessionEnd`→push, `PreCompact`→durability push) and `zug sync`/`pull`/`push` CLI verbs
+- Source-safe lesson IDs (`L-<tag>-<seq>`) for collision-free cross-machine merge
+- Fly server made always-on + canonical (`ZUG_CANONICAL=1`), fixing the cold-start "Session not found" outage class
+
+**Deferred to later ADR-004 slices:** multi-tenant accounts, billing, and free→paid migration.
 
 ---
 
@@ -116,6 +156,6 @@
 
 ## Contributing
 
-Each phase has a clear entry point. Phase 5 is the current focus — session fidelity improvements that make context survive compaction and accumulate signal over time.
+Phases 1–9 have shipped (latest: local-first sync in 1.1.0). The next frontier is the deferred ADR-004 slices — multi-tenant accounts, billing, free→paid migration — and the Future / Ideas above.
 
-If you're building Phase 5 or 6, read `docs/architecture.md` first.
+If you're contributing, read `docs/architecture.md` and the ADRs in `docs/adr/` first.

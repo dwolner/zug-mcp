@@ -3,35 +3,63 @@
 ## Overview
 
 ```
-Claude (any surface)
-  │
-  │ MCP protocol
-  ▼
-Zug MCP Server (~/.zug/server/)
-  │
-  │ file I/O
-  ▼
-~/.zug/ (data directory)
-  ├── PERSONA.md       ← cognitive fingerprint
-  ├── PLAYBOOK.md      ← universal learning patterns
-  ├── observations.jsonl
-  └── sessions/
+Machine A (CLI/desktop)        Machine B (CLI/desktop)        claude.ai web
+  synced client                  synced client                 OAuth client
+        │                              │                             │
+        │ write local + push/pull      │ push/pull                   │ MCP over HTTP
+        └──────────────┬───────────────┴──────────────┬──────────────┘
+                       ▼                               ▼
+              Canonical Zug server (Fly, ZUG_CANONICAL=1, always-on)
+                       │  merged append-only logs + server-side synthesis
+                       ▼
+              /data/.zug (persistent volume)
+                ├── PERSONA.md / PLAYBOOK.md / ACTIVE.md   ← authoritative, regenerated
+                ├── observations.jsonl / growth.jsonl
+                ├── lessons.jsonl
+                └── sessions/
+
+local-only mode (no server configured): a single machine reads/writes its own
+~/.zug/ and synthesizes locally if ANTHROPIC_API_KEY is set — no sync involved.
 ```
 
 ## Source Files
 
 | File | Role |
 |---|---|
-| `src/storage.ts` | All file I/O. Reads/writes PERSONA, PLAYBOOK, observations, sessions. No business logic. |
-| `src/server.ts` | MCP tool definitions. Calls storage, returns results. No transport concerns. |
+| `src/storage.ts` | All file I/O. Reads/writes PERSONA, PLAYBOOK, observations, sessions, lessons, growth. No business logic. |
+| `src/server.ts` | MCP tool definitions. Calls storage, returns results. No transport concerns. Gate handlers (`runGetContext`/`runEndSession`) branch on sync mode. |
 | `src/stdio.ts` | Entry point for Claude Code / Claude desktop (stdio transport). |
-| `src/http.ts` | *(Phase 3)* Entry point for Claude.ai web (HTTP/SSE transport). |
+| `src/http.ts` | Entry point for the HTTP server (claude.ai web + canonical sync). Hosts `/mcp` and the `/sync/*` endpoints behind shared auth + rate-limit. |
+| `src/sync-state.ts` | Sync mode resolution (`getSyncMode`), config (`resolveSyncConfig` from env or `~/.zug/config`), per-source identity (`getSourceId`), and cursor state (`~/.zug/sync-state.json`). |
+| `src/sync.ts` | Client-side `pull` / `push` / `sync`. Never throws — on failure it records `paused` so a server outage degrades gracefully. |
+| `src/sync-server.ts` | Server-side `handleSyncPull` / `handleSyncPush`. Push merges incoming logs and triggers canonical synthesis. |
+| `src/merge-core.ts` | Pure per-artifact merge logic (reinforcements, lessons). Deterministic, no I/O. |
+| `src/merge.ts` | One-shot import of another machine's `~/.zug/` (the `pnpm merge` path). |
+| `src/sync-types.ts` | Wire types shared between client and server (`SyncPayload`, `PullResponse`, `PushResult`). |
+| `src/synthesize.ts` | Haiku synthesis of PERSONA/PLAYBOOK/ACTIVE from observations. Runs on the canonical server (synced) or locally (local-only). |
+| `src/oauth-provider.ts` | OAuth 2.1 (PKCE) for claude.ai web. |
+| `src/rate-limit.ts` / `src/api-key.ts` / `src/onboard.ts` | Rate-limit middleware, API-key resolution, and the interactive onboarding seed. |
 
 ## Transport
 
-Phase 1 uses stdio — Claude Code spawns the MCP server as a child process and communicates via stdin/stdout. This is the simplest possible setup and works entirely locally.
+**stdio** — Claude Code / desktop spawn the MCP server as a child process and communicate via stdin/stdout. Works entirely locally; this is `local-only` and `synced` clients' MCP path.
 
-Phase 3 adds an HTTP server using the same `server.ts` logic. A Cloudflare tunnel exposes it to Claude.ai web. Both transports read/write the same `~/.zug/` data directory.
+**HTTP** — `src/http.ts` serves the same `server.ts` tool logic over Streamable HTTP for claude.ai web (OAuth), and additionally exposes `GET /sync/pull` + `POST /sync/push` for CLI/desktop sync clients. Both sit behind the same bearer/OAuth auth and rate-limiting as `/mcp`. The server is deployed on Fly with a persistent volume; it is **not** a Cloudflare tunnel.
+
+## Sync Architecture (ADR-004)
+
+Three modes resolved by `getSyncMode()`:
+
+- **`canonical`** (`ZUG_CANONICAL=1`, the Fly server) — owns the merged append-only logs and runs synthesis. Always-on so it never cold-starts mid-session.
+- **`synced`** (fs client with `ZUG_URL` + `ZUG_TOKEN`) — writes locally on the hot path, pushes raw logs to the server, pulls the one authoritative PERSONA/PLAYBOOK/ACTIVE.
+- **`local-only`** (no config) — original single-machine behavior, unchanged.
+
+Key invariants:
+
+- **Projections are pulled, never pushed.** PERSONA/PLAYBOOK/ACTIVE are regenerated server-side from the merged log, so there is exactly one authoritative fingerprint. Clients only ever upload raw observations/sessions/growth/lessons/reinforcements.
+- **Synthesis is triggered on push** (`sync-server.ts`), only when new non-low-confidence observations arrive — not on pull.
+- **Collision-free by construction.** Lesson IDs are `L-<source-tag>-<seq>` using a per-install `source-id`, so cross-machine merges never collide.
+- **Failure degrades, never blocks.** `sync.ts` never throws; a failed sync sets `status: "paused"` in `sync-state.json` and the session continues locally, reconciling on the next successful sync.
 
 ## Data Model
 
