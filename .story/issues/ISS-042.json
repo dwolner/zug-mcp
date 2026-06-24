@@ -15,9 +15,9 @@
   "relatedTickets": [
     "T-043"
   ],
-  "resolution": null,
-  "resolvedDate": null,
+  "resolution": "Removed the dead/misleading checkpoint print from cmdCompact in src/cli.ts. The PreCompact hook runs `zug compact`, whose only effective work is the durability push (runPush in synced mode) — PreCompact stdout is NOT injected into the model (only SessionStart stdout is; post-compaction reload is handled by `zug resume` via the SessionStart:compact hook). cmdCompact now performs the durability push and emits a single honest side-effect log line instead of a fake \"# Zug Checkpoint (pre-compact)\" block that implied a context injection that never happens. Updated the `zug compact` usage text accordingly. The setup.ts PreCompact registration was already correct (\"stdout not injected; side effect only\"). Verified: typecheck clean, `zug compact` in local-only prints \"nothing to push\", in synced(unreachable) prints \"durability push → {paused}\"; full suite 176/176 green.",
+  "resolvedDate": "2026-06-24",
   "severity": "low",
-  "status": "open",
+  "status": "resolved",
   "title": "PreCompact hook checkpoint (zug compact) never reaches the model — stdout not injected"
 }

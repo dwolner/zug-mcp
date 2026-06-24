@@ -136,34 +136,22 @@ async function cmdResume(): Promise<void> {
 }
 
 async function cmdCompact(): Promise<void> {
-  if (getSyncMode() === "synced") {
-    await runPush().catch(() => {});
-  }
-
-  const { sessions, observations } = getStats();
-  const lastDate = getLastSessionDate();
-  const active = readActive();
-
-  if (sessions === 0 && !active) {
-    console.log("# Zug — no data yet");
+  // PreCompact hook entrypoint. Its only job is durability: flush local changes to the
+  // canonical server before Claude Code compacts context. PreCompact stdout is NOT
+  // injected into the model (only SessionStart stdout is — post-compaction reload is
+  // handled by `zug resume` via the SessionStart:compact hook). So this command
+  // deliberately prints no "checkpoint": doing so would imply a context injection that
+  // never happens (ISS-042). Output below is a terse, honest side-effect log only.
+  if (getSyncMode() !== "synced") {
+    console.log("zug compact: local-only mode — nothing to push (data already on disk).");
     return;
   }
 
-  const parts: string[] = ["# Zug Checkpoint (pre-compact)", ""];
-
-  const statLine = `Sessions: ${sessions}${lastDate ? ` | Last: ${lastDate}` : ""} | Observations: ${observations}`;
-  parts.push(statLine, "");
-
-  if (active) {
-    parts.push("## Active Patterns", "", active, "");
-  }
-
-  parts.push(
-    "## Note",
-    "Observations are persisted to observations.jsonl. Call zug_get_context at the start of the next turn to reload full context.",
-  );
-
-  console.log(parts.join("\n"));
+  const result = await runPush().catch((err: unknown) => ({
+    status: "paused" as const,
+    error: err instanceof Error ? err.message : String(err),
+  }));
+  console.log(`zug compact: durability push → ${JSON.stringify(result)}`);
 }
 
 async function cmdSetup(args: string[]): Promise<void> {
@@ -253,7 +241,7 @@ function printUsage() {
   zug status          Show sessions, observations, config status, and data dir size
   zug tail [n]        Show recent observations (default: 10)
   zug persona         Print full PERSONA.md
-  zug compact         Print pre-compaction checkpoint (used by PreCompact hook)
+  zug compact         Durability push before context compaction (used by PreCompact hook)
   zug archive         Move sessions older than 90 days to sessions/archive/
   zug setup           Auto-detect agents and write MCP configs
     --claude-code     Configure Claude Code only
