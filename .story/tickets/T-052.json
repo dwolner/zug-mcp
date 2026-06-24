@@ -1,0 +1,14 @@
+{
+  "blockedBy": [
+    "T-051"
+  ],
+  "completedDate": null,
+  "createdDate": "2026-06-24",
+  "description": "Implements ADR-004's deferred free→paid migration and ADR-005. On a user's first sync after upgrading, bulk-upload their local append-only history (observations/sessions/growth/lessons/reinforcements) into their server-side userId namespace; the server merges (merge.ts idempotent union already does the hard part, now per user) and synthesizes the canonical fingerprint. Must be idempotent and resumable. Acceptance: a user with local-only history upgrades and sees the same unified persona on web and CLI after first sync; re-running the migration is a no-op.",
+  "id": "T-052",
+  "order": 150,
+  "phase": null,
+  "status": "open",
+  "title": "Free→paid migration: bulk-upload local history on first paid sync",
+  "type": "feature"
+}

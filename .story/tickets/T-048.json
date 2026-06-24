@@ -1,0 +1,14 @@
+{
+  "blockedBy": [
+    "T-044"
+  ],
+  "completedDate": null,
+  "createdDate": "2026-06-24",
+  "description": "Implements ADR-005 decision 8 (compliance portion). Anthropic is a SUB-PROCESSOR (user data is sent to its API for synthesis): sign the DPA, disclose it in the privacy policy, record lawful basis + Records of Processing. Move the Fly app + /data volume to an EU region (or document data location) and enable encryption at rest on the volume. Privacy Policy + Terms of Service + breach-notification process — generate a baseline (Iubenda/Termly) then a lawyer pass; do not hand-roll GDPR text. Storing users' cognitive fingerprints makes this load-bearing, not optional.\n\nRegistration / representation obligations (often missed — confirm with the lawyer review):\n- EU representative (GDPR Art. 27): as a non-EU controller serving EU data subjects, we likely must appoint an EU-based representative. Cheap to satisfy via a service (~€100–300/yr) but must be in place before taking EU customers.\n- UK ICO registration + annual data-protection fee if we serve UK users; check equivalent supervisory-authority registration for other jurisdictions.\n- Confirm whether incidental special-category data (Art. 9 — users may log health/political/religious content in sessions) triggers a higher bar (explicit consent, possible DPIA).\n\nEngagement model: DIY the drafting, then ONE fixed-fee privacy-specialist review of the ToS + Privacy Policy before charging the first EU customer (one-time cost, not ongoing counsel). The lawyer's job is the three items above plus lawful-basis/DSR adequacy — things generated docs can't decide. Add an explicit ToS line telling users not to paste secrets/special-category data they don't want retained.",
+  "id": "T-048",
+  "order": 110,
+  "phase": null,
+  "status": "open",
+  "title": "GDPR compliance pack: sub-processor DPA, EU residency, encryption at rest, Privacy Policy + ToS",
+  "type": "chore"
+}

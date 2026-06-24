@@ -1,0 +1,14 @@
+{
+  "blockedBy": [
+    "T-044"
+  ],
+  "completedDate": null,
+  "createdDate": "2026-06-24",
+  "description": "Implements ADR-005 decisions 2 and 3; supersedes ADR-003. Add SQLite on the /data volume as the control plane (the deliberate exception to ADR-001's no-DB rule — content stays in files). Schema: accounts (opaque anonymous userId, pseudonymous credential, no real name), source/device→account mapping (makes ADR-004 same-me-everywhere real), durable OAuth clients/codes/tokens (in-memory OAuth from ADR-003 dies on every redeploy of the always-on server), and Stripe customer/subscription state. oauth-provider.ts swaps its in-memory Maps for the SQLite-backed store (the OAuthServerProvider interface already supports this). Signup/login flow (pseudonymous). Acceptance: tokens survive a redeploy; one human with CLI+web+second-laptop resolves to one userId.",
+  "id": "T-045",
+  "order": 80,
+  "phase": null,
+  "status": "open",
+  "title": "Durable accounts + persistent OAuth/billing store (SQLite control plane)",
+  "type": "feature"
+}

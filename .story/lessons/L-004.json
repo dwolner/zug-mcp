@@ -1,0 +1,18 @@
+{
+  "content": "When threading a new dimension (tenancy, auth, request scope) through a system and declaring some helper \"out of scope\" for the change, enumerate EVERY caller of that helper — not just the obvious subsystem. A second, non-obvious caller running inside the new scope will silently leak across the boundary.",
+  "context": "T-044 multi-tenancy plan review (round 1) caught getSourceId() (sync-state.ts) leaking to the flat un-namespaced path: the plan asserted sync-state was \"client-local only\", but createLesson() (storage.ts) also calls getSourceId() and runs inside a tenant scope via the zug_create_lesson tool. Fix: getSourceId now resolves under getPaths().zugDir.",
+  "createdDate": "2026-06-24",
+  "id": "L-004",
+  "lastValidated": "2026-06-24",
+  "reinforcements": 0,
+  "source": "review",
+  "status": "active",
+  "supersedes": null,
+  "tags": [
+    "multi-tenancy",
+    "refactoring",
+    "review"
+  ],
+  "title": "Grep ALL callers before excluding a shared helper from a cross-cutting change",
+  "updatedDate": "2026-06-24"
+}

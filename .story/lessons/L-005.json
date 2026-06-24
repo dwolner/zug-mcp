@@ -1,0 +1,18 @@
+{
+  "content": "To add a per-request dimension (tenant/user/trace) to dozens of storage functions without editing every signature and call site, read it from an AsyncLocalStorage store inside the lowest-level resolver (e.g. getPaths). Absent a scope, fall back to the legacy default so local/stdio/tests stay byte-for-byte unchanged. Background work decoupled from the request must carry the dimension EXPLICITLY and re-enter the scope — a per-user queue is the natural explicit boundary.",
+  "context": "T-044 (ADR-005 decision 1). Chose ALS over adding a userId param to ~50 storage fns; getPaths() reads the scope, http.ts wraps each /mcp + /sync request in runWithTenant, and synthesis-queue.ts carries userId explicitly + re-enters runWithTenant in its worker. Result: engines unchanged, all 179 prior tests passed unmodified. Reviewer verified ALS propagates through the MCP SDK's synchronous onmessage dispatch inside awaited handleRequest.",
+  "createdDate": "2026-06-24",
+  "id": "L-005",
+  "lastValidated": "2026-06-24",
+  "reinforcements": 0,
+  "source": "manual",
+  "status": "active",
+  "supersedes": null,
+  "tags": [
+    "architecture",
+    "multi-tenancy",
+    "async-context"
+  ],
+  "title": "Use AsyncLocalStorage to thread a request-scoped dimension through many functions",
+  "updatedDate": "2026-06-24"
+}

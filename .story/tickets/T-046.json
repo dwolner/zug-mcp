@@ -1,0 +1,14 @@
+{
+  "blockedBy": [
+    "T-044"
+  ],
+  "completedDate": null,
+  "createdDate": "2026-06-24",
+  "description": "Implements ADR-005 decision 7. A per-user daily synthesis budget set ~10–25× the heavy-user rate (heavy ≈ 2 synth/day → cap ≈ 25–50/day) so real users never hit it. Purpose is abuse/runaway protection (a misbehaving client looping zug_end_session), NOT cost rationing — COGS is ~$1/mo even for heavy users. When the cap is exceeded, degrade to ADR-002's existing append-only path: keep recording observations locally, skip Haiku synthesis, resume next window. Never fail a session. Distinct from the per-IP request limiter in rate-limit.ts (which guards request rate, not the expensive operation). Counter lives in the per-user namespace/control plane. Acceptance: a loop of session-ends past the cap stops triggering synthesis but sessions still record and reconcile; normal users see no change.",
+  "id": "T-046",
+  "order": 90,
+  "phase": null,
+  "status": "open",
+  "title": "Per-user synthesis cap (runaway/abuse guard, degrades to append-only)",
+  "type": "feature"
+}

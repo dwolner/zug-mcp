@@ -1,0 +1,14 @@
+{
+  "blockedBy": [
+    "T-050"
+  ],
+  "completedDate": null,
+  "createdDate": "2026-06-24",
+  "description": "Go-to-market surface: true one-page marketing site. Full brand/design direction, approved copy, palette, typography, and layout are captured in docs/brand.md — that is the primary reference; build from it. Positioning: \"The fingerprint is earned, not configured\" — continuity of self across AI sessions; upgrade story is protecting what you've already built, not a feature paywall. Direction is Earthy & Type-Led: a founder-chosen multi-hue earthy palette (cream #EDE5D8, sea salt #B8C9C0, ink/green-black #22302B, jade #596D69, clay #B5603A, cornflower #7AA5BF) executed to deliberately AVOID the AI-default tell (warm-cream + single-terracotta + serif) — drop the serif for a characterful grotesk (not Inter), let greens/cornflower carry weight alongside the clay, type-led with no decoration. Signature: hero demonstrates \"earned not configured\" via a mono observation-log → clay-accented synthesized persona line (one orchestrated motion moment; otherwise quiet hovers, reduced-motion respected). Pricing: $5/mo or $50/yr. Pseudonymous signup CTA into Stripe Checkout; hosted-vs-self-host docs section.\n\nSecondary structural reference: https://jestsee.com (minimalist, content-first; review live for motion/micro-interactions).\n\nOpen items (from handoff): hero sidebar 3-card copy (weakest section, start here); typefaces — pick display grotesk + utility mono (not serif, not Inter); mobile layout (not designed); favicon/OG image (not started).\n\nAcceptance: a visitor can go from landing → pseudonymous signup → checkout → connected paid account.",
+  "id": "T-053",
+  "order": 160,
+  "phase": null,
+  "status": "open",
+  "title": "Landing page + pseudonymous signup + pricing ($5/mo, $50/yr)",
+  "type": "feature"
+}

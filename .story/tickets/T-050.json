@@ -1,0 +1,14 @@
+{
+  "blockedBy": [
+    "T-045"
+  ],
+  "completedDate": null,
+  "createdDate": "2026-06-24",
+  "description": "Implements ADR-005 decision 5. Stripe Checkout (subscription) + customer portal. Pricing: $5/mo or $50/yr — priced as an easy yes (below the $10 psychological line), not for max margin: for a compounding product, churn destroys more LTV than a higher price captures ($5/mo×3yr=$180 beats $8/mo cancelled at month 8=$64). Margin is still ~80–85% gross at $5/mo. Annual is for churn/cash-up-front, not margin. Webhook handler flips entitlement in the SQLite control plane on checkout.session.completed and customer.subscription.updated|deleted; failed-payment downgrade path (dunning can be manual at low volume). Acceptance: a successful checkout marks the account paid; cancellation/expiry reverts it to free.",
+  "id": "T-050",
+  "order": 130,
+  "phase": null,
+  "status": "open",
+  "title": "Stripe billing: Checkout + customer portal + webhook entitlement ($5/mo, $50/yr)",
+  "type": "feature"
+}
