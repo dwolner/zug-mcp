@@ -1,8 +1,8 @@
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
-// Function-level import only: getDataDir is called inside functions, never at module init, so the storage<->sync-state cycle is safe.
-import { getDataDir } from "./storage.js";
+// Function-level import only: these are called inside functions, never at module init, so the storage<->sync-state cycle is safe.
+import { getDataDir, getPaths } from "./storage.js";
 
 export type SyncMode = "canonical" | "synced" | "local-only";
 export interface SyncConfig { url: string; token: string; }
@@ -13,7 +13,9 @@ export interface SyncState {
 
 const EPOCH = "1970-01-01T00:00:00.000Z";
 
-function sourceIdFile(): string { return path.join(getDataDir(), "source-id"); }
+// Tenancy-aware: source-id is namespaced per user because createLesson() tags server-side lesson
+// IDs with it and runs inside a tenant scope (PR-1). Resolves to the flat dir absent a scope.
+function sourceIdFile(): string { return path.join(getPaths().zugDir, "source-id"); }
 
 export function getSourceId(): string {
   const file = sourceIdFile();

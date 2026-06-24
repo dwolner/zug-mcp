@@ -12,6 +12,11 @@ primary_region = 'iad'
   PORT = '8080'
   ZUG_DATA_DIR = '/data/.zug'
   ZUG_CANONICAL = '1'
+  # Multi-tenancy (T-044 / ADR-005 decision 1): per-user content lives under
+  # <ZUG_USERS_ROOT>/<userId>/.zug. Nested inside the existing /data/.zug mount to avoid a volume
+  # remount; pre-existing flat content migrates into ZUG_DEFAULT_USER_ID on first boot.
+  ZUG_USERS_ROOT = '/data/.zug/users'
+  ZUG_DEFAULT_USER_ID = 'default'
 
 [[mounts]]
   source = 'zug_data'

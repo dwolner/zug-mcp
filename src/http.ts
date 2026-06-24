@@ -7,6 +7,7 @@ import { createServer } from "./server.js";
 import { isRateLimited } from "./rate-limit.js";
 import { zugOAuthProvider } from "./oauth-provider.js";
 import { handleSyncPull, handleSyncPush } from "./sync-server.js";
+import { runWithTenant, toUserId, DEFAULT_USER_ID, migrateLegacyData } from "./tenancy.js";
 
 const ZUG_TOKEN = process.env.ZUG_TOKEN || "";
 if (!ZUG_TOKEN) {
@@ -32,6 +33,18 @@ function getClientIp(req: express.Request): string {
     return (Array.isArray(forwarded) ? forwarded[0] : forwarded).split(",")[0].trim();
   }
   return req.socket.remoteAddress ?? "unknown";
+}
+
+/**
+ * Resolve the tenant userId for an authenticated request (provisional until T-045's SQLite
+ * account mapping). OAuth Bearer → the verified client_id (normalized to a safe segment). Legacy
+ * X-Zug-Token → the single shared default user (all legacy callers collapse to one tenant by design).
+ * Called only after zugAuth has accepted the request, so requireBearerAuth has populated req.auth.
+ */
+function resolveUserId(req: express.Request): string {
+  const auth = (req as express.Request & { auth?: { clientId?: string } }).auth;
+  if (auth?.clientId) return toUserId(auth.clientId);
+  return DEFAULT_USER_ID;
 }
 
 const app = express();
@@ -82,39 +95,55 @@ app.use("/mcp", zugAuth);
 // MCP session handling
 app.use("/mcp", express.raw({ type: "*/*" }));
 
-app.all("/mcp", async (req, res) => {
+app.all("/mcp", (req, res) => {
+  // Run the ENTIRE handler (both the session-init and session-reuse branches, plus the error path)
+  // inside the tenant scope so every storage call the MCP tools make resolves to this user (PR-3).
+  // ALS propagates through transport.handleRequest's awaited handler dispatch. Transports are keyed
+  // by `${userId}:${sessionId}` so a session created for one user can't be driven by another (PR-4);
+  // data isolation itself is enforced at the path layer per-request, not the session layer.
   try {
-    const body = req.body && req.body.length > 0
-      ? JSON.parse(req.body.toString())
-      : undefined;
+    const userId = resolveUserId(req);
+    void runWithTenant(userId, async () => {
+    try {
+      const body = req.body && req.body.length > 0
+        ? JSON.parse(req.body.toString())
+        : undefined;
 
-    const raw = req.headers["mcp-session-id"];
-    const sessionId = Array.isArray(raw) ? raw[0] : raw;
+      const raw = req.headers["mcp-session-id"];
+      const sessionId = Array.isArray(raw) ? raw[0] : raw;
 
-    if (req.method === "POST" && !sessionId) {
-      let sessionTransport!: StreamableHTTPServerTransport;
-      sessionTransport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: () => randomUUID(),
-        onsessioninitialized: (id) => {
-          transports.set(id, sessionTransport);
-          sessionTransport.onclose = () => transports.delete(id);
-        },
-      });
-      const mcpServer = createServer();
-      await mcpServer.connect(sessionTransport);
-      await sessionTransport.handleRequest(req, res, body);
-    } else if (sessionId) {
-      const transport = transports.get(sessionId);
-      if (!transport) {
-        res.status(404).json({ error: "Session not found" });
-        return;
+      if (req.method === "POST" && !sessionId) {
+        let sessionTransport!: StreamableHTTPServerTransport;
+        sessionTransport = new StreamableHTTPServerTransport({
+          sessionIdGenerator: () => randomUUID(),
+          onsessioninitialized: (id) => {
+            const key = `${userId}:${id}`;
+            transports.set(key, sessionTransport);
+            sessionTransport.onclose = () => transports.delete(key);
+          },
+        });
+        const mcpServer = createServer();
+        await mcpServer.connect(sessionTransport);
+        await sessionTransport.handleRequest(req, res, body);
+      } else if (sessionId) {
+        const transport = transports.get(`${userId}:${sessionId}`);
+        if (!transport) {
+          res.status(404).json({ error: "Session not found" });
+          return;
+        }
+        await transport.handleRequest(req, res, body);
+      } else {
+        res.status(400).json({ error: "Missing Mcp-Session-Id header" });
       }
-      await transport.handleRequest(req, res, body);
-    } else {
-      res.status(400).json({ error: "Missing Mcp-Session-Id header" });
+    } catch (err) {
+      console.error("Request handler error:", err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Internal Server Error" });
+      }
     }
+    });
   } catch (err) {
-    console.error("Request handler error:", err);
+    console.error("Request scope error:", err);
     if (!res.headersSent) {
       res.status(500).json({ error: "Internal Server Error" });
     }
@@ -128,18 +157,53 @@ app.use("/sync", express.json({ limit: "16mb" }));
 
 app.get("/sync/pull", (req, res) => {
   const since = typeof req.query.since === "string" ? req.query.since : "1970-01-01T00:00:00.000Z";
-  res.json(handleSyncPull(since));
-});
-
-app.post("/sync/push", async (req, res) => {
+  // Outer guard catches scope-entry throws (resolveUserId/assertSafeUserId) and any fs error from the
+  // read-only pull, mirroring the /sync/push and /mcp handlers so every boundary fails uniformly.
   try {
-    res.json(await handleSyncPush(req.body));
+    const userId = resolveUserId(req);
+    runWithTenant(userId, () => { res.json(handleSyncPull(since)); });
   } catch (err) {
-    console.error("sync push error:", err);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error("sync pull error:", err);
+    if (!res.headersSent) res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`[zug] Zug MCP HTTP server listening on port ${PORT}`);
+app.post("/sync/push", (req, res) => {
+  try {
+    const userId = resolveUserId(req);
+    void runWithTenant(userId, async () => {
+      try {
+        res.json(await handleSyncPush(req.body));
+      } catch (err) {
+        console.error("sync push error:", err);
+        if (!res.headersSent) res.status(500).json({ error: "Internal Server Error" });
+      }
+    });
+  } catch (err) {
+    console.error("sync push scope error:", err);
+    if (!res.headersSent) res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+async function main(): Promise<void> {
+  // One-time multi-tenant migration: relocate any pre-existing flat content into the default user's
+  // namespace BEFORE serving requests, so no request is ever handled against half-moved content (PR-2).
+  try {
+    const m = migrateLegacyData();
+    if (m.migrated) {
+      console.log(`[zug] migrated ${m.movedCount} legacy content entr${m.movedCount === 1 ? "y" : "ies"} into the '${DEFAULT_USER_ID}' namespace`);
+    }
+  } catch (err) {
+    console.error("[zug] legacy migration failed:", err instanceof Error ? err.message : err);
+    throw err; // fail fast — do not serve with a half-migrated volume
+  }
+
+  app.listen(PORT, () => {
+    console.log(`[zug] Zug MCP HTTP server listening on port ${PORT}`);
+  });
+}
+
+main().catch((err) => {
+  console.error("[zug] fatal startup error:", err);
+  process.exit(1);
 });

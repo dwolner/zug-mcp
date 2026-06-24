@@ -2,13 +2,33 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import { getSourceId } from "./sync-state.js";
+// Function-level import only: these are called inside getPaths(), never at module init, so the
+// storage<->tenancy cycle is safe (mirrors the storage<->sync-state pattern).
+import { getCurrentUserId, getUsersRoot, assertSafeUserId } from "./tenancy.js";
 
 export function getDataDir(): string {
   return process.env.ZUG_DATA_DIR || path.join(os.homedir(), ".zug");
 }
 
-function getPaths() {
-  const zugDir = getDataDir();
+/**
+ * Resolve all storage paths for the active tenant. With a tenant scope (or an explicit
+ * userIdOverride) content lives under <usersRoot>/<userId>/.zug; without one it falls back to the
+ * flat legacy dir (stdio / local / tests). Exported so sync-state's getSourceId can namespace too.
+ */
+export function getPaths(userIdOverride?: string) {
+  const uid = userIdOverride ?? getCurrentUserId();
+  let zugDir: string;
+  if (uid) {
+    assertSafeUserId(uid);
+    const root = getUsersRoot();
+    zugDir = path.join(root, uid, ".zug");
+    // Defense-in-depth: the resolved tenant dir must stay under the users root.
+    if (!path.resolve(zugDir).startsWith(path.resolve(root) + path.sep)) {
+      throw new Error(`Tenant path escapes users root: ${uid}`);
+    }
+  } else {
+    zugDir = getDataDir();
+  }
   return {
     zugDir,
     sessionsDir: path.join(zugDir, "sessions"),

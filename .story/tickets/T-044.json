@@ -1,0 +1,13 @@
+{
+  "blockedBy": [],
+  "claimedBySession": "d45d65ad-dd06-4803-8dc1-cc6def493646",
+  "completedDate": "2026-06-24",
+  "createdDate": "2026-06-24",
+  "description": "Implements ADR-005 decision 1. The canonical server is currently hard single-tenant: getPaths() in storage.ts resolves one global ZUG_DATA_DIR (/data/.zug); handleSyncPull(since)/handleSyncPush(body) in sync-server.ts take no identity; createServer() in http.ts uses global paths. Two paying users would share one fingerprint. Work: (1) move content to /data/users/<userId>/.zug/…; (2) thread a userId dimension through getPaths() and every storage fn, server.ts gate handlers, sync-server.ts handlers, and synthesize.ts; (3) per-user synthesis queue so one user's session-end can't block another's (also the COGS/abuse throttle point). Content stays file-based per ADR-001 — the append-only-log + projection + merge.ts/synthesize.ts engines are unchanged, just run per user. This is the long pole and gates accounts, billing, tiering, migration, and GDPR. Acceptance: two distinct authenticated users get fully isolated PERSONA/PLAYBOOK/logs; existing single-user data migrates to a userId namespace without loss.",
+  "id": "T-044",
+  "order": 70,
+  "phase": null,
+  "status": "complete",
+  "title": "Multi-tenancy: namespace all storage by userId (foundation)",
+  "type": "feature"
+}

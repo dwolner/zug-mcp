@@ -23,6 +23,8 @@
     "dist/sync-types.js",
     "dist/sync.js",
     "dist/synthesize.js",
+    "dist/synthesis-queue.js",
+    "dist/tenancy.js",
     "LICENSE",
     "README.md"
   ],

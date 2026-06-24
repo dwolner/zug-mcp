@@ -43,6 +43,8 @@ import {
 import { synthesize } from "./synthesize.js";
 import { getSyncMode } from "./sync-state.js";
 import { pull, push } from "./sync.js";
+import { getCurrentUserId } from "./tenancy.js";
+import { enqueueSynthesis } from "./synthesis-queue.js";
 
 export function getOpenThread(): SocraticThread | null { return readOpenThread(); }
 export function resetOpenThread(): void { writeOpenThread(null); }
@@ -218,27 +220,26 @@ export async function runEndSession(args: {
       );
     }
 
-    // Kick off Haiku synthesis in background — rewrites PERSONA/PLAYBOOK/ACTIVE if successful
+    // Kick off Haiku synthesis via the per-user queue — serialized per user, non-blocking,
+    // rewrites PERSONA/PLAYBOOK/ACTIVE if successful. Capture userId + inputs in the current tenant
+    // scope; the queue re-enters that scope when the task runs (undefined userId → flat/local).
     if (meaningful.length > 0) {
-      synthesize({
+      const userId = getCurrentUserId();
+      const synthInput = {
         currentPersona: persona,
         currentPlaybook: readPlaybook(),
         sessionSummary: summary,
-        observations: meaningful.map((o) => ({
-          type: o.type,
-          observation: o.observation,
-          confidence: o.confidence,
-        })),
+        observations: meaningful.map((o) => ({ type: o.type, observation: o.observation, confidence: o.confidence })),
         reinforcedPatterns: getTopPatterns(10),
-      }).then((result) => {
+      };
+      void enqueueSynthesis(userId, async () => {
+        const result = await synthesize(synthInput);
         if (result) {
           writePersona(result.persona);
           writePlaybook(result.playbook);
           if (result.active) writeActive(result.active);
           archiveObservations();
         }
-      }).catch((err: unknown) => {
-        console.error("[zug] synthesis failed:", err instanceof Error ? err.message : err);
       });
     }
   }
