@@ -14,9 +14,9 @@
   "relatedTickets": [
     "T-043"
   ],
-  "resolution": null,
-  "resolvedDate": null,
+  "resolution": "Closed the clock-skew skip window in src/sync.ts. Added an advanceCursor(current, entries) helper that moves the observation/growth cursor (pullSince/pushSince) to max(current, latest entry timestamp actually processed) instead of the server's wall-clock highWater. pull() now advances pullSince over [...observations, ...growth] received; push() advances pushSince over [...observations, ...growth] sent; the server-returned highWater is intentionally ignored for the cursor (a 2xx confirms acceptance). Comparison is numeric (Date.getTime) to stay robust to ISO formatting differences and consistent with the server's `new Date(timestamp).getTime() > since` filter, and the cursor never regresses. This guarantees any entry the server has not yet surfaced has timestamp >= the cursor and remains eligible next exchange, so skew or a back-dated entry can no longer permanently skip it. Updated two existing assertions that encoded the old highWater behavior and added 3 regression tests (empty pull does not advance; cursor takes max of obs+growth; empty push does not advance). Verified: typecheck clean, 179/179 tests pass.",
+  "resolvedDate": "2026-06-24",
   "severity": "low",
-  "status": "open",
+  "status": "resolved",
   "title": "Sync cursor uses server wall-clock highWater; advance to max entry timestamp to close clock-skew skip window"
 }

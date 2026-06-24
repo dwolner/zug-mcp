@@ -5,9 +5,35 @@ import {
 } from "./storage.js";
 import { mergeReinforcements, mergeLessons } from "./merge-core.js";
 import { resolveSyncConfig, readSyncState, writeSyncState, getSourceId } from "./sync-state.js";
-import type { PullResponse, SyncPayload, PushResult } from "./sync-types.js";
+import type { PullResponse, SyncPayload } from "./sync-types.js";
 
 export interface SyncResult { status: "ok" | "paused" | "skipped"; error?: string; }
+
+/**
+ * Advance a sync cursor to the latest timestamp actually seen among the cursor-gated append
+ * logs (observations + growth), never regressing below the current cursor.
+ *
+ * We deliberately use max(entry timestamp) rather than the server's wall-clock `highWater`
+ * (ISS-043): the server gates what it sends with `new Date(timestamp).getTime() > since`,
+ * so advancing the cursor to a server now() that leads the entries' own timestamps — under
+ * client/server clock skew, or when a back-dated entry surfaces after another machine's pull
+ * stamped highWater — can push the cursor past an entry the server still needs to send,
+ * permanently skipping it (dedup can't recover what is never sent). Anchoring the cursor to
+ * the newest entry we actually processed closes that window: any entry the server has not yet
+ * surfaced necessarily has a timestamp >= our cursor and remains eligible next exchange.
+ * Comparison is numeric to stay robust to ISO formatting differences and consistent with the
+ * server's filter.
+ */
+function advanceCursor(current: string, entries: Array<{ timestamp: string }>): string {
+  let best = current;
+  let bestMs = new Date(current).getTime();
+  if (Number.isNaN(bestMs)) bestMs = 0;
+  for (const e of entries) {
+    const ms = new Date(e.timestamp).getTime();
+    if (!Number.isNaN(ms) && ms > bestMs) { bestMs = ms; best = e.timestamp; }
+  }
+  return best;
+}
 
 async function fetchJson(url: string, init: RequestInit, timeoutMs: number): Promise<unknown> {
   const ctrl = new AbortController();
@@ -39,7 +65,8 @@ export async function pull(opts: { timeoutMs?: number } = {}): Promise<SyncResul
     if (data.playbook) writePlaybookAtomic(data.playbook);
     if (data.active) writeActiveAtomic(data.active);
 
-    writeSyncState({ ...state, pullSince: data.highWater, lastSyncedAt: new Date().toISOString(), status: "ok", lastError: undefined });
+    const pullSince = advanceCursor(state.pullSince, [...data.observations, ...data.growth]);
+    writeSyncState({ ...state, pullSince, lastSyncedAt: new Date().toISOString(), status: "ok", lastError: undefined });
     return { status: "ok" };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -62,12 +89,15 @@ export async function push(opts: { timeoutMs?: number } = {}): Promise<SyncResul
     lessons: readLessons(),
   };
   try {
-    const result = await fetchJson(
+    // Server returns a highWater, but we intentionally do not use it for the cursor — see
+    // advanceCursor / ISS-043. A 2xx (fetchJson throws on non-ok) confirms acceptance.
+    await fetchJson(
       `${cfg.url}/sync/push`,
       { method: "POST", headers: { "X-Zug-Token": cfg.token, "Content-Type": "application/json" }, body: JSON.stringify(payload) },
       opts.timeoutMs ?? 15000,
-    ) as PushResult;
-    writeSyncState({ ...state, pushSince: result.highWater, lastSyncedAt: new Date().toISOString(), status: "ok", lastError: undefined });
+    );
+    const pushSince = advanceCursor(state.pushSince, [...payload.observations, ...payload.growth]);
+    writeSyncState({ ...state, pushSince, lastSyncedAt: new Date().toISOString(), status: "ok", lastError: undefined });
     return { status: "ok" };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
