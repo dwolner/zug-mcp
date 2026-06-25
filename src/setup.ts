@@ -72,10 +72,14 @@ Each message arrives:
 
 ### Observation Gate
 
-Something notable happens:
-→ Does an existing PERSONA pattern explain this, or is this new or contradicting?
-→ If new or contradicting AND confidence is medium/high: call \`zug_save_observation\`
-→ Otherwise: continue without saving
+Something notable happens → ROUTE it (don't just ask "is this new?"):
+
+→ **New or contradicting** a PERSONA pattern (confidence med/high)? → \`zug_save_observation\`. *[discovery]*
+→ **An evolution, exception, finer nuance, or second-order interaction** of a known pattern? → \`zug_save_observation\`. As the PERSONA matures these are HIGHER-value than first-time observations — capture them. *[refinement]*
+→ **A clean recurrence** of a known pattern? → \`zug_reinforce_observation\` (strengthens it, surfaces lesson candidates). NEVER silently drop a recurring pattern as "already known." *[reinforcement]*
+→ **Only if truly redundant or trivial** → continue without saving.
+
+A robust PERSONA is a reason to shift WHAT you capture (discovery → refinement + reinforcement), NOT a reason to go quiet. "Already known" is a routing signal to reinforce, not a stop signal. If a session ends with zero saves AND zero reinforces, you almost certainly under-observed — observation never stops, it only matures.
 
 Use session_id format: \`YYYY-MM-DD-{topic}\` (e.g. \`2026-04-24-learning-companion\`)
 

@@ -195,3 +195,17 @@ describe("runSetup — PERSONA seeding", () => {
     expect(content).toBe("sentinel content");
   });
 });
+
+describe("runSetup — Observation Gate rule content", () => {
+  it("writes a zug.md whose Observation Gate routes recurrences to reinforcement", async () => {
+    await runSetup({ home: tmpDir, claude: true, quiet: true });
+    const rule = fs.readFileSync(path.join(tmpDir, ".claude", "rules", "zug.md"), "utf-8");
+    // The gate must be the router form, not the old novelty filter.
+    expect(rule).toContain("zug_save_observation");
+    expect(rule).toContain("zug_reinforce_observation");
+    expect(rule).toMatch(/clean recurrence/i);
+    expect(rule).toMatch(/routing signal to reinforce, not a stop signal/i);
+    // Guard against the old single-branch gate silently coming back.
+    expect(rule).not.toContain("→ Otherwise: continue without saving");
+  });
+});
