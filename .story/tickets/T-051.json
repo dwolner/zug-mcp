@@ -6,9 +6,10 @@
   "completedDate": null,
   "createdDate": "2026-06-24",
   "description": "Implements ADR-005 decision 4 (inherits ADR-004's tier=sync boundary). A single entitlement check on the /sync/* (and /mcp) paths in http.ts, reading paid/free state from the SQLite control plane: free accounts are rejected from canonical sync (degrade to local-only per ADR-004); paid accounts get pull/push + server synthesis + web/multi-machine. Acceptance: a free account cannot push/pull to the canonical server; a paid account can; downgrade revokes access without data loss.",
+  "displayId": "T-051",
   "id": "T-051",
   "order": 140,
-  "phase": null,
+  "phase": "commercialization",
   "status": "open",
   "title": "Tier gate on /sync/* and /mcp (free = local-only, paid = canonical sync)",
   "type": "feature"

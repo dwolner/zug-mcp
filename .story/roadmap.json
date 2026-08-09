@@ -56,6 +56,13 @@
       "id": "first-run-ux",
       "label": "PHASE 8",
       "name": "First-Run UX"
+    },
+    {
+      "description": "Multi-tenant accounts, durable OAuth/billing (SQLite control plane), GDPR compliance, Stripe billing, tier gating, free→paid migration, landing page, and always-on hosting for the paid canonical sync tier. Implements ADR-005.",
+      "id": "commercialization",
+      "label": "PHASE 9",
+      "name": "Commercialization",
+      "summary": "Multi-tenancy, billing, and GDPR per ADR-005"
     }
   ],
   "title": "zug"

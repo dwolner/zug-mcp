@@ -3,9 +3,10 @@
   "completedDate": null,
   "createdDate": "2026-06-24",
   "description": "The single Fly volume becomes a multi-customer SPOF once paid users exist. Add per-user backups, monitoring/alerting (sync failures, synthesis errors, volume capacity, webhook failures), a public status page, and a support channel (email is fine at launch). Start in parallel with billing. Defer-acceptable for a soft launch but required before meaningful paid volume.",
+  "displayId": "T-049",
   "id": "T-049",
   "order": 120,
-  "phase": null,
+  "phase": "commercialization",
   "status": "open",
   "title": "Ops hardening for multi-customer hosting: per-user backups, monitoring, status page, support",
   "type": "chore"

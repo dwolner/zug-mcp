@@ -5,9 +5,10 @@
   "completedDate": null,
   "createdDate": "2026-06-24",
   "description": "Implements ADR-005 decision 8 (rights portion). Per-user export (download full fingerprint — was a Future/Ideas item, now mandatory) and erasure on request AND on subscription cancellation. Cheap because each user is a self-contained /data/users/<userId>/.zug directory: zip it to export, delete it (plus control-plane rows) to erase. Wire erasure into the Stripe cancellation/downgrade path. Acceptance: a user can export their data and request deletion; deletion removes all file + SQLite state for that userId.",
+  "displayId": "T-047",
   "id": "T-047",
   "order": 100,
-  "phase": null,
+  "phase": "commercialization",
   "status": "open",
   "title": "GDPR data-subject rights: export + erasure",
   "type": "feature"
