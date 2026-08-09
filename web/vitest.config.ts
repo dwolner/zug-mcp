@@ -12,4 +12,7 @@ export default defineConfig({
   resolve: {
     alias: { '@': path.resolve(__dirname, '.') },
   },
+  define: {
+    'process.env.VITEST': 'true',
+  },
 });
