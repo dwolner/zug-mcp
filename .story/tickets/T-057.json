@@ -1,0 +1,15 @@
+{
+  "blockedBy": [
+    "T-050",
+    "T-053"
+  ],
+  "completedDate": null,
+  "createdDate": "2026-08-09",
+  "description": "Follow-up to T-053, split out so the landing page's brand/design/motion work could ship without waiting on billing. T-053 ships with a placeholder waitlist/email-capture CTA; this ticket swaps that CTA for real Stripe Checkout once T-050 (Stripe billing: Checkout + customer portal + webhook entitlement) exists.\n\nScope: replace the placeholder signup form with pseudonymous signup → Stripe Checkout session → webhook-confirmed entitlement, per the original T-053 acceptance criteria (\"a visitor can go from landing → pseudonymous signup → checkout → connected paid account\").",
+  "id": "T-057",
+  "order": 190,
+  "phase": "commercialization",
+  "status": "open",
+  "title": "Wire landing page CTA to live Stripe Checkout",
+  "type": "task"
+}

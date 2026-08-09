@@ -1,0 +1,14 @@
+{
+  "blockedBy": [
+    "T-045"
+  ],
+  "completedDate": null,
+  "createdDate": "2026-08-09",
+  "description": "The data foundation for this already exists and was built specifically for it: T-018 (\"Persona growth snapshots\") added periodic PERSONA.md snapshots plus a structured growth summary (observation rate over time, ACTIVE pattern churn, session frequency trends, reinforcement counts, a \"what Zug learned about you\" narrative digest) with the explicit goal of being \"dashboard-ready even if no UI exists yet.\" The `zug_growth_summary` MCP tool already surfaces this data.\n\nThe original OSS distribution design doc (docs/superpowers/specs/2026-05-24-zug-oss-distribution-design.md) scoped this as \"Phase 3: Premium dashboard — growth visualizations, cross-session search, team workspaces\" and explicitly excluded it from the OSS/local-first phase. It belongs in Commercialization: a paid-tier differentiator alongside sync, not something the free/local-only tier needs.\n\nScope: a web UI (served off the same account system as the landing page/signup) that answers the north star from T-018 — \"what has Zug taught me about how I think?\" and \"is Zug getting better at working with me?\" — via pattern emergence timelines, session/observation heatmaps, insight quality over time, and the narrative growth digest. Cross-session search is a stretch goal from the original Phase 3 framing, not required for v1.\n\nDepends on T-045 (durable accounts) — a dashboard needs an authenticated user to scope data to. Gating (who can see it) follows from T-051 once that exists.\n\nRelation: fulfills the \"Phase 3\" dashboard deferred in the 2026-05-24 OSS distribution design doc; consumes T-018's data model.",
+  "id": "T-056",
+  "order": 180,
+  "phase": "commercialization",
+  "status": "open",
+  "title": "Web dashboard: growth visualizations from persona snapshot data (premium)",
+  "type": "feature"
+}

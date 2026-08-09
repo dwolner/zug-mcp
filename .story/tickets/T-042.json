@@ -1,13 +1,13 @@
 {
   "blockedBy": [],
-  "completedDate": null,
+  "completedDate": "2026-08-09",
   "createdDate": "2026-05-28",
   "description": "Zug MCP is deployed to Fly (app zug-mcp, see fly.toml) with auto_stop_machines = stop and min_machines_running = 0, so it scales to zero when idle. Symptom: across a multi-hour Augur session on 2026-05-27, every zug_get_context and zug_end_session call returned an MCP Session not found error. Root cause: with scale-to-zero the machine stops between requests and loses its in-memory MCP (streamable HTTP) session map, so the next call carrying the prior session id is unknown to the cold-restarted server; auto_start cold-start is also too slow for the session-start gate. Net effect: no cognitive fingerprint loads and no session log writes, so Zug provides zero cross-session continuity, which is its entire purpose. Fix: make the machine always-on in fly.toml [http_service]: set min_machines_running = 1 and auto_stop_machines = off, then redeploy (fly deploy, or fly scale count 1). Cost is roughly one always-on shared-cpu-1x / 1GB machine in iad. Separate follow-up to consider: persist or reconstruct MCP session state from the durable /data volume so a redeploy or crash does not drop active sessions even when always-on.",
   "displayId": "T-042",
   "id": "T-042",
   "order": 50,
   "phase": "commercialization",
-  "status": "open",
+  "status": "complete",
   "title": "Keep zug-mcp Fly machine always-on (scale-to-zero drops MCP sessions)",
   "type": "task"
 }
