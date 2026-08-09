@@ -17,6 +17,7 @@ import {
 import { runSetup } from "./setup.js";
 import { sync as runSync, pull as runPull, push as runPush } from "./sync.js";
 import { getSyncMode } from "./sync-state.js";
+import { checkForUpdate, updateNoticeLine } from "./version-check.js";
 
 const ZUG_DIR = getDataDir();
 const OBSERVATIONS_FILE = path.join(ZUG_DIR, "observations.jsonl");
@@ -113,7 +114,10 @@ async function cmdResume(): Promise<void> {
   const active = readActive();
 
   if (sessions === 0 && !active) {
-    console.log("# Zug — context resumed (no data yet)");
+    const lines = ["# Zug — context resumed (no data yet)"];
+    const latestVersion = await checkForUpdate(version);
+    if (latestVersion) lines.push("", updateNoticeLine(version, latestVersion));
+    console.log(lines.join("\n"));
     return;
   }
 
@@ -131,6 +135,9 @@ async function cmdResume(): Promise<void> {
     "## Action required",
     "Call zug_get_context now to reload your full cognitive fingerprint and playbook.",
   );
+
+  const latestVersion = await checkForUpdate(version);
+  if (latestVersion) parts.push("", updateNoticeLine(version, latestVersion));
 
   console.log(parts.join("\n"));
 }
@@ -217,13 +224,23 @@ function cmdBackup(): void {
 }
 
 async function cmdSync(kind: "sync" | "pull" | "push"): Promise<void> {
+  const lines: string[] = [];
   if (getSyncMode() === "local-only") {
-    console.log("Sync is not configured (local-only mode). Set ZUG_URL and ZUG_TOKEN in ~/.zug/config to enable.");
-    return;
+    lines.push("Sync is not configured (local-only mode). Set ZUG_URL and ZUG_TOKEN in ~/.zug/config to enable.");
+  } else {
+    const fn = kind === "pull" ? runPull : kind === "push" ? runPush : runSync;
+    const result = await fn();
+    lines.push(`zug ${kind}: ${JSON.stringify(result)}`);
   }
-  const fn = kind === "pull" ? runPull : kind === "push" ? runPush : runSync;
-  const result = await fn();
-  console.log(`zug ${kind}: ${JSON.stringify(result)}`);
+
+  // `zug pull` backs the SessionStart:startup hook — the one channel that reaches every
+  // user, including local-only, so the update check runs here regardless of sync mode.
+  if (kind === "pull") {
+    const latestVersion = await checkForUpdate(version);
+    if (latestVersion) lines.push(updateNoticeLine(version, latestVersion));
+  }
+
+  console.log(lines.join("\n"));
 }
 
 function cmdArchive(): void {
@@ -258,41 +275,63 @@ function printUsage() {
 
 const [, , cmd, ...rest] = process.argv;
 
-switch (cmd) {
-  case "status":
-    cmdStatus();
-    break;
-  case "tail":
-    cmdTail(rest[0]);
-    break;
-  case "persona":
-    cmdPersona();
-    break;
-  case "compact":
-    cmdCompact().then(() => process.exit(0));
-    break;
-  case "resume":
-    cmdResume().then(() => process.exit(0));
-    break;
-  case "setup":
-    cmdSetup(rest).then(() => process.exit(0));
-    break;
-  case "update":
-    cmdUpdate().then(() => process.exit(0));
-    break;
-  case "archive":
-    cmdArchive();
-    break;
-  case "backup":
-    cmdBackup();
-    break;
-  case "sync": cmdSync("sync").then(() => process.exit(0)); break;
-  case "pull": cmdSync("pull").then(() => process.exit(0)); break;
-  case "push": cmdSync("push").then(() => process.exit(0)); break;
-  case "--version":
-  case "version":
-    console.log(version);
-    break;
-  default:
-    printUsage();
+// Commands that already surface the update check themselves (pull/resume, via the
+// SessionStart-injected stdout channel) or where it would be noise (update itself,
+// version, unrecognized commands) are excluded from the generic stderr notifier below.
+const SKIP_UPDATE_NOTIFIER = new Set(["pull", "resume", "update", "version", "--version", undefined]);
+
+async function main(): Promise<void> {
+  switch (cmd) {
+    case "status":
+      cmdStatus();
+      break;
+    case "tail":
+      cmdTail(rest[0]);
+      break;
+    case "persona":
+      cmdPersona();
+      break;
+    case "compact":
+      await cmdCompact();
+      break;
+    case "resume":
+      await cmdResume();
+      break;
+    case "setup":
+      await cmdSetup(rest);
+      break;
+    case "update":
+      await cmdUpdate();
+      break;
+    case "archive":
+      cmdArchive();
+      break;
+    case "backup":
+      cmdBackup();
+      break;
+    case "sync":
+      await cmdSync("sync");
+      break;
+    case "pull":
+      await cmdSync("pull");
+      break;
+    case "push":
+      await cmdSync("push");
+      break;
+    case "--version":
+    case "version":
+      console.log(version);
+      break;
+    default:
+      printUsage();
+  }
+
+  if (!SKIP_UPDATE_NOTIFIER.has(cmd)) {
+    const latestVersion = await checkForUpdate(version);
+    if (latestVersion) console.error(updateNoticeLine(version, latestVersion));
+  }
+
+  process.exit(0);
 }
+
+main();
