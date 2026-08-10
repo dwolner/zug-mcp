@@ -1,0 +1,18 @@
+app = "zug-web"
+primary_region = "iad"
+
+[build]
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[mounts]]
+  source = "zug_web_data"
+  destination = "/data"
+
+[env]
+  SIGNUPS_FILE_PATH = "/data/signups.jsonl"
