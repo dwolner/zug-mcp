@@ -1,3 +1,17 @@
+import { Nav } from './components/Nav';
+import { Hero } from './components/Hero';
+import { FeatureGrid } from './components/FeatureGrid';
+import { UpgradeSection } from './components/UpgradeSection';
+import { Footer } from './components/Footer';
+
 export default function Home() {
-  return <main>zug</main>;
+  return (
+    <>
+      <Nav />
+      <Hero />
+      <FeatureGrid />
+      <UpgradeSection />
+      <Footer />
+    </>
+  );
 }
