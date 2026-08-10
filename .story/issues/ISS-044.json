@@ -1,0 +1,19 @@
+{
+  "components": [
+    "web",
+    "design"
+  ],
+  "discoveredDate": "2026-08-10",
+  "id": "ISS-044",
+  "impact": "Final whole-branch review of T-053 (docs/superpowers/plans/2026-08-09-t053-landing-page.md) computed contrast ratios for docs/brand.md's exact hex palette against how it's actually used across the shipped landing page components:\n\n- jade (#596D69) on cream (#EDE5D8): 4.40:1 (needs 4.5:1) — nav links, wordmark, hero origin line, hero subhead, ghost CTA, feature numbers+body, footer tagline+links\n- clay (#B5603A) on cream / cream on clay: 3.58:1 — primary CTA + submit button label (11px uppercase, fails even the large-text 3:1 threshold at that size)\n- jade on sea salt (#B8C9C0): 3.18:1 — upgrade eyebrow+body, hero sidebar card labels, SignatureMoment mono log lines, success message\n- clay on sea salt: 2.59:1 — the \"$5 / month\" price (text-2xl), the synthesized signature line, the error message. Fails even the large-text (3:1) AA threshold.\n- ink (#22302B) on cream/seasalt: 11.01 / 7.97 — passes\n\nThis is docs/brand.md's own chosen hex values and its own contrast guidance (\"use Jade for small links and small text, never Cornflower\") turning out optimistic once measured against the actual surfaces (seasalt) the design places jade/clay on. Not an implementation bug — a design/brand decision needed from the founder: darken jade/clay a few percent to clear AA while keeping the same visual family, or knowingly accept the gap.\n\nPunted from the T-053 final review per explicit founder decision (2026-08-09): do not block merge, track as a follow-up design-review item instead.",
+  "location": [],
+  "phase": null,
+  "relatedTickets": [
+    "T-053"
+  ],
+  "resolution": null,
+  "resolvedDate": null,
+  "severity": "medium",
+  "status": "open",
+  "title": "Landing page (T-053) brand palette fails WCAG AA contrast in actual usage"
+}
