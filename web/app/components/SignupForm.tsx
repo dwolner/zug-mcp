@@ -32,6 +32,7 @@ export function SignupForm({
       <input
         type="email"
         name="email"
+        required
         placeholder={signup.placeholder}
         className="border border-jade/40 bg-cream px-3 py-2 text-ink"
       />

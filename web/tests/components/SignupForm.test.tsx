@@ -23,6 +23,9 @@ describe('SignupForm', () => {
     const action = vi.fn().mockResolvedValue({ ok: false, error: 'Enter a valid email address.' });
     render(<SignupForm action={action} />);
 
+    fireEvent.change(screen.getByPlaceholderText('you@example.com'), {
+      target: { value: 'person@example.com' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Join the waitlist' }));
 
     await waitFor(() =>
