@@ -1,4 +1,5 @@
 import type { Config } from 'tailwindcss';
+import defaultTheme from 'tailwindcss/defaultTheme';
 
 const config: Config = {
   content: ['./app/**/*.{ts,tsx}'],
@@ -13,6 +14,7 @@ const config: Config = {
         cornflower: '#7AA5BF',
       },
       fontFamily: {
+        sans: ['var(--font-display)', ...defaultTheme.fontFamily.sans],
         display: ['var(--font-display)'],
         mono: ['var(--font-mono)'],
       },

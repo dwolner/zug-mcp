@@ -29,7 +29,11 @@ export function SignupForm({
         className="hidden"
         aria-hidden="true"
       />
+      <label htmlFor="signup-email" className="sr-only">
+        Email address
+      </label>
       <input
+        id="signup-email"
         type="email"
         name="email"
         required

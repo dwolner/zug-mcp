@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { processSignup } from '../../app/actions/signup';
+import { processSignup } from '../../lib/signup';
 
 describe('processSignup', () => {
   let appendSignup: ReturnType<typeof vi.fn>;
@@ -67,5 +67,28 @@ describe('processSignup', () => {
       expect(result.error).not.toContain('disk full');
     }
     expect(consoleErrorSpy).toHaveBeenCalled();
+  });
+
+  it('normalizes email whitespace and casing before storing', async () => {
+    const result = await processSignup(
+      { email: '  Person@Example.COM  ', honeypot: '', ip: '1.2.3.4' },
+      { appendSignup, checkRateLimit }
+    );
+
+    expect(result).toEqual({ ok: true });
+    expect(appendSignup).toHaveBeenCalledWith('person@example.com');
+  });
+
+  it('rejects an email over 254 characters without writing', async () => {
+    const longEmail = `${'a'.repeat(250)}@b.co`;
+    expect(longEmail.length).toBeGreaterThan(254);
+
+    const result = await processSignup(
+      { email: longEmail, honeypot: '', ip: '1.2.3.4' },
+      { appendSignup, checkRateLimit }
+    );
+
+    expect(result).toEqual({ ok: false, error: 'Enter a valid email address.' });
+    expect(appendSignup).not.toHaveBeenCalled();
   });
 });
