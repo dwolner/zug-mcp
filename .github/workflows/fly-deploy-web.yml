@@ -1,0 +1,19 @@
+name: Fly Deploy (web)
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'web/**'
+  workflow_dispatch:
+jobs:
+  deploy:
+    name: Deploy zug-web
+    runs-on: ubuntu-latest
+    concurrency: deploy-web-group
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy -c web/fly.toml --dockerfile web/Dockerfile --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_WEB }}

@@ -6,3 +6,6 @@ docs/
 scripts/
 templates/
 prompts/
+**/node_modules
+**/.next
+web/.next
