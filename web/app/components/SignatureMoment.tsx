@@ -11,11 +11,13 @@ const SYNTHESIZED_LINE = 'You diagnose before you report. Lead me to the cause.'
 
 export function SignatureMoment() {
   const [revealed, setRevealed] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
     const query = window.matchMedia('(prefers-reduced-motion: reduce)');
 
     if (query.matches) {
+      setReducedMotion(true);
       setRevealed(true);
       return;
     }
@@ -32,9 +34,9 @@ export function SignatureMoment() {
         ))}
       </div>
       <p
-        className={`mt-3 font-display text-lg transition-opacity duration-500 ${
-          revealed ? 'opacity-100' : 'opacity-0'
-        }`}
+        className={`mt-3 font-display text-lg ${
+          reducedMotion ? '' : 'transition-opacity duration-500'
+        } ${revealed ? 'opacity-100' : 'opacity-0'}`}
       >
         <span className="text-clay">{SYNTHESIZED_LINE}</span>
       </p>

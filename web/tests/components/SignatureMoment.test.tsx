@@ -42,4 +42,25 @@ describe('SignatureMoment', () => {
     expect(screen.getByText(/prefers root-cause framing/)).toBeInTheDocument();
     expect(screen.getByText(/tests the actual gate/)).toBeInTheDocument();
   });
+
+  it('does not apply transition class when reduced motion is preferred', () => {
+    mockMatchMedia(true);
+    render(<SignatureMoment />);
+
+    const synthesizedLine = screen.getByText(
+      'You diagnose before you report. Lead me to the cause.'
+    ).parentElement;
+    expect(synthesizedLine).not.toHaveClass('transition-opacity');
+  });
+
+  it('applies transition class when reduced motion is not preferred', () => {
+    mockMatchMedia(false);
+    render(<SignatureMoment />);
+
+    const synthesizedLine = screen.getByText(
+      'You diagnose before you report. Lead me to the cause.'
+    ).parentElement;
+    expect(synthesizedLine).toHaveClass('transition-opacity');
+    expect(synthesizedLine).toHaveClass('duration-500');
+  });
 });
