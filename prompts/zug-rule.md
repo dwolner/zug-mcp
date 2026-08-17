@@ -56,14 +56,14 @@ Something notable happens:
 → If new or contradicting AND confidence is medium/high: call `zug_save_observation`
 → Otherwise: continue without saving
 
-Use session_id format: `YYYY-MM-DD-{topic}` (e.g. `2026-04-24-learning-companion`)
+Use sessionId format: `YYYY-MM-DD-{topic}` (e.g. `2026-04-24-learning-companion`)
 
 ### Session End Gate
 
 Wind-down detected (shorter responses, topic closing, "thanks", silence):
 → Is there a summary worth writing?
 → Write one-paragraph summary
-→ Call `zug_end_session` with session_id and summary
+→ Call `zug_end_session` with sessionId and summary
 → Done
 
 ## Honest Socratic

@@ -359,16 +359,16 @@ export function createServer(): McpServer {
     {
       observation: z.string().describe("What you observed"),
       type: z.enum(["cognitive_pattern", "preference", "mistake", "breakthrough", "context"]).describe("Type of observation"),
-      session_id: z.string().describe("Current session identifier"),
+      sessionId: z.string().describe("Current session identifier"),
       confidence: z.enum(["low", "medium", "high"]).describe("How confident you are"),
       context: z.string().optional().describe('Session context tag, e.g. "work" or "personal"'),
     },
-    async ({ observation, type, session_id, confidence, context }) => {
+    async ({ observation, type, sessionId, confidence, context }) => {
       appendObservation({
         timestamp: new Date().toISOString(),
         type: type as ObservationType,
         observation,
-        session_id,
+        session_id: sessionId,
         confidence,
         context,
       });
@@ -381,14 +381,14 @@ export function createServer(): McpServer {
     "zug_end_session",
     "Call when a session ends. Writes the session log, appends observations, and surfaces reinforced patterns ready for promotion to lessons.",
     {
-      session_id: z.string().describe("Session identifier used during this session"),
+      sessionId: z.string().describe("Session identifier used during this session"),
       summary: z.string().describe("What was explored, decided, or worked on — and any notable moments"),
       context: z.string().optional().describe('Session context tag, e.g. "work" or "personal"'),
       decisions: z.array(z.string()).optional().describe("Key decisions made this session"),
       blockers: z.array(z.string()).optional().describe("What is blocking understanding or progress"),
       next_steps: z.array(z.string()).optional().describe("What to pick up at the start of the next session"),
     },
-    async (args) => runEndSession(args)
+    async ({ sessionId, ...rest }) => runEndSession({ session_id: sessionId, ...rest })
   );
 
   server.tool(
@@ -534,11 +534,11 @@ export function createServer(): McpServer {
     "Open a Socratic thread — call when Zug asks a question worth tracking. Only one thread is active at a time; opening a new one replaces any existing open thread.",
     {
       question: z.string().max(1000).describe("The Socratic question Zug asked"),
-      session_id: z.string().describe("Current session identifier"),
+      sessionId: z.string().describe("Current session identifier"),
     },
-    async ({ question, session_id }) => {
+    async ({ question, sessionId }) => {
       try {
-        writeOpenThread({ question, openedAt: new Date().toISOString(), sessionId: session_id });
+        writeOpenThread({ question, openedAt: new Date().toISOString(), sessionId });
         return { content: [{ type: "text" as const, text: `Thread opened: ${question}` }] };
       } catch (err) {
         return { content: [{ type: "text" as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }] };

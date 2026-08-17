@@ -90,14 +90,14 @@ Something notable happens:
   → Include `context` if the session has a clear domain: "work", "personal", or a project name
 → Otherwise: continue without saving
 
-Use session_id format: `YYYY-MM-DD-{topic}` (e.g. `2026-04-24-learning-companion`)
+Use sessionId format: `YYYY-MM-DD-{topic}` (e.g. `2026-04-24-learning-companion`)
 
 ### Session End Gate
 
 Wind-down detected (shorter responses, topic closing, "thanks", silence):
 → Is there a summary worth writing?
 → Write one-paragraph summary
-→ Call `zug_end_session` with session_id, summary, and context (if known)
+→ Call `zug_end_session` with sessionId, summary, and context (if known)
 → Done
 
 ## What You Are Not
