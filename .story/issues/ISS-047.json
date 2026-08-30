@@ -1,0 +1,26 @@
+{
+  "components": [
+    "synthesis-queue",
+    "server",
+    "storage"
+  ],
+  "createdBy": "claude-opus-5 (root-cause investigation, 2026-08-30)",
+  "dedupeKey": "zug-synthesis-2026-08-30:rc1-observability",
+  "discoveredDate": "2026-08-30",
+  "displayId": "ISS-047",
+  "id": "ISS-047",
+  "impact": "The reason the synthesis outage ran for three months undetected. This is the observability gap, tracked separately from the bug itself because fixing the timeout does not fix the blindness.\n\nCURRENT BEHAVIOUR: synthesis runs fire-and-forget via enqueueSynthesis(). Its only failure signal is a console.error inside the queue's catch block, on a Fly machine. Meanwhile:\n- zug_end_session returns \"Sync push queued; synthesis runs on the server.\" — a statement that has been false since 2026-05-26\n- zug_status reports sessions/observations/personaLines with no indication that personaLines has not moved in 155 sessions\n- getStaleGrowthWarning() only checks whether observationCount is flat; observations kept arriving, so it never fired. It watches the input and ignores the output.\n\nWHAT IT SHOULD HAVE CAUGHT: personaLines unchanged across 201 consecutive snapshots while observationCount rose 68 -> 130 is trivially detectable from data already being written to growth.jsonl every session.\n\nFIX DIRECTION: persist synthesis outcome (ok / timeout / truncated / no-api-key + timestamp) to disk so it survives the process, surface last-synthesis status in zug_status, and extend the stale-growth warning to watch persona output rather than only observation input. Consider making the end_session message conditional on the last known synthesis result instead of asserting success unconditionally.\n\nRELATED PATTERN: this is the advisory-message-instead-of-executable-check failure mode — the system described itself as working rather than verifying that it was.",
+  "location": [
+    "src/synthesis-queue.ts:36",
+    "src/server.ts:283",
+    "src/storage.ts:591",
+    "src/sync-server.ts:49"
+  ],
+  "phase": null,
+  "relatedTickets": [],
+  "resolution": "FIXED across src/storage.ts, src/synthesize.ts, src/server.ts.\n\n1. DURABLE OUTCOME (src/storage.ts). New per-tenant `synthesis-status.json` via `recordSynthesisOutcome()` / `readSynthesisStatus()`, with outcome typed as ok | timeout | truncated | malformed | no-api-key | error plus timestamp and detail. Writes are best-effort and swallow their own errors — observability must never break the thing it observes. Because it goes through getPaths(), it is tenancy-aware: the status lands in the affected user's directory, not a shared one.\n\n2. EVERY EXIT PATH RECORDS (src/synthesize.ts). All five previously-silent returns now record why: no-api-key, truncated, malformed, ok, and — the ISS-045 case — a try/catch around the streamed call that records timeout vs error and RETHROWS, so the queue's existing catch still logs it. Recording there rather than swallowing avoids trading one blind spot for another.\n\n3. WATCH THE OUTPUT, NOT THE INPUT (src/storage.ts). New `getFrozenPersonaWarning(n = 10)` detects the ISS-045 signature from data growth.jsonl was already writing every session: personaLines identical across the window while observationCount rises. Deliberately returns null when both are flat — that is the stale-input case getStaleGrowthWarning already owns.\n\n4. SURFACED (src/server.ts). zug_status now emits the synthesis warning and the frozen-persona warning alongside the existing stale warning. zug_end_session no longer asserts \"synthesis runs on the server\" unconditionally — a sentence that stayed true-sounding through the entire outage. It now reports the last known outcome and warns when it was not ok.\n\nVERIFICATION — run against the real ~/.zug/growth.jsonl, all 201 snapshots of the actual outage:\n  getStaleGrowthWarning()   : null\n  getSynthesisWarning()     : null\n  getFrozenPersonaWarning() : \"PERSONA has not changed across the last 10 sessions (118 lines) while observations grew 116 → 130. Synthesis is taking input without producing output.\"\n\nThat is the point of the issue proved on real data: the pre-existing detector is silent on the very outage it was meant to catch, and the new one fires with the correct figures. (getSynthesisWarning is null only because no synthesis has yet run against that directory under the new code — correct behaviour for \"never ran\".)\n\nTests: 12 new cases in storage.test.ts (status roundtrip, latest-wins, warning text, and the four frozen-persona cases incl. the both-flat non-case) and 6 in synthesize.test.ts covering each recorded outcome, including that a timeout is recorded AND rethrown. synthesize.test.ts now isolates ZUG_DATA_DIR to a temp dir, since synthesize() writes status. Suite 229/229 green, tsc --noEmit clean.\n\nNOT DEPLOYED — server-side; takes effect on zug-mcp after a Fly deploy.",
+  "resolvedDate": "2026-08-30",
+  "severity": "high",
+  "status": "resolved",
+  "title": "Synthesis failure is invisible outside Fly logs — zug_status and zug_end_session both report success"
+}

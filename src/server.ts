@@ -34,6 +34,9 @@ import {
   writeOpenThread,
   getLessonCandidates,
   getStaleGrowthWarning,
+  getSynthesisWarning,
+  getFrozenPersonaWarning,
+  readSynthesisStatus,
   archiveObservations,
   archiveSessions,
   type ObservationType,
@@ -277,9 +280,15 @@ export async function runEndSession(args: {
     ? `\n\nLesson candidates (reinforced 3+ times, not yet promoted):\n${candidates.map((p) => `  • "${p.text}" (${p.count}x)`).join("\n")}\nCall zug_create_lesson to promote any of these to named behavioral rules.`
     : "";
 
-  const syncNote = mode === "synced"
-    ? "Sync push queued; synthesis runs on the server."
-    : "Synthesis running in background.";
+  // ISS-047: this used to assert that synthesis was happening. It said so throughout a
+  // three-month outage. Report the last known outcome instead of describing the intent.
+  const lastSynthesis = readSynthesisStatus();
+  const synthesisFailed = lastSynthesis && lastSynthesis.outcome !== "ok";
+  const syncNote = synthesisFailed
+    ? `WARNING: the last synthesis failed (${lastSynthesis.outcome}) — PERSONA is not being updated.`
+    : mode === "synced"
+      ? "Sync push queued; synthesis runs on the server."
+      : "Synthesis running in background.";
 
   return {
     content: [{
@@ -420,6 +429,10 @@ export function createServer(): McpServer {
       const active = readActive();
       const obsRate = sessions > 0 ? (observations / sessions).toFixed(1) : "0";
       const staleWarning = getStaleGrowthWarning();
+      // ISS-047: the outage was detectable from data already on disk. Say so here rather than
+      // only in a server log line nobody reads.
+      const synthesisWarning = getSynthesisWarning();
+      const frozenPersonaWarning = getFrozenPersonaWarning();
 
       const lines = [
         `- Sessions: ${sessions}${lastDate ? ` | Last: ${lastDate}` : ""}`,
@@ -428,6 +441,8 @@ export function createServer(): McpServer {
         excerpt ? `- Excerpt: ${excerpt}` : null,
         `- Trend (obs/week, last 4): ${trend.join(" → ")}`,
         staleWarning ? `- Warning: ${staleWarning}` : null,
+        synthesisWarning ? `- Warning: ${synthesisWarning}` : null,
+        frozenPersonaWarning ? `- Warning: ${frozenPersonaWarning}` : null,
       ].filter(Boolean).join("\n");
 
       const parts = [

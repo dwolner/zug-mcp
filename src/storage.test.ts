@@ -31,6 +31,10 @@ import {
   getGrowthTrend,
   getLessonCandidates,
   getStaleGrowthWarning,
+  recordSynthesisOutcome,
+  readSynthesisStatus,
+  getSynthesisWarning,
+  getFrozenPersonaWarning,
   getAllObservations, getObservationsForSync, getGrowthSince,
   getAllReinforcements, writeReinforcements, addObservations, addGrowth,
   writePersonaAtomic, getAllSessionFiles, addSessionFile,
@@ -951,5 +955,92 @@ describe("sync storage helpers", () => {
     writeActiveAtomic("ACTIVE-X");
     expect(readPlaybook()).toBe("PLAYBOOK-X");
     expect(readActive()).toBe("ACTIVE-X");
+  });
+});
+
+// ISS-047: the synthesis outage ran for three months because its only failure signal was a
+// console.error on a Fly machine. These make the outcome durable and detectable from data the
+// system was already writing every session.
+describe("synthesis outcome recording (ISS-047)", () => {
+  it("returns null before any synthesis has run", () => {
+    expect(readSynthesisStatus()).toBeNull();
+  });
+
+  it("roundtrips an outcome with a timestamp", () => {
+    recordSynthesisOutcome("ok");
+    const status = readSynthesisStatus();
+    expect(status?.outcome).toBe("ok");
+    expect(status?.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  it("keeps the detail explaining a failure", () => {
+    recordSynthesisOutcome("truncated", "hit the 16384-token budget");
+    expect(readSynthesisStatus()?.detail).toContain("16384");
+  });
+
+  it("overwrites rather than accumulating — only the latest outcome matters", () => {
+    recordSynthesisOutcome("timeout");
+    recordSynthesisOutcome("ok");
+    expect(readSynthesisStatus()?.outcome).toBe("ok");
+  });
+});
+
+describe("getSynthesisWarning (ISS-047)", () => {
+  it("returns null when synthesis has never run", () => {
+    expect(getSynthesisWarning()).toBeNull();
+  });
+
+  it("returns null when the last synthesis succeeded", () => {
+    recordSynthesisOutcome("ok");
+    expect(getSynthesisWarning()).toBeNull();
+  });
+
+  it("names the failure mode so it is actionable", () => {
+    recordSynthesisOutcome("timeout", "Request timed out.");
+    const warning = getSynthesisWarning();
+    expect(warning).toContain("timeout");
+    expect(warning).toContain("Request timed out.");
+  });
+
+  it("warns for every non-ok outcome", () => {
+    for (const outcome of ["timeout", "truncated", "malformed", "no-api-key", "error"] as const) {
+      recordSynthesisOutcome(outcome);
+      expect(getSynthesisWarning()).not.toBeNull();
+    }
+  });
+});
+
+// The signature of ISS-045, from data already in growth.jsonl: personaLines pinned at 118 across
+// 201 snapshots while observationCount climbed 68 -> 130. getStaleGrowthWarning watched the input
+// and so never fired; this watches the output.
+describe("getFrozenPersonaWarning (ISS-047)", () => {
+  it("returns null with fewer than two snapshots", () => {
+    expect(getFrozenPersonaWarning()).toBeNull();
+    appendGrowthSnapshot(makeSnapshot({ personaLines: 100, observationCount: 5 }));
+    expect(getFrozenPersonaWarning()).toBeNull();
+  });
+
+  it("returns null when the persona is growing", () => {
+    appendGrowthSnapshot(makeSnapshot({ timestamp: "2026-01-01T00:00:00.000Z", personaLines: 100, observationCount: 5 }));
+    appendGrowthSnapshot(makeSnapshot({ timestamp: "2026-01-02T00:00:00.000Z", personaLines: 104, observationCount: 7 }));
+    expect(getFrozenPersonaWarning()).toBeNull();
+  });
+
+  it("returns null when nothing is moving — that is the stale-observation case, not this one", () => {
+    appendGrowthSnapshot(makeSnapshot({ timestamp: "2026-01-01T00:00:00.000Z", personaLines: 118, observationCount: 68 }));
+    appendGrowthSnapshot(makeSnapshot({ timestamp: "2026-01-02T00:00:00.000Z", personaLines: 118, observationCount: 68 }));
+    expect(getFrozenPersonaWarning()).toBeNull();
+  });
+
+  it("warns when observations accumulate but the persona never changes", () => {
+    appendGrowthSnapshot(makeSnapshot({ timestamp: "2026-01-01T00:00:00.000Z", personaLines: 118, observationCount: 68 }));
+    appendGrowthSnapshot(makeSnapshot({ timestamp: "2026-01-02T00:00:00.000Z", personaLines: 118, observationCount: 99 }));
+    appendGrowthSnapshot(makeSnapshot({ timestamp: "2026-01-03T00:00:00.000Z", personaLines: 118, observationCount: 130 }));
+
+    const warning = getFrozenPersonaWarning();
+    expect(warning).not.toBeNull();
+    expect(warning).toContain("118");
+    expect(warning).toContain("68");
+    expect(warning).toContain("130");
   });
 });

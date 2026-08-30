@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { loadApiKey, HAIKU_MODEL } from "./api-key.js";
+import { recordSynthesisOutcome } from "./storage.js";
 
 /**
  * Haiku output throughput measured during the ISS-045 investigation: 3,790 tokens in 52.9s.
@@ -74,6 +75,7 @@ export async function synthesize(input: SynthesisInput): Promise<SynthesisResult
       "Without synthesis, PERSONA.md grows unboundedly. " +
       "Set ANTHROPIC_API_KEY (or add to ~/.zug/.env) to enable automatic distillation."
     );
+    recordSynthesisOutcome("no-api-key");
     return null;
   }
 
@@ -154,15 +156,24 @@ Format each as a direct behavioral instruction to Zug: "when X → do Y" or "don
 
   // Streamed rather than a single blocking create: a ~53s generation held open as one
   // non-streaming request is what ISS-045 was. finalMessage() resolves to the assembled Message.
-  const response = await client.messages.stream({
-    model: HAIKU_MODEL,
-    max_tokens: MAX_OUTPUT_TOKENS,
+  let response;
+  try {
+    response = await client.messages.stream({
+      model: HAIKU_MODEL,
+      max_tokens: MAX_OUTPUT_TOKENS,
     system: "You output only the requested XML blocks. No preamble, no questions, no commentary. If nothing changes, return the existing content verbatim inside the XML tags.",
     messages: [
       { role: "user", content: prompt },
       { role: "assistant", content: "<PERSONA>" },
     ],
-  }).finalMessage();
+    }).finalMessage();
+  } catch (err) {
+    // The failure mode this whole investigation started from. Record it before rethrowing, so the
+    // queue's catch still logs it and the outcome survives the process either way.
+    const msg = err instanceof Error ? err.message : String(err);
+    recordSynthesisOutcome(/timed out|timeout/i.test(msg) ? "timeout" : "error", msg);
+    throw err;
+  }
 
   // Prepend the prefilled assistant turn so regex can match the full XML
   const raw = response.content
@@ -180,6 +191,7 @@ Format each as a direct behavioral instruction to Zug: "when X → do Y" or "don
       `closing </PERSONA>. The corpus needs ~${reEmitTokens} tokens to reproduce; raise ` +
       `MAX_OUTPUT_TOKENS or shorten PERSONA.md.`
     );
+    recordSynthesisOutcome("truncated", `needed ~${reEmitTokens} tokens, budget ${MAX_OUTPUT_TOKENS}`);
     return null;
   }
 
@@ -189,8 +201,11 @@ Format each as a direct behavioral instruction to Zug: "when X → do Y" or "don
 
   if (!personaMatch || !playbookMatch) {
     console.warn(`Synthesis skipped — model did not produce output.\n${text.slice(0, 300)}`);
+    recordSynthesisOutcome("malformed", "response did not contain PERSONA/PLAYBOOK blocks");
     return null;
   }
+
+  recordSynthesisOutcome("ok");
 
   return {
     persona: personaMatch[1].trim(),

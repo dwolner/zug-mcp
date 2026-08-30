@@ -40,6 +40,7 @@ export function getPaths(userIdOverride?: string) {
     lessonsFile: path.join(zugDir, "lessons.jsonl"),
     growthFile: path.join(zugDir, "growth.jsonl"),
     openThreadFile: path.join(zugDir, "open-thread.json"),
+    synthesisStatusFile: path.join(zugDir, "synthesis-status.json"),
   };
 }
 
@@ -596,6 +597,70 @@ export function getStaleGrowthWarning(n = 3): string | null {
   const max = Math.max(...counts);
   if (max > min) return null;
   return `No new observations in the last ${snapshots.length} sessions. Call zug_save_observation when you notice patterns.`;
+}
+
+// --- Synthesis outcome (ISS-047) ---
+//
+// Synthesis is fire-and-forget: enqueueSynthesis() catches task errors so one failure cannot wedge
+// a user's chain. That made every failure invisible outside the server's stdout, and the outage it
+// hid ran for three months. The outcome is therefore persisted per-tenant so it survives the
+// process and can be surfaced to the user who is actually affected by it.
+
+export type SynthesisOutcome = "ok" | "timeout" | "truncated" | "malformed" | "no-api-key" | "error";
+
+export interface SynthesisStatus {
+  outcome: SynthesisOutcome;
+  timestamp: string;
+  detail?: string;
+}
+
+/** Record the result of the most recent synthesis. Best-effort: never throws into the caller. */
+export function recordSynthesisOutcome(outcome: SynthesisOutcome, detail?: string): void {
+  try {
+    ensureDirs();
+    const { synthesisStatusFile } = getPaths();
+    const status: SynthesisStatus = {
+      outcome,
+      timestamp: new Date().toISOString(),
+      ...(detail ? { detail } : {}),
+    };
+    fs.writeFileSync(synthesisStatusFile, JSON.stringify(status, null, 2), "utf-8");
+  } catch { /* best-effort: observability must never break the thing it observes */ }
+}
+
+export function readSynthesisStatus(): SynthesisStatus | null {
+  const { synthesisStatusFile } = getPaths();
+  if (!fs.existsSync(synthesisStatusFile)) return null;
+  try { return JSON.parse(fs.readFileSync(synthesisStatusFile, "utf-8")) as SynthesisStatus; }
+  catch { return null; }
+}
+
+/** Human-readable warning when the last synthesis did not succeed. Null when it did, or never ran. */
+export function getSynthesisWarning(): string | null {
+  const status = readSynthesisStatus();
+  if (!status || status.outcome === "ok") return null;
+  const detail = status.detail ? ` — ${status.detail}` : "";
+  return `Last synthesis failed (${status.outcome}) at ${status.timestamp}${detail}. PERSONA is not being updated.`;
+}
+
+/**
+ * Detect the ISS-045 signature from data growth.jsonl already records: observations accumulating
+ * while PERSONA never changes. getStaleGrowthWarning watches the INPUT (are observations arriving)
+ * and so stayed silent through the entire outage; this watches the OUTPUT.
+ */
+export function getFrozenPersonaWarning(n = 10): string | null {
+  const snapshots = getGrowthTrend(n); // newest first
+  if (snapshots.length < 2) return null;
+
+  const lines = snapshots.map((s) => s.personaLines);
+  if (new Set(lines).size > 1) return null; // persona is moving — nothing to report
+
+  const newest = snapshots[0].observationCount;
+  const oldest = snapshots[snapshots.length - 1].observationCount;
+  if (newest <= oldest) return null; // nothing accumulating either; that is the stale-input case
+
+  return `PERSONA has not changed across the last ${snapshots.length} sessions (${lines[0]} lines) ` +
+    `while observations grew ${oldest} → ${newest}. Synthesis is taking input without producing output.`;
 }
 
 // --- Sync storage helpers ---

@@ -1,3 +1,6 @@
+import fs from "fs";
+import path from "path";
+import os from "os";
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 
 const mockStream = vi.hoisted(() => vi.fn());
@@ -19,6 +22,7 @@ import {
   estimateReEmitTokens,
   type SynthesisInput,
 } from "./synthesize";
+import { readSynthesisStatus } from "./storage";
 
 const BASE_INPUT: SynthesisInput = {
   currentPersona: "# Persona\nSome existing content",
@@ -47,14 +51,21 @@ function mockStreamText(text: string, extra: Record<string, unknown> = {}): void
   });
 }
 
+let tmpDir: string;
+
 beforeEach(() => {
   mockStream.mockReset();
   mockCtor.mockReset();
   process.env.ANTHROPIC_API_KEY = "test-key";
+  // synthesize() records its outcome to disk (ISS-047); keep the suite off the real ~/.zug.
+  tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "zug-synth-test-"));
+  process.env.ZUG_DATA_DIR = tmpDir;
 });
 
 afterEach(() => {
   delete process.env.ANTHROPIC_API_KEY;
+  delete process.env.ZUG_DATA_DIR;
+  fs.rmSync(tmpDir, { recursive: true, force: true });
 });
 
 describe("synthesize", () => {
@@ -264,5 +275,61 @@ describe("synthesize", () => {
 
       expect(mockStream.mock.calls[0][0].model).toBe("claude-haiku-4-5-20251001");
     });
+  });
+});
+
+// ISS-047: every one of these paths used to end in a silent `return null`, distinguishable only
+// by a console line on a server nobody was watching.
+describe("outcome recording (ISS-047)", () => {
+  it("records ok on success", async () => {
+    mockStreamText(makeRaw("p", "pb", "a"));
+    await synthesize(BASE_INPUT);
+    expect(readSynthesisStatus()?.outcome).toBe("ok");
+  });
+
+  it("records truncated when the output budget is exhausted", async () => {
+    mockStreamText("\nran out mid-docum", { stop_reason: "max_tokens" });
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    await synthesize(BASE_INPUT);
+    expect(readSynthesisStatus()?.outcome).toBe("truncated");
+    vi.restoreAllMocks();
+  });
+
+  it("records malformed when the response parses badly", async () => {
+    mockStreamText("\nno closing tag", { stop_reason: "end_turn" });
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    await synthesize(BASE_INPUT);
+    expect(readSynthesisStatus()?.outcome).toBe("malformed");
+    vi.restoreAllMocks();
+  });
+
+  it("records no-api-key when the key is missing", async () => {
+    delete process.env.ANTHROPIC_API_KEY;
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    await synthesize(BASE_INPUT);
+    expect(readSynthesisStatus()?.outcome).toBe("no-api-key");
+    vi.restoreAllMocks();
+  });
+
+  // The actual ISS-045 failure. It must be recorded, and it must still propagate so the queue
+  // logs it too — swallowing it here would trade one blind spot for another.
+  it("records timeout and rethrows so the queue still sees the failure", async () => {
+    mockStream.mockReturnValue({
+      finalMessage: vi.fn().mockRejectedValue(new Error("Request timed out.")),
+    });
+
+    await expect(synthesize(BASE_INPUT)).rejects.toThrow("Request timed out.");
+    const status = readSynthesisStatus();
+    expect(status?.outcome).toBe("timeout");
+    expect(status?.detail).toContain("Request timed out.");
+  });
+
+  it("records error for a non-timeout failure", async () => {
+    mockStream.mockReturnValue({
+      finalMessage: vi.fn().mockRejectedValue(new Error("500 internal server error")),
+    });
+
+    await expect(synthesize(BASE_INPUT)).rejects.toThrow();
+    expect(readSynthesisStatus()?.outcome).toBe("error");
   });
 });
