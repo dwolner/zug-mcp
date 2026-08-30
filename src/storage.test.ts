@@ -31,6 +31,7 @@ import {
   getGrowthTrend,
   getLessonCandidates,
   getStaleGrowthWarning,
+  wordSimilarity,
   recordSynthesisOutcome,
   readSynthesisStatus,
   getSynthesisWarning,
@@ -1043,4 +1044,26 @@ describe("getFrozenPersonaWarning (ISS-047)", () => {
     expect(warning).toContain("68");
     expect(warning).toContain("130");
   });
+});
+
+// T-058: the dashboard ports this matcher so a threshold can be tuned visually before ISS-048
+// wires it to an automatic gate. Both implementations are pinned to one fixture, so a change to
+// either side fails here rather than silently invalidating the tuned value.
+describe("wordSimilarity — shared fixture with web/lib/zug-cluster.ts", () => {
+  const fixture = JSON.parse(
+    fs.readFileSync(path.join(__dirname, "..", "web", "lib", "__fixtures__", "similarity-pairs.json"), "utf-8"),
+  ) as Array<{ name: string; a: string; b: string; jaccard: number; sharedCount: number }>;
+
+  it("has a fixture with meaningful spread, not just trivial cases", () => {
+    expect(fixture.length).toBeGreaterThanOrEqual(8);
+    expect(new Set(fixture.map((p) => p.sharedCount)).size).toBeGreaterThan(2);
+  });
+
+  for (const pair of fixture) {
+    it(`${pair.name}`, () => {
+      const { jaccard, sharedCount } = wordSimilarity(pair.a, pair.b);
+      expect(jaccard).toBeCloseTo(pair.jaccard, 10);
+      expect(sharedCount).toBe(pair.sharedCount);
+    });
+  }
 });

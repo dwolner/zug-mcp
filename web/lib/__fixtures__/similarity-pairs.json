@@ -1,0 +1,72 @@
+[
+  {
+    "name": "identical text",
+    "a": "Thinks in systems and relationships between things",
+    "b": "Thinks in systems and relationships between things",
+    "jaccard": 1,
+    "sharedCount": 5
+  },
+  {
+    "name": "case and punctuation only",
+    "a": "Thinks in systems, and relationships!",
+    "b": "THINKS IN SYSTEMS AND RELATIONSHIPS",
+    "jaccard": 1,
+    "sharedCount": 3
+  },
+  {
+    "name": "near-duplicate rephrasing",
+    "a": "Frames problems by root cause before proposing a fix",
+    "b": "Frames problems by root cause first, before proposing any fix",
+    "jaccard": 0.7777777778,
+    "sharedCount": 7
+  },
+  {
+    "name": "same topic, different words",
+    "a": "Verifies behaviour by running end-to-end tests",
+    "b": "Tests the actual gate rather than reading code",
+    "jaccard": 0.0909090909,
+    "sharedCount": 1
+  },
+  {
+    "name": "stopword-heavy but unrelated",
+    "a": "The and for with that this from",
+    "b": "Has have not but all were was",
+    "jaccard": 0,
+    "sharedCount": 0
+  },
+  {
+    "name": "completely unrelated",
+    "a": "Prefers concise responses without preamble",
+    "b": "Runs live API research during build sessions",
+    "jaccard": 0,
+    "sharedCount": 0
+  },
+  {
+    "name": "short words filtered out",
+    "a": "a an it is on",
+    "b": "a an it is on",
+    "jaccard": 0,
+    "sharedCount": 0
+  },
+  {
+    "name": "one side empty",
+    "a": "",
+    "b": "Thinks in systems",
+    "jaccard": 0,
+    "sharedCount": 0
+  },
+  {
+    "name": "both empty",
+    "a": "",
+    "b": "",
+    "jaccard": 0,
+    "sharedCount": 0
+  },
+  {
+    "name": "partial overlap",
+    "a": "Expects tools to follow their own stated rules",
+    "b": "Expects tools to be autonomous without babysitting",
+    "jaccard": 0.2,
+    "sharedCount": 2
+  }
+]

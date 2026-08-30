@@ -369,8 +369,11 @@ export function normalizeText(text: string): string {
 
 const STOP_WORDS = new Set(["the", "and", "for", "with", "that", "this", "from", "are", "was", "were", "has", "have", "not", "but", "all"]);
 
-// Jaccard similarity over content words (>2 chars, not stop words)
-function wordSimilarity(a: string, b: string): { jaccard: number; sharedCount: number } {
+// Jaccard similarity over content words (>2 chars, not stop words).
+// Exported so web/lib/zug-cluster.ts (T-058) can be asserted against the SAME fixture as this
+// implementation. The dashboard's threshold slider only means anything if the matcher it tunes
+// against behaves identically to this one, which ISS-048 will gate on.
+export function wordSimilarity(a: string, b: string): { jaccard: number; sharedCount: number } {
   const words = (s: string) => new Set(normalizeText(s).split(" ").filter((w) => w.length > 2 && !STOP_WORDS.has(w)));
   const A = words(a);
   const B = words(b);
