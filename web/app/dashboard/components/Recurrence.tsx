@@ -8,28 +8,30 @@ import type { Observation } from '@/lib/zug-data';
 /**
  * The reason this is a client component: the threshold is the thing being decided.
  *
- * ISS-048 will wire this matcher to an automatic gate at session end. Its jaccard/sharedCount
- * values are currently tuned for nothing in particular, and picking them blind gives you either a
- * matcher that never fires or one that collapses the whole corpus into a single cluster. Dragging
- * the slider against the real corpus is how that number gets chosen with evidence.
+ * The gate now runs at session end on short canonical pattern keys. Its threshold was derived from
+ * hand-authored phrasings, not observed keys, because the feature has no production data yet — so
+ * it is provisional. Dragging these against the real corpus is how it gets re-derived once real
+ * keys accumulate. Precision at the chosen setting is ~86%, not 100%: expect roughly one merge in
+ * seven to be wrong, which is survivable only because a merge surfaces as a lesson CANDIDATE for
+ * review rather than becoming a lesson directly.
  *
  * Bars are sized by cluster count, so color here is SEQUENTIAL -- one hue, light to dark. Cluster
  * identity means nothing, so it gets no categorical hue.
  */
 export function Recurrence({ observations }: { observations: Observation[] }) {
-  const [jaccard, setJaccard] = useState(PRODUCTION_THRESHOLD.jaccard);
+  const [overlap, setOverlap] = useState(PRODUCTION_THRESHOLD.overlap);
   const [sharedCount, setSharedCount] = useState(PRODUCTION_THRESHOLD.sharedCount);
 
   const clusters = useMemo(
-    () => clusterTexts(observations, (o) => o.observation, { jaccard, sharedCount }),
-    [observations, jaccard, sharedCount],
+    () => clusterTexts(observations, (o) => o.observation, { overlap, sharedCount }),
+    [observations, overlap, sharedCount],
   );
 
   const recurring = clusters.filter((c) => c.members.length > 1);
   const promotable = clusters.filter((c) => c.members.length >= 3);
   const max = clusters[0]?.members.length ?? 1;
   const isProduction =
-    jaccard === PRODUCTION_THRESHOLD.jaccard && sharedCount === PRODUCTION_THRESHOLD.sharedCount;
+    overlap === PRODUCTION_THRESHOLD.overlap && sharedCount === PRODUCTION_THRESHOLD.sharedCount;
 
   return (
     <section>
@@ -42,10 +44,10 @@ export function Recurrence({ observations }: { observations: Observation[] }) {
       <div className="flex flex-wrap items-end gap-6 mb-4 text-xs">
         <label className="flex flex-col gap-1">
           <span className="text-ink/70">
-            jaccard <span className="font-mono">{jaccard.toFixed(2)}</span>
+            overlap <span className="font-mono">{overlap.toFixed(2)}</span>
           </span>
-          <input type="range" min={0.05} max={0.95} step={0.05} value={jaccard}
-                 onChange={(e) => setJaccard(Number(e.target.value))} className="w-56" />
+          <input type="range" min={0.05} max={1} step={0.05} value={overlap}
+                 onChange={(e) => setOverlap(Number(e.target.value))} className="w-56" />
         </label>
         <label className="flex flex-col gap-1">
           <span className="text-ink/70">
@@ -54,7 +56,7 @@ export function Recurrence({ observations }: { observations: Observation[] }) {
           <input type="range" min={1} max={6} step={1} value={sharedCount}
                  onChange={(e) => setSharedCount(Number(e.target.value))} className="w-40" />
         </label>
-        <button type="button" onClick={() => { setJaccard(PRODUCTION_THRESHOLD.jaccard); setSharedCount(PRODUCTION_THRESHOLD.sharedCount); }}
+        <button type="button" onClick={() => { setOverlap(PRODUCTION_THRESHOLD.overlap); setSharedCount(PRODUCTION_THRESHOLD.sharedCount); }}
                 className="border border-ink/25 rounded px-2 py-1 hover:bg-ink/5">
           reset to production
         </button>
@@ -77,7 +79,7 @@ export function Recurrence({ observations }: { observations: Observation[] }) {
             </>
           ) : (
             <>
-              No observation recurs at jaccard {jaccard.toFixed(2)} / {sharedCount} shared words.
+              No observation recurs at overlap {overlap.toFixed(2)} / {sharedCount} shared words.
               Loosen further, or reset to compare against the production values.
             </>
           )}

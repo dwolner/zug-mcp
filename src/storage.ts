@@ -394,6 +394,57 @@ export function wordSimilarity(a: string, b: string): { jaccard: number; sharedC
   return { jaccard: union > 0 ? shared.length / union : 0, sharedCount: shared.length };
 }
 
+/**
+ * Overlap (containment) coefficient: shared / smaller set. Same tokenizer as wordSimilarity, a
+ * different denominator.
+ *
+ * Jaccard divides by the UNION, which structurally caps unequal-length keys: "frames problems by
+ * root cause" against "starts from root cause before proposing fixes" shares 2 content words out
+ * of a 7-word union, so it can never exceed 0.29 no matter how right the match is. Agents do not
+ * write keys at a consistent length, so that penalty fires constantly. Dividing by the smaller set
+ * removes it.
+ *
+ * Chosen against 18 labelled positive and 200 negative pattern-key pairs, the negatives including
+ * ADVERSARIAL ones -- same structure, discriminating word swapped ("prefers concise responses" vs
+ * "prefers verbose responses"). Those matter: an earlier evaluation without them reported 100%
+ * precision at every threshold and led to a threshold that merged opposites. The repo's own test
+ * suite caught it.
+ *
+ * Like-for-like against the previous Jaccard 0.40 / 2 gate, at equal 67% recall:
+ *   jaccard 0.40 / 2 : precision 71%, 5 of 8 adversarial pairs wrongly merged
+ *   overlap 0.50 / 3 : precision 86%, 2 of 8 adversarial pairs wrongly merged
+ */
+export function overlapSimilarity(a: string, b: string): { overlap: number; sharedCount: number } {
+  const words = (s: string) =>
+    new Set(normalizeText(s).split(" ").filter((w) => w.length > 2 && !STOP_WORDS.has(w)));
+  const A = words(a);
+  const B = words(b);
+  const shared = [...A].filter((w) => B.has(w)).length;
+  const smaller = Math.min(A.size, B.size);
+  return { overlap: smaller > 0 ? shared / smaller : 0, sharedCount: shared };
+}
+
+/**
+ * The gate for treating two pattern keys as the same pattern.
+ *
+ * sharedCount is 3, not 2, and it is the half doing the work: across overlap 0.30-0.60 the ratio
+ * barely moves the numbers while raising sharedCount from 2 to 3 lifts precision 70% -> 86% and
+ * cuts wrong merges of adversarial pairs from 7 to 2. Requiring three shared content words is what
+ * rejects "prefers concise responses" / "prefers verbose responses", which share only two.
+ *
+ * PRECISION IS 86%, NOT 100%. Roughly one merge in seven is expected to be wrong, and the residual
+ * failures are semantic opposites that no bag-of-words metric can separate -- both keys carry the
+ * same words and differ by one. That is tolerable here only because a merge does not silently
+ * become a lesson: getLessonCandidates surfaces candidates for zug_create_lesson to promote, so a
+ * bad merge is visible at promotion rather than baked in. Do not reuse this gate anywhere that
+ * lacks that review step.
+ *
+ * CAVEAT: derived from hand-authored phrasings, not observed keys, because the pattern-key feature
+ * has no production data yet. Re-derive against real keys once a few dozen accumulate; the
+ * dashboard's Recurrence panel runs exactly this sweep interactively.
+ */
+export const MATCH_THRESHOLD = { overlap: 0.5, sharedCount: 3 } as const;
+
 function findBestMatch(patterns: ReinforcedPattern[], text: string): { idx: number; similarity: number } {
   const norm = normalizeText(text);
   let bestIdx = -1;
@@ -401,10 +452,9 @@ function findBestMatch(patterns: ReinforcedPattern[], text: string): { idx: numb
 
   for (let i = 0; i < patterns.length; i++) {
     if (normalizeText(patterns[i].text) === norm) return { idx: i, similarity: 1 };
-    const { jaccard, sharedCount } = wordSimilarity(patterns[i].text, text);
-    // Require both ratio threshold AND at least 2 shared content words
-    if (jaccard >= 0.4 && sharedCount >= 2 && jaccard > bestSim) {
-      bestSim = jaccard;
+    const { overlap, sharedCount } = overlapSimilarity(patterns[i].text, text);
+    if (overlap >= MATCH_THRESHOLD.overlap && sharedCount >= MATCH_THRESHOLD.sharedCount && overlap > bestSim) {
+      bestSim = overlap;
       bestIdx = i;
     }
   }
@@ -517,8 +567,8 @@ export function autoReinforceSession(session_id: string): AutoReinforceResult {
     // Fuzzy, not exact: two rephrasings of the same key within one session are one occurrence.
     const alreadyNamed = seenThisSession.some((prev) => {
       if (normalizeText(prev) === normalizeText(key)) return true;
-      const { jaccard, sharedCount } = wordSimilarity(prev, key);
-      return jaccard >= 0.4 && sharedCount >= 2;
+      const { overlap, sharedCount } = overlapSimilarity(prev, key);
+      return overlap >= MATCH_THRESHOLD.overlap && sharedCount >= MATCH_THRESHOLD.sharedCount;
     });
     if (alreadyNamed) continue;
 

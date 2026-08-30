@@ -4,6 +4,7 @@
     "a": "Thinks in systems and relationships between things",
     "b": "Thinks in systems and relationships between things",
     "jaccard": 1,
+    "overlap": 1,
     "sharedCount": 5
   },
   {
@@ -11,6 +12,7 @@
     "a": "Thinks in systems, and relationships!",
     "b": "THINKS IN SYSTEMS AND RELATIONSHIPS",
     "jaccard": 1,
+    "overlap": 1,
     "sharedCount": 3
   },
   {
@@ -18,6 +20,7 @@
     "a": "Frames problems by root cause before proposing a fix",
     "b": "Frames problems by root cause first, before proposing any fix",
     "jaccard": 0.7777777778,
+    "overlap": 1,
     "sharedCount": 7
   },
   {
@@ -25,6 +28,7 @@
     "a": "Verifies behaviour by running end-to-end tests",
     "b": "Tests the actual gate rather than reading code",
     "jaccard": 0.0909090909,
+    "overlap": 0.2,
     "sharedCount": 1
   },
   {
@@ -32,6 +36,7 @@
     "a": "The and for with that this from",
     "b": "Has have not but all were was",
     "jaccard": 0,
+    "overlap": 0,
     "sharedCount": 0
   },
   {
@@ -39,6 +44,7 @@
     "a": "Prefers concise responses without preamble",
     "b": "Runs live API research during build sessions",
     "jaccard": 0,
+    "overlap": 0,
     "sharedCount": 0
   },
   {
@@ -46,6 +52,7 @@
     "a": "a an it is on",
     "b": "a an it is on",
     "jaccard": 0,
+    "overlap": 0,
     "sharedCount": 0
   },
   {
@@ -53,6 +60,7 @@
     "a": "",
     "b": "Thinks in systems",
     "jaccard": 0,
+    "overlap": 0,
     "sharedCount": 0
   },
   {
@@ -60,6 +68,7 @@
     "a": "",
     "b": "",
     "jaccard": 0,
+    "overlap": 0,
     "sharedCount": 0
   },
   {
@@ -67,6 +76,7 @@
     "a": "Expects tools to follow their own stated rules",
     "b": "Expects tools to be autonomous without babysitting",
     "jaccard": 0.2,
+    "overlap": 0.4,
     "sharedCount": 2
   }
 ]

@@ -32,6 +32,8 @@ import {
   getLessonCandidates,
   getStaleGrowthWarning,
   wordSimilarity,
+  overlapSimilarity,
+  MATCH_THRESHOLD,
   autoReinforceSession,
   stampSessionContext,
   recordSynthesisOutcome,
@@ -1054,7 +1056,7 @@ describe("getFrozenPersonaWarning (ISS-047)", () => {
 describe("wordSimilarity — shared fixture with web/lib/zug-cluster.ts", () => {
   const fixture = JSON.parse(
     fs.readFileSync(path.join(__dirname, "..", "web", "lib", "__fixtures__", "similarity-pairs.json"), "utf-8"),
-  ) as Array<{ name: string; a: string; b: string; jaccard: number; sharedCount: number }>;
+  ) as Array<{ name: string; a: string; b: string; jaccard: number; overlap: number; sharedCount: number }>;
 
   it("has a fixture with meaningful spread, not just trivial cases", () => {
     expect(fixture.length).toBeGreaterThanOrEqual(8);
@@ -1066,6 +1068,10 @@ describe("wordSimilarity — shared fixture with web/lib/zug-cluster.ts", () => 
       const { jaccard, sharedCount } = wordSimilarity(pair.a, pair.b);
       expect(jaccard).toBeCloseTo(pair.jaccard, 10);
       expect(sharedCount).toBe(pair.sharedCount);
+
+      const overlap = overlapSimilarity(pair.a, pair.b);
+      expect(overlap.overlap).toBeCloseTo(pair.overlap, 10);
+      expect(overlap.sharedCount).toBe(pair.sharedCount);
     });
   }
 });
@@ -1231,5 +1237,63 @@ describe("stampSessionContext", () => {
 
   it("is a no-op for a session with no observations", () => {
     expect(stampSessionContext("nothing-here", "work")).toBe(0);
+  });
+});
+
+describe("overlapSimilarity", () => {
+  it("scores identical text 1", () => {
+    expect(overlapSimilarity("verifies claims", "verifies claims").overlap).toBe(1);
+  });
+
+  it("scores disjoint text 0", () => {
+    expect(overlapSimilarity("verifies claims", "prefers brevity").overlap).toBe(0);
+  });
+
+  it("returns 0 rather than NaN when a side has no content words", () => {
+    expect(overlapSimilarity("", "verifies claims").overlap).toBe(0);
+    expect(overlapSimilarity("a an it", "verifies claims").overlap).toBe(0);
+  });
+
+  // The reason for the metric change: Jaccard divides by the union, so a short key fully contained
+  // in a longer one is capped well below 1. Overlap divides by the smaller set.
+  it("scores full containment 1 where jaccard is penalised for length", () => {
+    const short = "root cause first";
+    const long = "starts from root cause first before proposing any fix";
+    expect(overlapSimilarity(short, long).overlap).toBe(1);
+    expect(wordSimilarity(short, long).jaccard).toBeLessThan(0.5);
+  });
+});
+
+describe("reinforcePattern matching gate", () => {
+  it("uses the exported threshold rather than inline constants", () => {
+    expect(MATCH_THRESHOLD).toEqual({ overlap: 0.5, sharedCount: 3 });
+  });
+
+  it("merges a rephrasing of the same pattern key", () => {
+    reinforcePattern("verifies claims against primary sources");
+    const result = reinforcePattern("verifies claims with primary sources");
+    expect(result.matched).toBe(true);
+    expect(result.pattern.count).toBe(2);
+  });
+
+  it("merges a key fully contained in a longer phrasing", () => {
+    reinforcePattern("prefers root cause over workaround");
+    const result = reinforcePattern("prefers root cause fixes over workarounds");
+    expect(result.matched).toBe(true);
+  });
+
+  // The adversarial case that the earlier sharedCount of 2 merged: same structure, one word apart,
+  // and semantically opposite. Three shared content words is what rejects it.
+  it("keeps opposites apart when they differ only in the discriminating word", () => {
+    reinforcePattern("prefers concise responses");
+    const result = reinforcePattern("prefers verbose responses");
+    expect(result.matched).toBe(false);
+    expect(getTopPatterns(10)).toHaveLength(2);
+  });
+
+  it("keeps two unrelated patterns apart", () => {
+    reinforcePattern("frames problems by root cause");
+    reinforcePattern("expects tools to run without babysitting");
+    expect(getTopPatterns(10)).toHaveLength(2);
   });
 });

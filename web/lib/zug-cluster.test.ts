@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { wordSimilarity, normalizeText, clusterTexts, PRODUCTION_THRESHOLD } from './zug-cluster';
+import {
+  wordSimilarity,
+  overlapSimilarity,
+  normalizeText,
+  clusterTexts,
+  PRODUCTION_THRESHOLD,
+} from './zug-cluster';
 import pairs from './__fixtures__/similarity-pairs.json';
 
 // The fixture holds values computed from the production matcher in src/storage.ts. src/storage.test.ts
@@ -11,6 +17,10 @@ describe('wordSimilarity — parity with the server matcher', () => {
       const { jaccard, sharedCount } = wordSimilarity(pair.a, pair.b);
       expect(jaccard).toBeCloseTo(pair.jaccard, 10);
       expect(sharedCount).toBe(pair.sharedCount);
+
+      const overlap = overlapSimilarity(pair.a, pair.b);
+      expect(overlap.overlap).toBeCloseTo(pair.overlap, 10);
+      expect(overlap.sharedCount).toBe(pair.sharedCount);
     });
   }
 });
@@ -62,7 +72,7 @@ describe('clusterTexts', () => {
       'Verifies behaviour by running end-to-end tests',
     ];
     const counts = [0.9, 0.7, 0.5, 0.3, 0.1].map(
-      (j) => clusterTexts(corpus, t, { jaccard: j, sharedCount: 1 }).length,
+      (o) => clusterTexts(corpus, t, { overlap: o, sharedCount: 1 }).length,
     );
     for (let i = 1; i < counts.length; i++) {
       expect(counts[i]).toBeLessThanOrEqual(counts[i - 1]);
@@ -70,6 +80,12 @@ describe('clusterTexts', () => {
   });
 
   it('exposes the production threshold as the baseline', () => {
-    expect(PRODUCTION_THRESHOLD).toEqual({ jaccard: 0.4, sharedCount: 2 });
+    expect(PRODUCTION_THRESHOLD).toEqual({ overlap: 0.5, sharedCount: 3 });
+  });
+
+  // Mirrors the server-side gate test: opposites sharing only two content words must not cluster.
+  it('keeps opposites apart when they differ only in the discriminating word', () => {
+    const clusters = clusterTexts(['prefers concise responses', 'prefers verbose responses'], (x) => x);
+    expect(clusters).toHaveLength(2);
   });
 });
