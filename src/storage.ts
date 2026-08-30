@@ -84,6 +84,18 @@ export interface Observation {
   session_id: string;
   confidence: "low" | "medium" | "high";
   context?: string;
+  /**
+   * Short canonical name for the underlying pattern, e.g. "verifies claims against primary
+   * sources" (ISS-048).
+   *
+   * Reinforcement matching runs on THIS, not on `observation`. Measured over the real 131-
+   * observation corpus, lexical Jaccard on full observation prose produced 131 clusters and zero
+   * recurrences at the production threshold -- long richly-worded paragraphs describing the same
+   * pattern share too few exact content words to ever match. The same threshold separates short
+   * canonical keys cleanly. Optional, because every observation written before this existed has
+   * none, and those are skipped rather than matched on prose.
+   */
+  pattern?: string;
 }
 
 function ensureDirs() {
@@ -436,6 +448,51 @@ export function getTopPatterns(limit: number): ReinforcedPattern[] {
   return loadPatterns(reinforcementsFile)
     .sort((a, b) => b.count - a.count)
     .slice(0, limit);
+}
+
+/**
+ * Reinforce every distinct pattern key named during a session (ISS-048).
+ *
+ * This is the forcing function. Reinforcement previously depended on the agent noticing "I have
+ * seen this before" and choosing to call zug_reinforce_observation -- it did so 3 times in 192
+ * sessions. Recurrence is now computed from what was already recorded.
+ *
+ * Deduped WITHIN the session: recurrence means across sessions, so one chatty session naming the
+ * same pattern three times must not promote it to a lesson candidate on its own.
+ */
+export interface AutoReinforceResult {
+  /** Distinct pattern keys found in this session. */
+  considered: number;
+  /** Observations carrying no usable pattern key -- skipped, never matched on their prose. */
+  skipped: number;
+  reinforced: number;
+  created: number;
+}
+
+export function autoReinforceSession(session_id: string): AutoReinforceResult {
+  const observations = getObservationsBySession(session_id);
+  const result: AutoReinforceResult = { considered: 0, skipped: 0, reinforced: 0, created: 0 };
+
+  const seenThisSession: string[] = [];
+  for (const o of observations) {
+    const key = o.pattern?.trim();
+    if (!key) { result.skipped++; continue; }
+
+    // Fuzzy, not exact: two rephrasings of the same key within one session are one occurrence.
+    const alreadyNamed = seenThisSession.some((prev) => {
+      if (normalizeText(prev) === normalizeText(key)) return true;
+      const { jaccard, sharedCount } = wordSimilarity(prev, key);
+      return jaccard >= 0.4 && sharedCount >= 2;
+    });
+    if (alreadyNamed) continue;
+
+    seenThisSession.push(key);
+    result.considered++;
+    const { matched } = reinforcePattern(key);
+    if (matched) result.reinforced++; else result.created++;
+  }
+
+  return result;
 }
 
 // --- Lesson system ---

@@ -32,6 +32,7 @@ import {
   getLessonCandidates,
   getStaleGrowthWarning,
   wordSimilarity,
+  autoReinforceSession,
   recordSynthesisOutcome,
   readSynthesisStatus,
   getSynthesisWarning,
@@ -1066,4 +1067,100 @@ describe("wordSimilarity — shared fixture with web/lib/zug-cluster.ts", () => 
       expect(sharedCount).toBe(pair.sharedCount);
     });
   }
+});
+
+// ISS-048: reinforcement never fired, and the T-058 sweep showed that auto-calling the existing
+// matcher on full observation prose would have changed nothing -- at the production threshold all
+// 131 real observations are mutually unique. The fix is to match on a SHORT canonical pattern key
+// the agent supplies, where the same threshold separates cleanly, and to run it automatically.
+describe("autoReinforceSession (ISS-048)", () => {
+  const obs = (over: Partial<Observation> & { session_id: string }) => {
+    appendObservation({
+      timestamp: new Date().toISOString(),
+      type: "cognitive_pattern",
+      observation: "some long prose observation about how they think",
+      confidence: "high",
+      ...over,
+    } as Observation);
+  };
+
+  it("does nothing for a session with no observations", () => {
+    expect(autoReinforceSession("empty")).toEqual({
+      considered: 0, skipped: 0, reinforced: 0, created: 0,
+    });
+  });
+
+  // The pre-ISS-048 corpus has no pattern keys at all. Those observations must be skipped, not
+  // reinforced on their prose -- reinforcing prose is exactly the thing that does not work.
+  it("skips observations that carry no pattern key", () => {
+    obs({ session_id: "s1" });
+    obs({ session_id: "s1" });
+    expect(autoReinforceSession("s1")).toEqual({
+      considered: 0, skipped: 2, reinforced: 0, created: 0,
+    });
+    expect(getTopPatterns(10)).toHaveLength(0);
+  });
+
+  it("creates a pattern the first time a key is seen", () => {
+    obs({ session_id: "s1", pattern: "verifies claims against primary sources" });
+    const result = autoReinforceSession("s1");
+    expect(result).toEqual({ considered: 1, skipped: 0, reinforced: 0, created: 1 });
+    expect(getTopPatterns(10)[0].count).toBe(1);
+  });
+
+  it("reinforces across sessions when a later session names the same pattern", () => {
+    obs({ session_id: "s1", pattern: "verifies claims against primary sources" });
+    autoReinforceSession("s1");
+    obs({ session_id: "s2", pattern: "verifies claims against primary sources" });
+    const result = autoReinforceSession("s2");
+    expect(result).toEqual({ considered: 1, skipped: 0, reinforced: 1, created: 0 });
+    expect(getTopPatterns(10)[0].count).toBe(2);
+  });
+
+  // The whole point of a canonical key: rephrasing must not fork a new pattern.
+  it("matches a rephrased key rather than forking a new pattern", () => {
+    obs({ session_id: "s1", pattern: "prefers root cause over workaround" });
+    autoReinforceSession("s1");
+    obs({ session_id: "s2", pattern: "prefers root-cause fixes over workarounds" });
+    autoReinforceSession("s2");
+    const patterns = getTopPatterns(10);
+    expect(patterns).toHaveLength(1);
+    expect(patterns[0].count).toBe(2);
+  });
+
+  it("keeps genuinely different patterns apart", () => {
+    obs({ session_id: "s1", pattern: "prefers concise responses" });
+    obs({ session_id: "s1", pattern: "verifies claims against primary sources" });
+    autoReinforceSession("s1");
+    expect(getTopPatterns(10)).toHaveLength(2);
+  });
+
+  // Recurrence means "across sessions". One chatty session naming the same pattern three times
+  // must not promote it to a lesson candidate on its own.
+  it("counts a pattern once per session even when named repeatedly within it", () => {
+    obs({ session_id: "s1", pattern: "verifies claims against primary sources" });
+    obs({ session_id: "s1", pattern: "verifies claims with primary sources" });
+    obs({ session_id: "s1", pattern: "verifies claims against primary sources" });
+    const result = autoReinforceSession("s1");
+    expect(result.considered).toBe(1);
+    expect(getTopPatterns(10)[0].count).toBe(1);
+  });
+
+  it("ignores a blank or whitespace-only pattern key", () => {
+    obs({ session_id: "s1", pattern: "   " });
+    expect(autoReinforceSession("s1")).toEqual({
+      considered: 0, skipped: 1, reinforced: 0, created: 0,
+    });
+  });
+
+  // The end-to-end claim of the issue: three sessions naming one pattern makes it promotable,
+  // where before nothing ever reached the threshold.
+  it("produces a lesson candidate after three sessions, which never happened before", () => {
+    for (const id of ["s1", "s2", "s3"]) {
+      obs({ session_id: id, pattern: "verifies claims against primary sources" });
+      autoReinforceSession(id);
+    }
+    expect(getTopPatterns(10)[0].count).toBe(3);
+    expect(getLessonCandidates(3)).toHaveLength(1);
+  });
 });

@@ -34,6 +34,7 @@ import {
   writeOpenThread,
   getLessonCandidates,
   getStaleGrowthWarning,
+  autoReinforceSession,
   getSynthesisWarning,
   getFrozenPersonaWarning,
   readSynthesisStatus,
@@ -211,6 +212,12 @@ export async function runEndSession(args: {
   writeOpenThread(null);
   archiveSessions();
 
+  // ISS-048: compute recurrence rather than waiting to be told about it. This ran 3 times in 192
+  // sessions when it depended on the agent remembering to call zug_reinforce_observation. Must
+  // happen before the growth snapshot and the lesson-candidate check below, so both see this
+  // session's reinforcements.
+  const reinforced = autoReinforceSession(session_id);
+
   if (mode !== "synced") {
     // Append observations immediately (synchronous, always succeeds)
     const meaningful = observations.filter((o) => o.confidence !== "low");
@@ -275,6 +282,13 @@ export async function runEndSession(args: {
   ].filter(Boolean);
   const structuredLabel = structuredParts.length ? ` (${structuredParts.join(", ")})` : "";
 
+  const reinforcementNote = reinforced.considered > 0
+    ? ` ${reinforced.considered} pattern${reinforced.considered > 1 ? "s" : ""} named` +
+      `${reinforced.reinforced > 0 ? `, ${reinforced.reinforced} recurring` : ""}.`
+    : reinforced.skipped > 0
+      ? ` No pattern keys given, so nothing could be reinforced — pass \`pattern\` to zug_save_observation to let recurrence be detected.`
+      : "";
+
   const candidates = getLessonCandidates(3);
   const candidatesBlock = candidates.length > 0
     ? `\n\nLesson candidates (reinforced 3+ times, not yet promoted):\n${candidates.map((p) => `  • "${p.text}" (${p.count}x)`).join("\n")}\nCall zug_create_lesson to promote any of these to named behavioral rules.`
@@ -293,7 +307,7 @@ export async function runEndSession(args: {
   return {
     content: [{
       type: "text" as const,
-      text: `Session saved${contextLabel}${structuredLabel}. ${observations.length} observations. Total: ${stats.sessions} sessions, ${stats.observations} observations. ${syncNote}${candidatesBlock}`,
+      text: `Session saved${contextLabel}${structuredLabel}. ${observations.length} observations.${reinforcementNote} Total: ${stats.sessions} sessions, ${stats.observations} observations. ${syncNote}${candidatesBlock}`,
     }],
   };
 }
@@ -371,8 +385,15 @@ export function createServer(): McpServer {
       sessionId: z.string().describe("Current session identifier"),
       confidence: z.enum(["low", "medium", "high"]).describe("How confident you are"),
       context: z.string().optional().describe('Session context tag, e.g. "work" or "personal"'),
+      pattern: z.string().optional().describe(
+        "Short canonical name for the underlying pattern — 3-8 words, present tense, no session " +
+        "specifics. E.g. \"verifies claims against primary sources\", \"prefers root cause over " +
+        "workaround\". Recurrence is matched on THIS, not on the observation text, so phrase it the " +
+        "same way you would for any other session showing the same pattern. Omit for one-off " +
+        "context that is not a recurring trait."
+      ),
     },
-    async ({ observation, type, sessionId, confidence, context }) => {
+    async ({ observation, type, sessionId, confidence, context, pattern }) => {
       appendObservation({
         timestamp: new Date().toISOString(),
         type: type as ObservationType,
@@ -380,9 +401,11 @@ export function createServer(): McpServer {
         session_id: sessionId,
         confidence,
         context,
+        pattern,
       });
       const contextLabel = context ? ` [${context}]` : "";
-      return { content: [{ type: "text" as const, text: `Saved: [${type}/${confidence}]${contextLabel} ${observation}` }] };
+      const patternLabel = pattern ? ` (pattern: ${pattern})` : "";
+      return { content: [{ type: "text" as const, text: `Saved: [${type}/${confidence}]${contextLabel} ${observation}${patternLabel}` }] };
     }
   );
 
