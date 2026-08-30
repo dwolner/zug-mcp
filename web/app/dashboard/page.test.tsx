@@ -24,16 +24,28 @@ afterEach(() => {
 
 describe('dashboard route gating', () => {
   // web/ deploys to Fly, where ~/.zug does not exist. This route must not be reachable there.
-  it('404s in production so it can never ship with the landing page', () => {
+  it('404s in production so it can never ship with the landing page', async () => {
     vi.stubEnv('NODE_ENV', 'production');
-    expect(() => DashboardPage()).toThrow('NEXT_NOT_FOUND');
+    await expect(DashboardPage({ searchParams: Promise.resolve({}) })).rejects.toThrow('NEXT_NOT_FOUND');
     expect(notFound).toHaveBeenCalled();
   });
 
-  it('renders outside production', () => {
+  it('renders outside production', async () => {
     vi.stubEnv('NODE_ENV', 'development');
-    expect(() => DashboardPage()).not.toThrow();
+    await expect(DashboardPage({ searchParams: Promise.resolve({}) })).resolves.toBeTruthy();
     expect(notFound).not.toHaveBeenCalled();
+  });
+
+  it('renders with a context filter applied', async () => {
+    vi.stubEnv('NODE_ENV', 'development');
+    await expect(
+      DashboardPage({ searchParams: Promise.resolve({ context: 'work' }) }),
+    ).resolves.toBeTruthy();
+  });
+
+  it('renders when searchParams is absent entirely', async () => {
+    vi.stubEnv('NODE_ENV', 'development');
+    await expect(DashboardPage({})).resolves.toBeTruthy();
   });
 
   it('is force-dynamic so a refresh re-reads the data directory', () => {
@@ -42,8 +54,8 @@ describe('dashboard route gating', () => {
 });
 
 describe('missing data directory', () => {
-  it('renders an empty state instead of throwing when there is no data', () => {
+  it('renders an empty state instead of throwing when there is no data', async () => {
     vi.stubEnv('NODE_ENV', 'development');
-    expect(() => DashboardPage()).not.toThrow();
+    await expect(DashboardPage({ searchParams: Promise.resolve({}) })).resolves.toBeTruthy();
   });
 });

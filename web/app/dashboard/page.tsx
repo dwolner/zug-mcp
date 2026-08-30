@@ -8,6 +8,7 @@ import {
   readSessionFilenames,
   readPersonaSections,
   readActivePatterns,
+  readSessionContexts,
   dataDir,
 } from '@/lib/zug-data';
 import {
@@ -15,12 +16,16 @@ import {
   sessionsPerDay,
   typeConfidenceBreakdown,
   pipelineHealth,
+  contextBuckets,
+  contextCoverage,
+  filterByContext,
 } from '@/lib/zug-metrics';
 import { PipelineHealth } from './components/PipelineHealth';
 import { Cadence } from './components/Cadence';
 import { Accumulating } from './components/Accumulating';
 import { Recurrence } from './components/Recurrence';
 import { PersonaBrowser } from './components/PersonaBrowser';
+import { ContextFilter } from './components/ContextFilter';
 
 // Re-read the data directory on every request, so a refresh reflects the session that just ended.
 export const dynamic = 'force-dynamic';
@@ -40,18 +45,28 @@ export const dynamic = 'force-dynamic';
  * LOCAL production build too, not only on Fly. That is intended -- this is a `pnpm dev` tool -- and
  * it is written down because otherwise it reads as a bug six months from now.
  */
-export default function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ context?: string }>;
+}) {
   if (process.env.NODE_ENV === 'production') notFound();
 
   const growth = readGrowth();
-  const observations = readObservations();
+  const allObservations = readObservations();
   const reinforcements = readReinforcements();
   const sessions = readSessionFilenames();
   const personaSections = readPersonaSections();
   const activePatterns = readActivePatterns();
+  const sessionContexts = readSessionContexts();
   const health = pipelineHealth(growth, reinforcements, readSynthesisStatus(), readLessonCount());
 
-  const empty = growth.length === 0 && observations.length === 0;
+  const activeContext = (await searchParams)?.context;
+  const buckets = contextBuckets(allObservations, sessionContexts);
+  const coverage = contextCoverage(allObservations, sessionContexts);
+  const observations = filterByContext(allObservations, sessionContexts, activeContext);
+
+  const empty = growth.length === 0 && allObservations.length === 0;
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">
@@ -70,7 +85,10 @@ export default function DashboardPage() {
         </p>
       ) : (
         <div className="space-y-12">
+          {/* Global, deliberately above the filter: these are not per-context. */}
           <PipelineHealth health={health} />
+
+          <ContextFilter buckets={buckets} coverage={coverage} active={activeContext} />
           <Cadence
             observationWeeks={observationsPerWeek(observations)}
             sessionDays={sessionsPerDay(sessions)}

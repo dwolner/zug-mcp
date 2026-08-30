@@ -35,6 +35,7 @@ import {
   getLessonCandidates,
   getStaleGrowthWarning,
   autoReinforceSession,
+  stampSessionContext,
   getSynthesisWarning,
   getFrozenPersonaWarning,
   readSynthesisStatus,
@@ -179,6 +180,11 @@ export async function runEndSession(args: {
   const { session_id, summary, context, decisions, blockers, next_steps } = args;
   const mode = getSyncMode();
 
+  // Inherit the session's context onto observations that lack one, BEFORE they are read, so the
+  // written session log and everything downstream sees it. The session knows work-vs-personal; the
+  // observations under it were not being told.
+  const contextStamped = stampSessionContext(session_id, context);
+
   const observations = getObservationsBySession(session_id);
   const persona = readPersona();
   const today = new Date().toISOString().slice(0, 10);
@@ -282,6 +288,10 @@ export async function runEndSession(args: {
   ].filter(Boolean);
   const structuredLabel = structuredParts.length ? ` (${structuredParts.join(", ")})` : "";
 
+  const contextNote = contextStamped > 0
+    ? ` Tagged ${contextStamped} observation${contextStamped > 1 ? "s" : ""} as ${context}.`
+    : "";
+
   const reinforcementNote = reinforced.considered > 0
     ? ` ${reinforced.considered} pattern${reinforced.considered > 1 ? "s" : ""} named` +
       `${reinforced.reinforced > 0 ? `, ${reinforced.reinforced} recurring` : ""}.`
@@ -307,7 +317,7 @@ export async function runEndSession(args: {
   return {
     content: [{
       type: "text" as const,
-      text: `Session saved${contextLabel}${structuredLabel}. ${observations.length} observations.${reinforcementNote} Total: ${stats.sessions} sessions, ${stats.observations} observations. ${syncNote}${candidatesBlock}`,
+      text: `Session saved${contextLabel}${structuredLabel}. ${observations.length} observations.${contextNote}${reinforcementNote} Total: ${stats.sessions} sessions, ${stats.observations} observations. ${syncNote}${candidatesBlock}`,
     }],
   };
 }

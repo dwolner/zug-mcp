@@ -160,3 +160,85 @@ export function pipelineHealth(
     canEverPromote: maxReinforcement >= 3,
   };
 }
+
+
+// --- Work / personal differentiation ---
+//
+// Measured on the real corpus: only 38 of 132 observations carry their own `context`, while 142 of
+// 260 session files do. Joining an observation to its session recovers some of the rest; the
+// remainder is genuinely unknown and is reported as such rather than dropped, because a split that
+// silently omits 64% of the data is worse than no split.
+
+export const UNKNOWN_CONTEXT = 'unknown';
+
+/** Explicit tag wins, then the session's context, then unknown. */
+export function resolveContext(
+  observation: Observation,
+  sessionContexts: Record<string, string>,
+): string {
+  const own = observation.context?.trim();
+  if (own) return own;
+  const inherited = sessionContexts[observation.session_id]?.trim();
+  if (inherited) return inherited;
+  return UNKNOWN_CONTEXT;
+}
+
+export interface ContextBucket {
+  context: string;
+  count: number;
+}
+
+/** Buckets are whatever contexts actually appear, so a new tag needs no code change. */
+export function contextBuckets(
+  observations: Observation[],
+  sessionContexts: Record<string, string>,
+): ContextBucket[] {
+  const counts = new Map<string, number>();
+  for (const o of observations) {
+    const c = resolveContext(o, sessionContexts);
+    counts.set(c, (counts.get(c) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([context, count]) => ({ context, count }))
+    // Known contexts by size, unknown always last -- it is a gap, not a category.
+    .sort((a, b) => {
+      if (a.context === UNKNOWN_CONTEXT) return 1;
+      if (b.context === UNKNOWN_CONTEXT) return -1;
+      return b.count - a.count;
+    });
+}
+
+export interface ContextCoverage {
+  total: number;
+  attributed: number;
+  unknown: number;
+  /** Percent of observations with a known context, rounded. 0 when there are none. */
+  percent: number;
+}
+
+export function contextCoverage(
+  observations: Observation[],
+  sessionContexts: Record<string, string>,
+): ContextCoverage {
+  const unknown = observations.filter(
+    (o) => resolveContext(o, sessionContexts) === UNKNOWN_CONTEXT,
+  ).length;
+  const total = observations.length;
+  const attributed = total - unknown;
+  return {
+    total,
+    attributed,
+    unknown,
+    percent: total === 0 ? 0 : Math.round((attributed / total) * 100),
+  };
+}
+
+/** Undefined context means "all" -- the unfiltered view, not an empty one. */
+export function filterByContext(
+  observations: Observation[],
+  sessionContexts: Record<string, string>,
+  context: string | undefined,
+): Observation[] {
+  if (!context) return observations;
+  return observations.filter((o) => resolveContext(o, sessionContexts) === context);
+}

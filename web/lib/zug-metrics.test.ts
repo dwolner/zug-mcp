@@ -7,8 +7,13 @@ import {
   consolidationGap,
   typeConfidenceBreakdown,
   pipelineHealth,
+  resolveContext,
+  contextBuckets,
+  contextCoverage,
+  filterByContext,
+  UNKNOWN_CONTEXT,
 } from './zug-metrics';
-import { parsePersonaSections } from './zug-data';
+import { parsePersonaSections, parseSessionHeader } from './zug-data';
 import type { GrowthSnapshot, Observation } from './zug-data';
 
 const obs = (timestamp: string, over: Partial<Observation> = {}): Observation => ({
@@ -271,5 +276,128 @@ describe('parsePersonaSections', () => {
     const b = parsePersonaSections(raw)[1].bullets[0];
     expect(b.text).toBe('Ideas that create emergent properties');
     expect(b.citation?.date).toBe('2026-03-23');
+  });
+});
+
+describe('parseSessionHeader', () => {
+  // The id comes from the header, not the filename: real filenames carry a doubled date prefix,
+  // e.g. 2026-08-30-2026-08-29-usbank-account-switch.md
+  it('reads the id from the # Session line, not the filename', () => {
+    const head = ['# Session 2026-08-29-usbank-account-switch', 'Date: 2026-08-30T04:59:28.423Z', 'Context: work'].join('\n');
+    expect(parseSessionHeader(head)).toEqual({
+      id: '2026-08-29-usbank-account-switch',
+      context: 'work',
+    });
+  });
+
+  it('returns a null context for a session file that has no Context line', () => {
+    expect(parseSessionHeader('# Session s1\nDate: x')).toEqual({ id: 's1', context: null });
+  });
+
+  it('returns null when there is no session header at all', () => {
+    expect(parseSessionHeader('just some text')).toBeNull();
+  });
+});
+
+describe('resolveContext', () => {
+  const sessions = { s1: 'work', s2: 'personal' };
+
+  it("prefers the observation's own tag over its session's", () => {
+    expect(resolveContext(obs('2026-01-01T00:00:00.000Z', { session_id: 's1', context: 'personal' }), sessions))
+      .toBe('personal');
+  });
+
+  it("inherits the session's context when the observation has none", () => {
+    expect(resolveContext(obs('2026-01-01T00:00:00.000Z', { session_id: 's1' }), sessions)).toBe('work');
+  });
+
+  it('falls back to unknown when neither carries one', () => {
+    expect(resolveContext(obs('2026-01-01T00:00:00.000Z', { session_id: 'gone' }), sessions))
+      .toBe(UNKNOWN_CONTEXT);
+  });
+
+  it('treats a whitespace-only tag as absent', () => {
+    expect(resolveContext(obs('2026-01-01T00:00:00.000Z', { session_id: 's1', context: '  ' }), sessions))
+      .toBe('work');
+  });
+});
+
+describe('contextBuckets', () => {
+  const sessions = { s1: 'work' };
+
+  it('counts by resolved context, largest known first', () => {
+    const result = contextBuckets(
+      [
+        obs('2026-01-01T00:00:00.000Z', { session_id: 's1' }),
+        obs('2026-01-01T00:00:00.000Z', { session_id: 's1' }),
+        obs('2026-01-01T00:00:00.000Z', { session_id: 'x', context: 'personal' }),
+      ],
+      sessions,
+    );
+    expect(result).toEqual([
+      { context: 'work', count: 2 },
+      { context: 'personal', count: 1 },
+    ]);
+  });
+
+  // unknown is a gap, not a category -- it must never outrank a real context by being bigger.
+  it('always sorts unknown last even when it is the largest bucket', () => {
+    const result = contextBuckets(
+      [
+        obs('2026-01-01T00:00:00.000Z', { session_id: 'gone' }),
+        obs('2026-01-01T00:00:00.000Z', { session_id: 'gone' }),
+        obs('2026-01-01T00:00:00.000Z', { session_id: 'gone' }),
+        obs('2026-01-01T00:00:00.000Z', { session_id: 's1' }),
+      ],
+      sessions,
+    );
+    expect(result.map((b) => b.context)).toEqual(['work', UNKNOWN_CONTEXT]);
+  });
+
+  it('surfaces any context that appears, not a hardcoded work/personal pair', () => {
+    const result = contextBuckets([obs('2026-01-01T00:00:00.000Z', { context: 'zug' })], {});
+    expect(result).toEqual([{ context: 'zug', count: 1 }]);
+  });
+});
+
+describe('contextCoverage', () => {
+  it('reports zero coverage for an empty corpus without dividing by zero', () => {
+    expect(contextCoverage([], {})).toEqual({ total: 0, attributed: 0, unknown: 0, percent: 0 });
+  });
+
+  // The shape of the real corpus, which is the reason this exists at all.
+  it('reports the attributed share so a partial split cannot read as complete', () => {
+    const observations = [
+      ...Array.from({ length: 3 }, () => obs('2026-01-01T00:00:00.000Z', { context: 'work' })),
+      ...Array.from({ length: 7 }, () => obs('2026-01-01T00:00:00.000Z', { session_id: 'gone' })),
+    ];
+    expect(contextCoverage(observations, {})).toEqual({
+      total: 10, attributed: 3, unknown: 7, percent: 30,
+    });
+  });
+});
+
+describe('filterByContext', () => {
+  const sessions = { s1: 'work' };
+  const corpus = [
+    obs('2026-01-01T00:00:00.000Z', { session_id: 's1' }),
+    obs('2026-01-01T00:00:00.000Z', { session_id: 'x', context: 'personal' }),
+    obs('2026-01-01T00:00:00.000Z', { session_id: 'gone' }),
+  ];
+
+  it('returns everything when no context is selected', () => {
+    expect(filterByContext(corpus, sessions, undefined)).toHaveLength(3);
+  });
+
+  it('filters on the resolved context, so inherited tags are included', () => {
+    expect(filterByContext(corpus, sessions, 'work')).toHaveLength(1);
+  });
+
+  it('can select the unknown bucket, so the gap is inspectable rather than hidden', () => {
+    expect(filterByContext(corpus, sessions, UNKNOWN_CONTEXT)).toHaveLength(1);
+  });
+
+  it('returns nothing for a context that does not appear', () => {
+    expect(filterByContext(corpus, sessions, 'nope')).toEqual([]);
   });
 });

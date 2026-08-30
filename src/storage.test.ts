@@ -33,6 +33,7 @@ import {
   getStaleGrowthWarning,
   wordSimilarity,
   autoReinforceSession,
+  stampSessionContext,
   recordSynthesisOutcome,
   readSynthesisStatus,
   getSynthesisWarning,
@@ -1162,5 +1163,73 @@ describe("autoReinforceSession (ISS-048)", () => {
     }
     expect(getTopPatterns(10)[0].count).toBe(3);
     expect(getLessonCandidates(3)).toHaveLength(1);
+  });
+});
+
+// Context differentiation: 142 of 260 session files carry a "Context: work|personal" line, but only
+// 38 of 132 observations do. The session knows; the observations under it never inherited it. Same
+// shape as the ISS-048 gate -- the information exists one level up and was being discarded.
+describe("stampSessionContext", () => {
+  const obs = (over: Partial<Observation> & { session_id: string }) => {
+    appendObservation({
+      timestamp: new Date().toISOString(),
+      type: "cognitive_pattern",
+      observation: "prose",
+      confidence: "high",
+      ...over,
+    } as Observation);
+  };
+
+  it("returns 0 and changes nothing when no context is given", () => {
+    obs({ session_id: "s1" });
+    expect(stampSessionContext("s1", undefined)).toBe(0);
+    expect(getObservationsBySession("s1")[0].context).toBeUndefined();
+  });
+
+  it("returns 0 for a blank context rather than stamping an empty string", () => {
+    obs({ session_id: "s1" });
+    expect(stampSessionContext("s1", "   ")).toBe(0);
+    expect(getObservationsBySession("s1")[0].context).toBeUndefined();
+  });
+
+  it("fills the context on observations that lack one", () => {
+    obs({ session_id: "s1" });
+    obs({ session_id: "s1" });
+    expect(stampSessionContext("s1", "work")).toBe(2);
+    expect(getObservationsBySession("s1").map((o) => o.context)).toEqual(["work", "work"]);
+  });
+
+  // An explicitly-tagged observation is a deliberate act; the session default must not clobber it.
+  it("never overwrites a context the observation already carries", () => {
+    obs({ session_id: "s1", context: "personal" });
+    obs({ session_id: "s1" });
+    expect(stampSessionContext("s1", "work")).toBe(1);
+    expect(getObservationsBySession("s1").map((o) => o.context).sort()).toEqual(["personal", "work"]);
+  });
+
+  it("leaves other sessions untouched", () => {
+    obs({ session_id: "s1" });
+    obs({ session_id: "s2" });
+    stampSessionContext("s1", "work");
+    expect(getObservationsBySession("s2")[0].context).toBeUndefined();
+  });
+
+  // This rewrites an append-only log. A line it cannot parse must survive verbatim rather than be
+  // silently dropped, which is what a parse-map-rewrite would do.
+  it("preserves unparseable lines instead of dropping them", () => {
+    obs({ session_id: "s1" });
+    const observationsFile = path.join(tmpDir, "observations.jsonl");
+    fs.appendFileSync(observationsFile, "{ this is not json\n", "utf-8");
+    obs({ session_id: "s1" });
+
+    stampSessionContext("s1", "work");
+
+    const raw = fs.readFileSync(observationsFile, "utf-8");
+    expect(raw).toContain("{ this is not json");
+    expect(getObservationsBySession("s1")).toHaveLength(2);
+  });
+
+  it("is a no-op for a session with no observations", () => {
+    expect(stampSessionContext("nothing-here", "work")).toBe(0);
   });
 });

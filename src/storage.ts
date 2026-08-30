@@ -451,6 +451,42 @@ export function getTopPatterns(limit: number): ReinforcedPattern[] {
 }
 
 /**
+ * Fill in `context` on this session's observations from the session's own context.
+ *
+ * The session-end call knows whether the session was work or personal; the observations written
+ * during it usually do not, because zug_save_observation's `context` is optional and rarely passed.
+ * Measured on the real corpus: 142 of 260 session files carry a Context line, but only 38 of 132
+ * observations do. The information existed one level up and was being thrown away.
+ *
+ * Only fills where absent -- an explicitly tagged observation is a deliberate act and is never
+ * overwritten. Returns the number stamped.
+ */
+export function stampSessionContext(session_id: string, context: string | undefined): number {
+  const trimmed = context?.trim();
+  if (!trimmed) return 0;
+
+  ensureDirs();
+  const { observationsFile } = getPaths();
+  if (!fs.existsSync(observationsFile)) return 0;
+
+  let stamped = 0;
+  // Rewrites an append-only log, so a line that will not parse is passed through verbatim rather
+  // than dropped -- a parse/map/serialize round trip would silently discard it.
+  const lines = fs.readFileSync(observationsFile, "utf-8").split("\n");
+  const out = lines.map((line) => {
+    if (!line.trim()) return line;
+    let parsed: Observation;
+    try { parsed = JSON.parse(line) as Observation; } catch { return line; }
+    if (parsed.session_id !== session_id || parsed.context) return line;
+    stamped++;
+    return JSON.stringify({ ...parsed, context: trimmed });
+  });
+
+  if (stamped > 0) fs.writeFileSync(observationsFile, out.join("\n"), "utf-8");
+  return stamped;
+}
+
+/**
  * Reinforce every distinct pattern key named during a session (ISS-048).
  *
  * This is the forcing function. Reinforcement previously depended on the agent noticing "I have

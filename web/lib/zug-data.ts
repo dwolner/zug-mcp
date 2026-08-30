@@ -116,6 +116,59 @@ export function readSynthesisStatus(): SynthesisStatus | null {
   }
 }
 
+/**
+ * session_id -> context, from the headers of every session file, LIVE AND ARCHIVED.
+ *
+ * The archive matters: sessions older than 90 days are moved to sessions/archive/, and observations
+ * reach further back than the live directory does. Ignoring it would throw away context for exactly
+ * the oldest observations, which are the ones least likely to carry their own tag.
+ *
+ * Only the file head is read -- the context is in the first few lines and there are ~260 files.
+ */
+export function readSessionContexts(): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const dir of ['sessions', 'sessions/archive']) {
+    let names: string[];
+    try {
+      names = fs.readdirSync(path.join(dataDir(), dir)).filter((f) => f.endsWith('.md'));
+    } catch {
+      continue;
+    }
+    for (const name of names) {
+      const parsed = parseSessionHeader(readHead(path.join(dataDir(), dir, name)));
+      if (parsed?.context) out[parsed.id] = parsed.context;
+    }
+  }
+  return out;
+}
+
+function readHead(file: string, bytes = 512): string {
+  try {
+    const fd = fs.openSync(file, 'r');
+    try {
+      const buf = Buffer.alloc(bytes);
+      const read = fs.readSync(fd, buf, 0, bytes, 0);
+      return buf.subarray(0, read).toString('utf-8');
+    } finally {
+      fs.closeSync(fd);
+    }
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Pull the session id and context out of a session file header. Exported for testing on plain
+ * strings. The id comes from the `# Session <id>` line rather than the filename, because filenames
+ * carry a doubled date prefix (`2026-08-30-2026-08-29-usbank-account-switch.md`).
+ */
+export function parseSessionHeader(head: string): { id: string; context: string | null } | null {
+  const id = head.match(/^# Session (.+)$/m);
+  if (!id) return null;
+  const context = head.match(/^Context: (.+)$/m);
+  return { id: id[1].trim(), context: context ? context[1].trim() : null };
+}
+
 /** Names only. We need dates, not 193 file bodies. */
 export function readSessionFilenames(): string[] {
   try {
