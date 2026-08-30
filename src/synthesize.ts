@@ -3,6 +3,17 @@ import { loadApiKey, HAIKU_MODEL } from "./api-key.js";
 
 const PERSONA_LINE_LIMIT = 600;
 
+/**
+ * Wall-clock budget for one synthesis call (ISS-045).
+ *
+ * Synthesis re-emits PERSONA + PLAYBOOK + ACTIVE verbatim, so its output scales with the corpus,
+ * not with the size of the change. Measured against a 118-line PERSONA: 3,790 output tokens at
+ * ~72 tok/s = 52.9s. The previous 30s budget could therefore never be met, and every call on the
+ * Fly server timed out silently for three months. This is deliberately ~5x the measured worst case
+ * so ordinary corpus growth does not reintroduce the failure.
+ */
+export const SYNTHESIS_TIMEOUT_MS = 300_000;
+
 export interface SynthesisInput {
   currentPersona: string;
   currentPlaybook: string;
@@ -32,7 +43,7 @@ export async function synthesize(input: SynthesisInput): Promise<SynthesisResult
     return null;
   }
 
-  const client = new Anthropic({ apiKey, timeout: 30_000, maxRetries: 2 });
+  const client = new Anthropic({ apiKey, timeout: SYNTHESIS_TIMEOUT_MS, maxRetries: 2 });
 
   const personaLineCount = input.currentPersona.split("\n").length;
   const trimInstruction = personaLineCount > PERSONA_LINE_LIMIT
@@ -107,7 +118,9 @@ Format each as a direct behavioral instruction to Zug: "when X → do Y" or "don
 (active patterns, one per line)
 </ACTIVE>`;
 
-  const response = await client.messages.create({
+  // Streamed rather than a single blocking create: a ~53s generation held open as one
+  // non-streaming request is what ISS-045 was. finalMessage() resolves to the assembled Message.
+  const response = await client.messages.stream({
     model: HAIKU_MODEL,
     max_tokens: 4096,
     system: "You output only the requested XML blocks. No preamble, no questions, no commentary. If nothing changes, return the existing content verbatim inside the XML tags.",
@@ -115,7 +128,7 @@ Format each as a direct behavioral instruction to Zug: "when X → do Y" or "don
       { role: "user", content: prompt },
       { role: "assistant", content: "<PERSONA>" },
     ],
-  });
+  }).finalMessage();
 
   // Prepend the prefilled assistant turn so regex can match the full XML
   const raw = response.content

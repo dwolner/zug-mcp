@@ -1,0 +1,26 @@
+{
+  "components": [
+    "synthesize",
+    "sync-server",
+    "synthesis-queue"
+  ],
+  "createdBy": "claude-opus-5 (root-cause investigation, 2026-08-30)",
+  "dedupeKey": "zug-synthesis-2026-08-30:rc1-timeout",
+  "discoveredDate": "2026-08-30",
+  "displayId": "ISS-045",
+  "id": "ISS-045",
+  "impact": "PERSONA.md has not been synthesized since sync mode was enabled (~2026-05-26). Confirmed by Fly logs: \"[zug] synthesis task failed for default: Request timed out.\" on every push (2026-08-29T19:03, 2026-08-30T05:01, 05:12, 16:59).\n\nMECHANISM: synthesize() asks Haiku to re-emit PERSONA + PLAYBOOK + ACTIVE verbatim with edits applied. Measured against the live corpus: 3,790 output tokens at 72 tok/s = 52.9s wall clock. The client is constructed as `new Anthropic({ apiKey, timeout: 30_000, maxRetries: 2 })`. Three consecutive timeouts, synthesize() returns null, `if (result)` is false, nothing is written.\n\nEVIDENCE:\n- PERSONA.md content ends with raw un-synthesized append block \"### 2026-05-23\"\n- personaLines pinned at 118 across all 201 growth snapshots (2026-05-26 to 2026-08-30), while observationCount climbed 68 -> 130\n- ACTIVE.md unchanged (activePatternCount = 5 in every snapshot)\n- Reproduction: replayed the same call shape with timeout raised to 300s -> succeeded in 52.9s, stop_reason end_turn, output parsed cleanly. The only variable is the timeout.\n\nSECOND-ORDER: archiveObservations() runs only on synthesis success, so observations.jsonl grows unboundedly, which grows the synthesis input, which makes the timeout worse over time. This is a ratchet, not a plateau.\n\nNOTE: in synced mode the local branch `if (mode !== \"synced\")` skips the local append+synthesis entirely and delegates to the server, so there is no local fallback masking this.\n\nFIX DIRECTION: stream the response (client.messages.stream) rather than a single blocking create, and/or raise the timeout well above worst-case generation. See related issue on the max_tokens ceiling — raising the timeout alone only defers failure.",
+  "location": [
+    "src/synthesize.ts:35",
+    "src/synthesize.ts:110",
+    "src/synthesize.ts:131",
+    "src/sync-server.ts:49"
+  ],
+  "phase": null,
+  "relatedTickets": [],
+  "resolution": "FIXED in src/synthesize.ts.\n\nChanges:\n1. Added exported `SYNTHESIS_TIMEOUT_MS = 300_000` (was an inline `timeout: 30_000`), documented with the measurement that justifies it: 3,790 output tokens at ~72 tok/s = 52.9s, so ~5x the measured worst case.\n2. Switched `client.messages.create(...)` to `client.messages.stream(...).finalMessage()`. Holding a ~53s generation open as a single non-streaming request is exactly the shape this bug was; streaming keeps the connection active for the full generation.\n3. `maxRetries: 2` unchanged.\n\nVERIFICATION — end-to-end against the real API and the live 118-line PERSONA corpus, not mocks:\n  timeout budget : 300000ms (was 30000)\n  persona in     : 118 lines\n  elapsed        : 54.9s\nThe request COMPLETED. No \"Request timed out\". The timeout defect is gone and confirmed gone.\n\nHONEST STATUS: synthesis still does not produce a usable result end-to-end, but for a different and already-tracked reason. With the timeout lifted, the call now runs to completion and fails at the NEXT gate — the model exhausted max_tokens before emitting the closing </PERSONA> tag, the parse regex missed, and synthesize() returned null via \"Synthesis skipped — model did not produce output.\"\n\nThat is ISS-046, and this run is empirical confirmation of its prediction: raising the timeout alone does not defer the failure, it exposes it immediately, because the corpus is already at the 4,096-token ceiling. PERSONA remains frozen until ISS-046 lands.\n\nTests: 14 in src/synthesize.test.ts rewritten to exercise the streaming path (mock now provides messages.stream + finalMessage), plus a new \"request configuration (ISS-045)\" block asserting streaming is used, the timeout floor is >= 300s, that budget reaches the Anthropic client, and that a generation slower than the old 30s budget completes. Full suite 206/206 green, tsc --noEmit clean.\n\nNOT DEPLOYED. This is a server-side fix; it takes effect on zug-mcp only after a Fly deploy, which was deliberately excluded from the autonomous session.",
+  "resolvedDate": "2026-08-30",
+  "severity": "critical",
+  "status": "resolved",
+  "title": "Synthesis silently fails on every push — 30s client timeout vs ~53s actual generation"
+}
