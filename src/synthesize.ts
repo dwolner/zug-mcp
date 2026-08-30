@@ -1,7 +1,41 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { loadApiKey, HAIKU_MODEL } from "./api-key.js";
 
-const PERSONA_LINE_LIMIT = 600;
+/**
+ * Haiku output throughput measured during the ISS-045 investigation: 3,790 tokens in 52.9s.
+ * Kept as a named constant so the timeout and output budgets below stay derivable from evidence
+ * rather than from independent guesses.
+ */
+export const OBSERVED_OUTPUT_TOKENS_PER_SEC = 72;
+
+/**
+ * Output budget for one synthesis call (ISS-046).
+ *
+ * Synthesis re-emits PERSONA + PLAYBOOK + ACTIVE verbatim, so required output tracks corpus size.
+ * The live corpus needed ~4,006 tokens against a 4,096 ceiling -- 90 tokens of headroom -- so the
+ * first session that added a few lines truncated mid-document and synthesis returned null.
+ * This is ~4x the measured corpus, and the invariant that it stays generatable inside
+ * SYNTHESIS_TIMEOUT_MS is asserted in the tests rather than left to be rediscovered.
+ */
+export const MAX_OUTPUT_TOKENS = 16_384;
+
+/**
+ * Fraction of the output budget the corpus may occupy before the model is told to summarize.
+ * The trim instruction has to fire while the documents can STILL be re-emitted -- an instruction
+ * to shorten them is useless once emitting them at all no longer fits.
+ */
+const TRIM_TRIGGER_RATIO = 0.6;
+
+/** Rough allowance for the ACTIVE block, which is generated rather than passed in. */
+const ACTIVE_BLOCK_ALLOWANCE_TOKENS = 300;
+
+/**
+ * Estimate the output tokens needed to re-emit the documents verbatim (~4 bytes/token).
+ * Deliberately crude: it only has to be right enough to trip the guardrail before the ceiling.
+ */
+export function estimateReEmitTokens(persona: string, playbook: string): number {
+  return Math.ceil((persona.length + playbook.length) / 4) + ACTIVE_BLOCK_ALLOWANCE_TOKENS;
+}
 
 /**
  * Wall-clock budget for one synthesis call (ISS-045).
@@ -45,9 +79,9 @@ export async function synthesize(input: SynthesisInput): Promise<SynthesisResult
 
   const client = new Anthropic({ apiKey, timeout: SYNTHESIS_TIMEOUT_MS, maxRetries: 2 });
 
-  const personaLineCount = input.currentPersona.split("\n").length;
-  const trimInstruction = personaLineCount > PERSONA_LINE_LIMIT
-    ? `\n\nIMPORTANT: The persona is ${personaLineCount} lines (limit: ${PERSONA_LINE_LIMIT}). Summarize the oldest dated sections to reduce length while preserving key insights. Newer observations take priority.`
+  const reEmitTokens = estimateReEmitTokens(input.currentPersona, input.currentPlaybook);
+  const trimInstruction = reEmitTokens > MAX_OUTPUT_TOKENS * TRIM_TRIGGER_RATIO
+    ? `\n\nIMPORTANT: These documents need roughly ${reEmitTokens} tokens to reproduce, against a ${MAX_OUTPUT_TOKENS} token output budget. Summarize the oldest dated sections to reduce length while preserving key insights. Newer observations take priority.`
     : "";
 
   const obsBlock = input.observations.length > 0
@@ -122,7 +156,7 @@ Format each as a direct behavioral instruction to Zug: "when X → do Y" or "don
   // non-streaming request is what ISS-045 was. finalMessage() resolves to the assembled Message.
   const response = await client.messages.stream({
     model: HAIKU_MODEL,
-    max_tokens: 4096,
+    max_tokens: MAX_OUTPUT_TOKENS,
     system: "You output only the requested XML blocks. No preamble, no questions, no commentary. If nothing changes, return the existing content verbatim inside the XML tags.",
     messages: [
       { role: "user", content: prompt },
@@ -136,6 +170,18 @@ Format each as a direct behavioral instruction to Zug: "when X → do Y" or "don
     .map((b) => b.text)
     .join("");
   const text = "<PERSONA>" + raw;
+
+  // Truncation and a malformed response both used to land on the same silent `return null`,
+  // which is why ISS-046 was invisible until it was reproduced by hand. stop_reason tells them
+  // apart, so say which one happened.
+  if (response.stop_reason === "max_tokens") {
+    console.warn(
+      `[zug] Synthesis truncated — output hit the ${MAX_OUTPUT_TOKENS}-token budget before ` +
+      `closing </PERSONA>. The corpus needs ~${reEmitTokens} tokens to reproduce; raise ` +
+      `MAX_OUTPUT_TOKENS or shorten PERSONA.md.`
+    );
+    return null;
+  }
 
   const personaMatch = text.match(/<PERSONA>\n?([\s\S]*?)\n?<\/PERSONA>/);
   const playbookMatch = text.match(/<PLAYBOOK>\n?([\s\S]*?)\n?<\/PLAYBOOK>/);

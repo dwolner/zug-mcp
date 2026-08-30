@@ -11,7 +11,14 @@ vi.mock("@anthropic-ai/sdk", () => ({
   }),
 }));
 
-import { synthesize, SYNTHESIS_TIMEOUT_MS, type SynthesisInput } from "./synthesize";
+import {
+  synthesize,
+  SYNTHESIS_TIMEOUT_MS,
+  MAX_OUTPUT_TOKENS,
+  OBSERVED_OUTPUT_TOKENS_PER_SEC,
+  estimateReEmitTokens,
+  type SynthesisInput,
+} from "./synthesize";
 
 const BASE_INPUT: SynthesisInput = {
   currentPersona: "# Persona\nSome existing content",
@@ -150,6 +157,75 @@ describe("synthesize", () => {
     });
   });
 
+  // ISS-046: max_tokens was 4096 against a corpus needing ~4,006 tokens to re-emit -- 90 tokens
+  // of headroom. Meanwhile PERSONA_LINE_LIMIT=600 gated the trim instruction, so the guardrail
+  // could not fire until roughly 5x past the point where the ceiling already broke synthesis.
+  describe("output budget (ISS-046)", () => {
+    beforeEach(() => {
+      mockStreamText(makeRaw("p", "pb", "a"));
+    });
+
+    it("requests an output budget with real headroom over the measured corpus", async () => {
+      await synthesize(BASE_INPUT);
+
+      // A verbatim re-emit of the live corpus measured 3,790 tokens. 4096 was not headroom.
+      expect(mockStream.mock.calls[0][0].max_tokens).toBe(MAX_OUTPUT_TOKENS);
+      expect(MAX_OUTPUT_TOKENS).toBeGreaterThanOrEqual(3_790 * 3);
+    });
+
+    // The invariant that ISS-046 was really about: two independently-chosen constants that
+    // silently described an impossible request. Worst-case generation must fit the timeout.
+    it("keeps the output budget generatable within the timeout budget", () => {
+      const worstCaseMs = (MAX_OUTPUT_TOKENS / OBSERVED_OUTPUT_TOKENS_PER_SEC) * 1000;
+      expect(worstCaseMs).toBeLessThan(SYNTHESIS_TIMEOUT_MS);
+    });
+
+    it("triggers the trim instruction before the corpus can reach the ceiling", async () => {
+      // Sized from the budget rather than a magic line count, so this stays true if either moves.
+      const oversized = "x".repeat(MAX_OUTPUT_TOKENS * 4);
+      expect(estimateReEmitTokens(oversized, "")).toBeGreaterThan(MAX_OUTPUT_TOKENS);
+
+      await synthesize({ ...BASE_INPUT, currentPersona: oversized });
+
+      const prompt = mockStream.mock.calls[0][0].messages[0].content as string;
+      expect(prompt).toContain("IMPORTANT:");
+      expect(prompt).toContain("Summarize the oldest dated sections");
+    });
+
+    it("trims while the corpus still fits, not after it has already overflowed", async () => {
+      // At the trigger point the documents must still be re-emittable, or the instruction to
+      // shorten them cannot itself be carried out.
+      const oversized = "x".repeat(MAX_OUTPUT_TOKENS * 4);
+      await synthesize({ ...BASE_INPUT, currentPersona: oversized });
+
+      const prompt = mockStream.mock.calls[0][0].messages[0].content as string;
+      const triggerLine = prompt.split("\n").find((l) => l.startsWith("IMPORTANT:")) ?? "";
+      expect(triggerLine).toMatch(/\d+ tokens/);
+    });
+
+    it("reports truncation distinctly from a malformed response", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      mockStreamText("\nPersona that runs out of budget mid-docum", { stop_reason: "max_tokens" });
+
+      const result = await synthesize(BASE_INPUT);
+
+      expect(result).toBeNull();
+      expect(warn.mock.calls.flat().join(" ")).toContain("truncated");
+      warn.mockRestore();
+    });
+
+    it("still reports a genuinely malformed response as malformed, not truncated", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      mockStreamText("\nNo closing tag at all", { stop_reason: "end_turn" });
+
+      const result = await synthesize(BASE_INPUT);
+
+      expect(result).toBeNull();
+      expect(warn.mock.calls.flat().join(" ")).not.toContain("truncated");
+      warn.mockRestore();
+    });
+  });
+
   describe("prompt construction", () => {
     beforeEach(() => {
       mockStreamText(makeRaw("p", "pb", "a"));
@@ -176,22 +252,11 @@ describe("synthesize", () => {
       expect(prompt).toContain("- [preference/medium] Prefers concise");
     });
 
-    it("includes trim instruction when persona exceeds 600 lines", async () => {
-      const longPersona = Array(601).fill("line").join("\n");
-
-      await synthesize({ ...BASE_INPUT, currentPersona: longPersona });
+    it("omits the trim instruction while the corpus fits comfortably in the budget", async () => {
+      await synthesize(BASE_INPUT);
 
       const prompt = mockStream.mock.calls[0][0].messages[0].content as string;
-      expect(prompt).toContain("IMPORTANT: The persona is 601 lines");
-    });
-
-    it("omits trim instruction when persona is within the 600-line limit", async () => {
-      const shortPersona = Array(600).fill("line").join("\n");
-
-      await synthesize({ ...BASE_INPUT, currentPersona: shortPersona });
-
-      const prompt = mockStream.mock.calls[0][0].messages[0].content as string;
-      expect(prompt).not.toContain("IMPORTANT: The persona is");
+      expect(prompt).not.toContain("IMPORTANT:");
     });
 
     it("uses haiku model", async () => {
