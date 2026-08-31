@@ -3,7 +3,7 @@ import {
   getAllSessionFiles, readPersona, readPlaybook, readActive,
   addObservations, addGrowth, addSessionFile, writeReinforcements,
   writeLessons, getTopPatterns, writePersonaAtomic, writePlaybookAtomic, writeActiveAtomic,
-  getSynthesisHighWater, advanceSynthesisHighWater,
+  getSynthesisHighWater, advanceSynthesisHighWater, readSynthesisStatus,
 } from "./storage.js";
 import { mergeReinforcements, mergeLessons } from "./merge-core.js";
 import { synthesize } from "./synthesize.js";
@@ -102,6 +102,7 @@ export function handleSyncPull(sinceISO: string): PullResponse {
     persona: readPersona(),
     playbook: readPlaybook(),
     active: readActive(),
+    synthesisStatus: readSynthesisStatus(),
     highWater: new Date().toISOString(),
   };
 }

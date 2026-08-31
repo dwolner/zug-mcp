@@ -44,6 +44,14 @@ export interface SynthesisStatus {
   outcome: 'ok' | 'timeout' | 'truncated' | 'malformed' | 'no-api-key' | 'error';
   timestamp: string;
   detail?: string;
+  /**
+   * Timestamp of the newest observation actually absorbed into PERSONA (ISS-050). Optional: a server
+   * older than that fix, or one that has never synthesized successfully, does not send it.
+   *
+   * Mirrors SynthesisStatus in src/storage.ts. `outcome` alone cannot tell you the pipeline is
+   * healthy -- it reports only the last batch, not how much never got offered.
+   */
+  lastSynthesizedAt?: string;
 }
 
 /** A citation lifted from a PERSONA bullet. `date` is optional -- not every citation carries one. */

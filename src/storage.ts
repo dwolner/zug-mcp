@@ -822,6 +822,21 @@ export function advanceSynthesisHighWater(iso: string): void {
   } catch { /* best-effort: observability must never break the thing it observes */ }
 }
 
+/**
+ * Overwrite the whole status object (ISS-049). Used by sync's pull to land the canonical server's
+ * status on a synced client's disk. Last-writer-wins is correct and no merge is needed: for a synced
+ * user the server is the only thing that synthesizes, so a local copy is never authoritative.
+ *
+ * Distinct from recordSynthesisOutcome, which composes a NEW status and preserves the local cursor —
+ * exactly the wrong semantics here, where the server's cursor is the one that matters.
+ */
+export function writeSynthesisStatus(status: SynthesisStatus): void {
+  try {
+    ensureDirs();
+    fs.writeFileSync(getPaths().synthesisStatusFile, JSON.stringify(status, null, 2), "utf-8");
+  } catch { /* best-effort: observability must never break the thing it observes */ }
+}
+
 export function readSynthesisStatus(): SynthesisStatus | null {
   const { synthesisStatusFile } = getPaths();
   if (!fs.existsSync(synthesisStatusFile)) return null;

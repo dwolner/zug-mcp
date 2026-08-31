@@ -132,8 +132,45 @@ export function typeConfidenceBreakdown(observations: Observation[]): TypeBreakd
   return [...types.values()].sort((a, b) => b.total - a.total);
 }
 
+export interface SynthesisBacklog {
+  /** Meaningful observations that have arrived but are not yet absorbed into PERSONA. */
+  pending: number;
+  /** Oldest pending observation, or null when nothing is pending or the cursor is unavailable. */
+  oldestPendingAt: string | null;
+  /** False when the server sent no cursor, so backlog is genuinely unknown rather than zero. */
+  known: boolean;
+}
+
+/**
+ * How far synthesis has fallen behind (ISS-050).
+ *
+ * This is the signal that was missing for three months. `outcome: ok` reports only that the LAST
+ * batch synthesized -- it says nothing about how much never got offered, so the status file read
+ * healthy the entire time 66 observations sat unabsorbed. Comparing observations against the
+ * synthesis cursor is what actually distinguishes "keeping up" from "silently dropping".
+ *
+ * Low-confidence observations are excluded to match the server's own gate; counting them would leave
+ * a floor the number could never fall below.
+ */
+export function synthesisBacklog(
+  observations: Observation[],
+  synthesis: SynthesisStatus | null,
+): SynthesisBacklog {
+  const cursor = synthesis?.lastSynthesizedAt;
+  const since = cursor ? Date.parse(cursor) : NaN;
+  // No cursor: either a server predating ISS-050 or one that has never succeeded. Reporting the
+  // whole corpus as pending would cry wolf on every such client, and reporting zero would claim a
+  // health we cannot verify — so say we do not know and let the outcome tile carry the signal.
+  if (Number.isNaN(since)) return { pending: 0, oldestPendingAt: null, known: false };
+  const pending = observations
+    .filter((o) => o.confidence !== 'low' && Date.parse(o.timestamp) > since)
+    .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
+  return { pending: pending.length, oldestPendingAt: pending[0]?.timestamp ?? null, known: true };
+}
+
 export interface PipelineHealth {
   synthesis: SynthesisStatus | null;
+  backlog: SynthesisBacklog;
   gap: ConsolidationGap | null;
   lessons: number;
   reinforcementCount: number;
@@ -148,10 +185,12 @@ export function pipelineHealth(
   reinforcements: ReinforcedPattern[],
   synthesis: SynthesisStatus | null,
   lessons: number,
+  observations: Observation[] = [],
 ): PipelineHealth {
   const maxReinforcement = reinforcements.reduce((m, r) => Math.max(m, r.count), 0);
   return {
     synthesis,
+    backlog: synthesisBacklog(observations, synthesis),
     gap: consolidationGap(growth),
     lessons,
     reinforcementCount: reinforcements.length,

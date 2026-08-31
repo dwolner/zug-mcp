@@ -59,7 +59,13 @@ export default async function DashboardPage({
   const personaSections = readPersonaSections();
   const activePatterns = readActivePatterns();
   const sessionContexts = readSessionContexts();
-  const health = pipelineHealth(growth, reinforcements, readSynthesisStatus(), readLessonCount());
+  const health = pipelineHealth(
+    growth,
+    reinforcements,
+    readSynthesisStatus(),
+    readLessonCount(),
+    allObservations,
+  );
 
   const activeContext = (await searchParams)?.context;
   const buckets = contextBuckets(allObservations, sessionContexts);

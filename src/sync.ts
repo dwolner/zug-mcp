@@ -1,7 +1,7 @@
 import {
   addObservations, addGrowth, addSessionFile, getAllReinforcements, writeReinforcements,
   readLessons, writeLessons, writePersonaAtomic, writePlaybookAtomic, writeActiveAtomic,
-  getObservationsForSync, getGrowthSince, getAllSessionFiles,
+  getObservationsForSync, getGrowthSince, getAllSessionFiles, writeSynthesisStatus,
 } from "./storage.js";
 import { mergeReinforcements, mergeLessons } from "./merge-core.js";
 import { resolveSyncConfig, readSyncState, writeSyncState, getSourceId } from "./sync-state.js";
@@ -64,6 +64,8 @@ export async function pull(opts: { timeoutMs?: number } = {}): Promise<SyncResul
     if (data.persona) writePersonaAtomic(data.persona);
     if (data.playbook) writePlaybookAtomic(data.playbook);
     if (data.active) writeActiveAtomic(data.active);
+    // Projected down, not merged (ISS-049). Guarded because an older server does not send the field.
+    if (data.synthesisStatus) writeSynthesisStatus(data.synthesisStatus);
 
     const pullSince = advanceCursor(state.pullSince, [...data.observations, ...data.growth]);
     writeSyncState({ ...state, pullSince, lastSyncedAt: new Date().toISOString(), status: "ok", lastError: undefined });

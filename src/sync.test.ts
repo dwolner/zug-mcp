@@ -3,7 +3,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { pull, push, sync } from "./sync.js";
-import { getAllObservations, readPersona, readLessons, appendObservation, writeSession } from "./storage.js";
+import { getAllObservations, readPersona, readLessons, appendObservation, writeSession, readSynthesisStatus } from "./storage.js";
 import { readSyncState } from "./sync-state.js";
 import type { PullResponse, PushResult } from "./sync-types.js";
 
@@ -18,7 +18,8 @@ afterEach(() => { fs.rmSync(dir, { recursive: true, force: true }); vi.restoreAl
 
 const pullResponse = (over: Partial<PullResponse>): PullResponse => ({
   sourceId: "server", observations: [], sessions: [], growth: [], reinforcements: [], lessons: [],
-  persona: "", playbook: "", active: "", highWater: "2026-05-28T00:00:00.000Z", ...over,
+  persona: "", playbook: "", active: "", synthesisStatus: null,
+  highWater: "2026-05-28T00:00:00.000Z", ...over,
 });
 
 describe("pull", () => {
@@ -35,6 +36,27 @@ describe("pull", () => {
     expect(getAllObservations().map((o) => o.observation)).toContain("from-server");
     expect(readPersona()).toBe("SERVER-PERSONA");
     expect(readLessons().map((l) => l.id)).toContain("L-z-1");
+  });
+
+  it("writes the server's synthesis status to local disk (ISS-049)", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(pullResponse({
+      synthesisStatus: { outcome: "timeout", timestamp: "2026-08-31T16:44:04.983Z", detail: "Request timed out.", lastSynthesizedAt: "2026-08-31T16:35:30.593Z" },
+    })), { status: 200 })));
+    await pull();
+    const local = readSynthesisStatus();
+    expect(local?.outcome).toBe("timeout");
+    expect(local?.lastSynthesizedAt).toBe("2026-08-31T16:35:30.593Z");
+  });
+
+  it("tolerates an older server that omits synthesisStatus entirely (ISS-049)", async () => {
+    // Clients update independently of the server, so the field must be optional on the wire even
+    // though the current server always sends it.
+    const legacy = pullResponse({}) as Partial<PullResponse>;
+    delete legacy.synthesisStatus;
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(legacy), { status: 200 })));
+    const result = await pull();
+    expect(result.status).toBe("ok");
+    expect(readSynthesisStatus()).toBeNull();
   });
 
   it("does NOT advance the cursor past entries on an empty pull, even if highWater leads (ISS-043)", async () => {

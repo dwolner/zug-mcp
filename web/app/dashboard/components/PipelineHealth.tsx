@@ -39,14 +39,42 @@ function daysSince(iso: string): number {
   return Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 86_400_000));
 }
 
+/**
+ * Pending observations are normal briefly — anything recorded after the last push waits for the next
+ * one. A backlog that has aged past a day means pushes are no longer draining it, which is the
+ * ISS-050 failure. Age, not count, is what separates the two, so a large-but-fresh batch (a long
+ * session) does not raise an alarm and a single stuck observation does.
+ */
+const BACKLOG_STALE_DAYS = 1;
+
 export function PipelineHealth({ health }: { health: Health }) {
-  const { synthesis, gap, lessons, reinforcementCount, maxReinforcement, canEverPromote } = health;
+  const { synthesis, backlog, gap, lessons, reinforcementCount, maxReinforcement, canEverPromote } =
+    health;
+
+  const backlogStale =
+    backlog.oldestPendingAt !== null && daysSince(backlog.oldestPendingAt) >= BACKLOG_STALE_DAYS;
+
+  const okTile = backlogStale
+    ? {
+        // `ok` while a backlog ages is precisely how ISS-050 stayed invisible: the outcome describes
+        // the last batch, not the observations that were never offered. Surface it as a warning.
+        value: `${backlog.pending} pending`,
+        detail: `Last succeeded ${synthesis?.timestamp.slice(0, 10)}, but the oldest unabsorbed observation is ${daysSince(backlog.oldestPendingAt!)}d old.`,
+        status: 'warning' as const,
+      }
+    : {
+        value: 'ok',
+        detail: backlog.known
+          ? `Last succeeded ${synthesis?.timestamp.slice(0, 10)}. ${backlog.pending === 0 ? 'Nothing pending.' : `${backlog.pending} pending, awaiting next push.`}`
+          : `Last succeeded ${synthesis?.timestamp.slice(0, 10)}. Backlog unknown — server sends no cursor.`,
+        status: 'good' as const,
+      };
 
   const synthesisTile =
     synthesis === null
       ? { value: 'never run', detail: 'No synthesis outcome has been recorded yet.', status: 'neutral' as const }
       : synthesis.outcome === 'ok'
-        ? { value: 'ok', detail: `Last succeeded ${synthesis.timestamp.slice(0, 10)}.`, status: 'good' as const }
+        ? okTile
         : {
             value: synthesis.outcome,
             detail: `${synthesis.detail ?? 'Failed'} — last attempt ${synthesis.timestamp.slice(0, 10)}.`,

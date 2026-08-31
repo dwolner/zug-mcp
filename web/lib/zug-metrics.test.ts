@@ -7,6 +7,7 @@ import {
   consolidationGap,
   typeConfidenceBreakdown,
   pipelineHealth,
+  synthesisBacklog,
   resolveContext,
   contextBuckets,
   contextCoverage,
@@ -14,7 +15,7 @@ import {
   UNKNOWN_CONTEXT,
 } from './zug-metrics';
 import { parsePersonaSections, parseSessionHeader } from './zug-data';
-import type { GrowthSnapshot, Observation } from './zug-data';
+import type { GrowthSnapshot, Observation, SynthesisStatus } from './zug-data';
 
 const obs = (timestamp: string, over: Partial<Observation> = {}): Observation => ({
   timestamp,
@@ -206,6 +207,65 @@ describe('pipelineHealth', () => {
   it('reports promotion as possible once a pattern reaches the threshold', () => {
     const health = pipelineHealth([], [{ text: 'a', count: 3, lastSeen: 'x' }], null, 0);
     expect(health.canEverPromote).toBe(true);
+  });
+});
+
+describe('synthesisBacklog (ISS-050 detector)', () => {
+  const ok = (lastSynthesizedAt?: string): SynthesisStatus => ({
+    outcome: 'ok',
+    timestamp: '2026-08-31T16:44:04.983Z',
+    ...(lastSynthesizedAt ? { lastSynthesizedAt } : {}),
+  });
+
+  it('counts observations newer than the cursor and reports the oldest', () => {
+    const result = synthesisBacklog(
+      [obs('2026-05-01T00:00:00.000Z'), obs('2026-06-01T00:00:00.000Z'), obs('2026-07-01T00:00:00.000Z')],
+      ok('2026-05-15T00:00:00.000Z'),
+    );
+    expect(result.pending).toBe(2);
+    expect(result.oldestPendingAt).toBe('2026-06-01T00:00:00.000Z');
+    expect(result.known).toBe(true);
+  });
+
+  it('reports nothing pending when the cursor is caught up', () => {
+    const result = synthesisBacklog([obs('2026-05-01T00:00:00.000Z')], ok('2026-05-15T00:00:00.000Z'));
+    expect(result.pending).toBe(0);
+    expect(result.oldestPendingAt).toBeNull();
+  });
+
+  it('excludes low-confidence observations, matching the server gate', () => {
+    const result = synthesisBacklog(
+      [obs('2026-06-01T00:00:00.000Z', { confidence: 'low' }), obs('2026-06-02T00:00:00.000Z')],
+      ok('2026-05-15T00:00:00.000Z'),
+    );
+    expect(result.pending).toBe(1);
+    expect(result.oldestPendingAt).toBe('2026-06-02T00:00:00.000Z');
+  });
+
+  it('reports backlog as UNKNOWN, not zero, when the server sends no cursor', () => {
+    // An older server, or one that never succeeded. Claiming zero would assert a health we cannot
+    // verify; claiming the whole corpus would cry wolf on every legacy client.
+    const result = synthesisBacklog([obs('2026-06-01T00:00:00.000Z')], ok());
+    expect(result.known).toBe(false);
+    expect(result.pending).toBe(0);
+  });
+
+  it('reports unknown when there is no status at all', () => {
+    expect(synthesisBacklog([obs('2026-06-01T00:00:00.000Z')], null).known).toBe(false);
+  });
+
+  it('reproduces the real ISS-050 shape: outcome ok while observations sit unabsorbed', () => {
+    // The exact condition that read healthy for three months — a successful last batch, and a pile
+    // of older observations that were never offered to synthesis at all.
+    const stranded = [
+      obs('2026-05-28T00:00:00.000Z'),
+      obs('2026-06-24T00:00:00.000Z'),
+      obs('2026-08-03T00:00:00.000Z'),
+    ];
+    const health = pipelineHealth([], [], ok('2026-05-15T00:00:00.000Z'), 0, stranded);
+    expect(health.synthesis?.outcome).toBe('ok');
+    expect(health.backlog.pending).toBe(3);
+    expect(health.backlog.oldestPendingAt).toBe('2026-05-28T00:00:00.000Z');
   });
 });
 
