@@ -25,6 +25,7 @@
     "dist/synthesize.js",
     "dist/synthesis-queue.js",
     "dist/tenancy.js",
+    "dist/version-check.js",
     "LICENSE",
     "README.md"
   ],

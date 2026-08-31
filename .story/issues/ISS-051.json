@@ -1,0 +1,24 @@
+{
+  "components": [
+    "web",
+    "zug-metrics"
+  ],
+  "createdBy": "claude-opus-5",
+  "dedupeKey": "frozen-persona-tile-false-positive-2026-08-31",
+  "discoveredDate": "2026-08-31",
+  "id": "ISS-051",
+  "impact": "Found by rendering the dashboard while verifying ISS-049, not by reading code. Related: ISS-047 (which built this tile), ISS-049, ISS-050.\n\nThe Persona tile read \"0d frozen\" with status CRITICAL at the exact moment PERSONA was demonstrably moving — it had gone 118 -> 134 -> 207 lines within the preceding hour as the ISS-050 backlog recovery ran.\n\nMECHANISM: consolidationGap walks back from the newest growth snapshot while personaLines is unchanged, and returns a gap for any trailing run of length >= 2. The two most recent local snapshots were 2026-08-31T16:28:03 (131 lines) and 2026-08-31T16:44:14 (131 lines) — sixteen minutes apart. Two snapshots that happen to agree is the normal case, not a stall. PipelineHealth.tsx then hardcodes status=\"critical\" for any non-null gap, with no reference to how old the freeze is or how much accumulated during it, so the tile rendered \"0d frozen ... 2 sessions while 2 observations arrived\" as a critical alarm.\n\nWHY IT MATTERS: this tile is the alarm ISS-047 built specifically to catch a SUSTAINED freeze — 118 lines unchanged for three months while 66 observations piled up. An alarm that also fires on a 16-minute window with 2 observations is one you learn to ignore, which defeats the purpose. The failure mode is the same class the ISS-050 work just closed: an indicator that reads the same whether the pipeline is healthy or broken.\n\nFIX DIRECTION: severity should scale with the evidence the gap already carries rather than being constant. `observationsAccumulated` and the age of `frozenSince` are both already computed; a freeze is only interesting once meaningful input has arrived during it and it has persisted. Suggest neutral/good below a threshold, warning above it, critical only for a genuinely sustained freeze — mirroring the age-based rather than count-based judgement used for BACKLOG_STALE_DAYS in the synthesis tile (ISS-049), so the two tiles reason consistently.\n\nSEPARATE OBSERVATION, probably not a defect: growth.jsonl reports personaLines=131 while the actual PERSONA.md is 207 lines. Growth snapshots are written by the locally installed zug-mcp (still v1.2.0) at session end and lag the synced file. Worth confirming the dashboard should read persona size from the file rather than from snapshots, but it does not cause this bug.",
+  "location": [
+    "web/lib/zug-metrics.ts (consolidationGap)",
+    "web/app/dashboard/components/PipelineHealth.tsx"
+  ],
+  "phase": null,
+  "relatedTickets": [
+    "T-058"
+  ],
+  "resolution": null,
+  "resolvedDate": null,
+  "severity": "medium",
+  "status": "open",
+  "title": "Frozen-persona tile cries wolf: two snapshots minutes apart report \"0d frozen\" as critical"
+}
