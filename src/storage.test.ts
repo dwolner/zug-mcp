@@ -1037,6 +1037,21 @@ describe("getFrozenPersonaWarning (ISS-047)", () => {
     expect(getFrozenPersonaWarning()).toBeNull();
   });
 
+  // Regression: the first version compared newest-vs-oldest observationCount and went silent on
+  // the real corpus, where sync interleaves snapshots from sources with different totals
+  // (116,136,130,128,127,116,...). Non-monotonicity is documented elsewhere in this file as the
+  // reason not to trust these counters' ordering -- the detector must not assume it either.
+  it("warns when the count is non-monotonic across the window, as multi-device sync makes it", () => {
+    appendGrowthSnapshot(makeSnapshot({ timestamp: "2026-01-01T00:00:00.000Z", personaLines: 118, observationCount: 116 }));
+    appendGrowthSnapshot(makeSnapshot({ timestamp: "2026-01-02T00:00:00.000Z", personaLines: 118, observationCount: 136 }));
+    appendGrowthSnapshot(makeSnapshot({ timestamp: "2026-01-03T00:00:00.000Z", personaLines: 118, observationCount: 116 }));
+
+    const warning = getFrozenPersonaWarning();
+    expect(warning).not.toBeNull();
+    expect(warning).toContain("116");
+    expect(warning).toContain("136");
+  });
+
   it("warns when observations accumulate but the persona never changes", () => {
     appendGrowthSnapshot(makeSnapshot({ timestamp: "2026-01-01T00:00:00.000Z", personaLines: 118, observationCount: 68 }));
     appendGrowthSnapshot(makeSnapshot({ timestamp: "2026-01-02T00:00:00.000Z", personaLines: 118, observationCount: 99 }));

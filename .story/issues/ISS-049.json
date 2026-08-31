@@ -1,0 +1,28 @@
+{
+  "components": [
+    "sync-server",
+    "sync",
+    "sync-types",
+    "web"
+  ],
+  "createdBy": "claude-opus-5 (post-deploy verification, 2026-08-31)",
+  "dedupeKey": "zug-deploy-2026-08-31:synthesis-status-not-synced",
+  "discoveredDate": "2026-08-31",
+  "id": "ISS-049",
+  "impact": "Found while verifying the 2026-08-31 deploy. ISS-047 added a durable per-tenant synthesis-status.json so a failure survives the process and can be surfaced. It is written server-side, but handleSyncPull does NOT include it in the pull payload — it returns observations, sessions, growth, reinforcements, lessons, persona, playbook and active, and nothing else.\n\nCONSEQUENCE: for a synced user (ZUG_URL set, which is the paid/canonical path), ~/.zug/synthesis-status.json never appears. The T-058 dashboard reads that local file, so its \"LAST SYNTHESIS\" tile reads \"never run\" permanently, no matter what the server actually did. Confirmed on the live machine after deploy: the file is absent locally while the server has been running the new code.\n\nThe MCP zug_status tool is unaffected — it executes server-side and reads the server's copy — so the gap is specific to anything reading the local data directory. That is exactly the dashboard, and it will get worse as more views depend on locally-synced state.\n\nNote the asymmetry this creates: the one surface built to make synthesis failure visible is the surface that cannot see it.\n\nFIX DIRECTION: add `synthesisStatus` to PullResponse in sync-types.ts, return it from handleSyncPull, and write it in sync.ts's pull alongside persona/playbook/active. It is a single small JSON object with no merge semantics needed — last-writer-wins from the canonical server is correct, since the server is the only thing that synthesizes for a synced user.\n\nAlternatively the dashboard could read status via the MCP tool rather than the file, but that turns a read-only local page into a network client, which the T-058 design deliberately avoided.",
+  "location": [
+    "src/sync-server.ts:70",
+    "src/sync-types.ts",
+    "src/sync.ts:62",
+    "web/lib/zug-data.ts"
+  ],
+  "phase": null,
+  "relatedTickets": [
+    "T-058"
+  ],
+  "resolution": null,
+  "resolvedDate": null,
+  "severity": "medium",
+  "status": "open",
+  "title": "Synthesis status never reaches a synced client — dashboard always reports \"never run\""
+}

@@ -801,12 +801,17 @@ export function getFrozenPersonaWarning(n = 10): string | null {
   const lines = snapshots.map((s) => s.personaLines);
   if (new Set(lines).size > 1) return null; // persona is moving — nothing to report
 
-  const newest = snapshots[0].observationCount;
-  const oldest = snapshots[snapshots.length - 1].observationCount;
-  if (newest <= oldest) return null; // nothing accumulating either; that is the stale-input case
+  // Compare the RANGE, not newest-vs-oldest. observationCount is not monotonic in real data: sync
+  // interleaves snapshots from sources holding different totals, so the newest snapshot can report
+  // fewer observations than one before it (observed: 116,136,130,128,127,116,...). Reading only the
+  // endpoints made this detector silent on exactly the outage it exists to catch.
+  const counts = snapshots.map((s) => s.observationCount);
+  const low = Math.min(...counts);
+  const high = Math.max(...counts);
+  if (high <= low) return null; // nothing accumulating either; that is the stale-input case
 
   return `PERSONA has not changed across the last ${snapshots.length} sessions (${lines[0]} lines) ` +
-    `while observations grew ${oldest} → ${newest}. Synthesis is taking input without producing output.`;
+    `while observations grew ${low} → ${high}. Synthesis is taking input without producing output.`;
 }
 
 // --- Sync storage helpers ---
