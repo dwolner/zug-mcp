@@ -193,11 +193,7 @@ export function readPersonaRaw(): string {
 }
 
 export function readActivePatterns(): string[] {
-  const raw = readText(path.join(dataDir(), 'ACTIVE.md')) ?? '';
-  return raw
-    .split('\n')
-    .map((l) => l.replace(/^-\s*/, '').trim())
-    .filter(Boolean);
+  return parseActivePatterns(readText(path.join(dataDir(), 'ACTIVE.md')) ?? '');
 }
 
 export function readPersonaSections(): PersonaSection[] {
@@ -247,4 +243,134 @@ function parseBullet(body: string): PersonaBullet {
     text: body.slice(0, match.index).trim(),
     citation: { raw, date: date ? date[1] : null },
   };
+}
+
+/* -------------------------------------------------------------------------------------------- *
+ * Data source: local mirror vs live server
+ *
+ * The readers above all read ~/.zug, which is a CLIENT MIRROR of the server, refreshed only by the
+ * SessionStart `zug pull` hook. It can be a full synthesis cycle behind zug-mcp.fly.dev (T-062).
+ * For a dashboard whose whole job is reporting pipeline health, reading the mirror means reporting
+ * on a copy of the thing being measured.
+ *
+ * `/sync/pull?since=<epoch>` already returns every field this dashboard needs -- observations,
+ * growth, reinforcements, lessons, persona, playbook, active, synthesisStatus and full session
+ * bodies -- so the remote source is one request, not an endpoint build-out.
+ *
+ * TRIGGER CONDITION, stated explicitly: remote mode is used ONLY when BOTH `ZUG_URL` and
+ * `ZUG_TOKEN` are set in the dashboard process's environment. Neither set (the default, and the
+ * case in every test) => filesystem, byte-for-byte the previous behaviour. It is opt-in, never a
+ * fallback, and it never fails over to the mirror: if the fetch fails the dashboard errors rather
+ * than silently showing stale local data under a "live" header, which is the exact failure mode
+ * ISS-047 was about.
+ * -------------------------------------------------------------------------------------------- */
+
+export interface ZugSource {
+  kind: 'local' | 'remote';
+  /** Rendered in the page header so the reader always knows which of the two they are looking at. */
+  label: string;
+}
+
+export interface ZugSnapshot {
+  source: ZugSource;
+  growth: GrowthSnapshot[];
+  observations: Observation[];
+  reinforcements: ReinforcedPattern[];
+  lessonCount: number;
+  synthesisStatus: SynthesisStatus | null;
+  sessionFilenames: string[];
+  sessionContexts: Record<string, string>;
+  personaSections: PersonaSection[];
+  activePatterns: string[];
+}
+
+/** Shape of GET /sync/pull. Mirrors PullResponse in src/sync-types.ts. */
+interface PullResponse {
+  observations: Observation[];
+  growth: GrowthSnapshot[];
+  reinforcements: ReinforcedPattern[];
+  lessons: unknown[];
+  sessions: { filename: string; content: string }[];
+  persona?: string;
+  playbook?: string;
+  active?: string;
+  synthesisStatus?: SynthesisStatus;
+}
+
+export function parseActivePatterns(raw: string): string[] {
+  return raw
+    .split('\n')
+    .map((l) => l.replace(/^-\s*/, '').trim())
+    .filter(Boolean);
+}
+
+/** session_id -> context, from session bodies already in hand (remote source). */
+export function sessionContextsFromFiles(
+  files: { filename: string; content: string }[],
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const f of files) {
+    const parsed = parseSessionHeader(f.content.slice(0, 512));
+    if (parsed?.context) out[parsed.id] = parsed.context;
+  }
+  return out;
+}
+
+function remoteConfig(): { url: string; token: string } | null {
+  const url = process.env.ZUG_URL;
+  const token = process.env.ZUG_TOKEN;
+  return url && token ? { url: url.replace(/\/$/, ''), token } : null;
+}
+
+async function loadRemote(cfg: { url: string; token: string }): Promise<ZugSnapshot> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 15_000);
+  let data: PullResponse;
+  try {
+    const res = await fetch(
+      `${cfg.url}/sync/pull?since=${encodeURIComponent('1970-01-01T00:00:00.000Z')}`,
+      // The token never reaches the browser: this page is a server component and `force-dynamic`
+      // means the fetch runs per request on the server.
+      { headers: { 'X-Zug-Token': cfg.token }, cache: 'no-store', signal: ctrl.signal },
+    );
+    if (!res.ok) throw new Error(`GET /sync/pull -> HTTP ${res.status}`);
+    data = (await res.json()) as PullResponse;
+  } finally {
+    clearTimeout(timer);
+  }
+
+  const sessions = data.sessions ?? [];
+  return {
+    source: { kind: 'remote', label: cfg.url },
+    growth: data.growth ?? [],
+    observations: data.observations ?? [],
+    reinforcements: data.reinforcements ?? [],
+    lessonCount: (data.lessons ?? []).length,
+    synthesisStatus: data.synthesisStatus ?? null,
+    sessionFilenames: sessions.map((s) => s.filename),
+    sessionContexts: sessionContextsFromFiles(sessions),
+    personaSections: parsePersonaSections(data.persona ?? ''),
+    activePatterns: parseActivePatterns(data.active ?? ''),
+  };
+}
+
+function loadLocal(): ZugSnapshot {
+  return {
+    source: { kind: 'local', label: dataDir() },
+    growth: readGrowth(),
+    observations: readObservations(),
+    reinforcements: readReinforcements(),
+    lessonCount: readLessonCount(),
+    synthesisStatus: readSynthesisStatus(),
+    sessionFilenames: readSessionFilenames(),
+    sessionContexts: readSessionContexts(),
+    personaSections: readPersonaSections(),
+    activePatterns: readActivePatterns(),
+  };
+}
+
+/** The single entry point the page uses. See the TRIGGER CONDITION note above for source selection. */
+export async function loadSnapshot(): Promise<ZugSnapshot> {
+  const cfg = remoteConfig();
+  return cfg ? loadRemote(cfg) : loadLocal();
 }

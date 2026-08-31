@@ -1,16 +1,5 @@
 import { notFound } from 'next/navigation';
-import {
-  readGrowth,
-  readObservations,
-  readReinforcements,
-  readLessonCount,
-  readSynthesisStatus,
-  readSessionFilenames,
-  readPersonaSections,
-  readActivePatterns,
-  readSessionContexts,
-  dataDir,
-} from '@/lib/zug-data';
+import { loadSnapshot } from '@/lib/zug-data';
 import {
   observationsPerWeek,
   sessionsPerDay,
@@ -52,18 +41,23 @@ export default async function DashboardPage({
 }) {
   if (process.env.NODE_ENV === 'production') notFound();
 
-  const growth = readGrowth();
-  const allObservations = readObservations();
-  const reinforcements = readReinforcements();
-  const sessions = readSessionFilenames();
-  const personaSections = readPersonaSections();
-  const activePatterns = readActivePatterns();
-  const sessionContexts = readSessionContexts();
+  const {
+    source,
+    growth,
+    observations: allObservations,
+    reinforcements,
+    sessionFilenames: sessions,
+    sessionContexts,
+    personaSections,
+    activePatterns,
+    synthesisStatus,
+    lessonCount,
+  } = await loadSnapshot();
   const health = pipelineHealth(
     growth,
     reinforcements,
-    readSynthesisStatus(),
-    readLessonCount(),
+    synthesisStatus,
+    lessonCount,
     allObservations,
   );
 
@@ -79,15 +73,29 @@ export default async function DashboardPage({
       <header className="mb-10">
         <h1 className="text-2xl">Zug — instrument panel</h1>
         <p className="mt-1 text-sm text-ink/70">
-          Local prototype. Reads <code className="font-mono text-xs">{dataDir()}</code> read-only and
-          writes nothing.
+          Local prototype. Reads <code className="font-mono text-xs">{source.label}</code> read-only
+          and writes nothing.{' '}
+          {source.kind === 'remote' ? (
+            <span className="text-ink/60">
+              Live server — this is the authoritative pipeline state.
+            </span>
+          ) : (
+            <span className="text-ink/60">
+              Local mirror — refreshed only by the SessionStart <code className="font-mono text-xs">zug pull</code>,
+              so it can trail the server by a synthesis cycle (T-062). Set{' '}
+              <code className="font-mono text-xs">ZUG_URL</code> and{' '}
+              <code className="font-mono text-xs">ZUG_TOKEN</code> to read the server instead.
+            </span>
+          )}
         </p>
       </header>
 
       {empty ? (
         <p className="border border-ink/15 rounded-lg p-4 bg-white/40 text-sm text-ink/70">
-          No data found in <code className="font-mono text-xs">{dataDir()}</code>. Set{' '}
-          <code className="font-mono text-xs">ZUG_DATA_DIR</code> if your data lives elsewhere.
+          No data found in <code className="font-mono text-xs">{source.label}</code>. Set{' '}
+          <code className="font-mono text-xs">ZUG_DATA_DIR</code> if your data lives elsewhere, or{' '}
+          <code className="font-mono text-xs">ZUG_URL</code> +{' '}
+          <code className="font-mono text-xs">ZUG_TOKEN</code> to read the server.
         </p>
       ) : (
         <div className="space-y-12">
