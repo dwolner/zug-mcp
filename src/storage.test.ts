@@ -38,6 +38,8 @@ import {
   stampSessionContext,
   recordSynthesisOutcome,
   readSynthesisStatus,
+  getSynthesisHighWater,
+  advanceSynthesisHighWater,
   getSynthesisWarning,
   getFrozenPersonaWarning,
   getAllObservations, getObservationsForSync, getGrowthSince,
@@ -987,6 +989,47 @@ describe("synthesis outcome recording (ISS-047)", () => {
     recordSynthesisOutcome("timeout");
     recordSynthesisOutcome("ok");
     expect(readSynthesisStatus()?.outcome).toBe("ok");
+  });
+});
+
+describe("synthesis high-water cursor (ISS-050)", () => {
+  it("treats the whole history as pending until a synthesis has succeeded", () => {
+    expect(getSynthesisHighWater()).toBe("1970-01-01T00:00:00.000Z");
+    recordSynthesisOutcome("timeout");
+    expect(getSynthesisHighWater()).toBe("1970-01-01T00:00:00.000Z");
+  });
+
+  it("advances only when told to, independently of the outcome write", () => {
+    recordSynthesisOutcome("ok");
+    expect(getSynthesisHighWater()).toBe("1970-01-01T00:00:00.000Z");
+    advanceSynthesisHighWater("2026-03-01T00:00:00.000Z");
+    expect(getSynthesisHighWater()).toBe("2026-03-01T00:00:00.000Z");
+  });
+
+  it("survives a later failure — one bad run must not re-feed the whole corpus", () => {
+    advanceSynthesisHighWater("2026-03-01T00:00:00.000Z");
+    recordSynthesisOutcome("timeout", "Request timed out.");
+    expect(readSynthesisStatus()?.outcome).toBe("timeout");
+    expect(getSynthesisHighWater()).toBe("2026-03-01T00:00:00.000Z");
+  });
+
+  it("is monotonic — an out-of-order call cannot move the cursor backwards", () => {
+    advanceSynthesisHighWater("2026-03-05T00:00:00.000Z");
+    advanceSynthesisHighWater("2026-03-01T00:00:00.000Z");
+    expect(getSynthesisHighWater()).toBe("2026-03-05T00:00:00.000Z");
+  });
+
+  it("compares as instants, not strings, across mixed millisecond stamping", () => {
+    // "...00Z" sorts AFTER "...00.000Z" lexicographically despite being the same instant.
+    advanceSynthesisHighWater("2026-03-01T00:00:00.000Z");
+    advanceSynthesisHighWater("2026-03-01T00:00:00Z");
+    expect(getSynthesisHighWater()).toBe("2026-03-01T00:00:00.000Z");
+  });
+
+  it("ignores a malformed cursor rather than stranding every future observation", () => {
+    advanceSynthesisHighWater("2026-03-01T00:00:00.000Z");
+    advanceSynthesisHighWater("not-a-date");
+    expect(getSynthesisHighWater()).toBe("2026-03-01T00:00:00.000Z");
   });
 });
 

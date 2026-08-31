@@ -758,17 +758,65 @@ export interface SynthesisStatus {
   outcome: SynthesisOutcome;
   timestamp: string;
   detail?: string;
+  /**
+   * Timestamp of the newest observation that has actually been absorbed into PERSONA (ISS-050).
+   *
+   * This is the synthesis cursor, and it is deliberately NOT the same thing as `timestamp` (when
+   * synthesis last ran) or the client's sync `pushSince` (what was last delivered). It advances only
+   * after a synthesis succeeds AND its output is written, so observations belonging to a failed
+   * attempt stay pending and are re-fed on the next push instead of being dropped.
+   */
+  lastSynthesizedAt?: string;
 }
+
+/** Before any synthesis has succeeded, everything on disk is pending. */
+const SYNTHESIS_EPOCH = "1970-01-01T00:00:00.000Z";
 
 /** Record the result of the most recent synthesis. Best-effort: never throws into the caller. */
 export function recordSynthesisOutcome(outcome: SynthesisOutcome, detail?: string): void {
   try {
     ensureDirs();
     const { synthesisStatusFile } = getPaths();
+    // Carry the cursor forward: an outcome write must never reset it, or a single failure after a
+    // good run would re-feed the entire corpus.
+    const prev = readSynthesisStatus();
     const status: SynthesisStatus = {
       outcome,
       timestamp: new Date().toISOString(),
       ...(detail ? { detail } : {}),
+      ...(prev?.lastSynthesizedAt ? { lastSynthesizedAt: prev.lastSynthesizedAt } : {}),
+    };
+    fs.writeFileSync(synthesisStatusFile, JSON.stringify(status, null, 2), "utf-8");
+  } catch { /* best-effort: observability must never break the thing it observes */ }
+}
+
+/**
+ * The synthesis cursor: observations newer than this are still pending. Falls back to the epoch so a
+ * tenant that has never synthesized successfully treats its whole history as pending.
+ */
+export function getSynthesisHighWater(): string {
+  return readSynthesisStatus()?.lastSynthesizedAt ?? SYNTHESIS_EPOCH;
+}
+
+/**
+ * Advance the synthesis cursor to `iso`. Call only after a successful synthesis has been persisted.
+ * Monotonic: a stale or out-of-order call can never move the cursor backwards.
+ */
+export function advanceSynthesisHighWater(iso: string): void {
+  try {
+    ensureDirs();
+    const { synthesisStatusFile } = getPaths();
+    const next = new Date(iso).getTime();
+    if (isNaN(next)) return; // a malformed cursor would strand every future observation
+    const prev = readSynthesisStatus();
+    // Compare as instants, not strings: observation timestamps are inconsistently stamped with and
+    // without milliseconds, and those two forms do not sort lexicographically.
+    if (prev?.lastSynthesizedAt && new Date(prev.lastSynthesizedAt).getTime() >= next) return;
+    const status: SynthesisStatus = {
+      outcome: prev?.outcome ?? "ok",
+      timestamp: prev?.timestamp ?? new Date().toISOString(),
+      ...(prev?.detail ? { detail: prev.detail } : {}),
+      lastSynthesizedAt: iso,
     };
     fs.writeFileSync(synthesisStatusFile, JSON.stringify(status, null, 2), "utf-8");
   } catch { /* best-effort: observability must never break the thing it observes */ }
