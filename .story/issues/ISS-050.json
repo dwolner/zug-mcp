@@ -1,0 +1,24 @@
+{
+  "components": [
+    "sync-server",
+    "synthesis-queue",
+    "synthesize"
+  ],
+  "createdBy": "claude-opus-5 (post-deploy verification, 2026-08-31)",
+  "dedupeKey": "zug-deploy-2026-08-31:synthesis-not-triggered",
+  "discoveredDate": "2026-08-31",
+  "id": "ISS-050",
+  "impact": "Discovered while verifying the 2026-08-31 deploy. The ISS-045/046 fixes are correctly deployed, but synthesis has still not run once, so PERSONA remains frozen at 118 lines and the deploy has not yet delivered its intended effect.\n\nWHAT IS VERIFIED (checked inside the running Fly image, machine version 36):\n- /app/dist/synthesize.js contains SYNTHESIS_TIMEOUT_MS = 300_000 (the new value)\n- /app/dist/synthesize.js calls recordSynthesisOutcome in 5 places\n- /app/dist/sync-server.js contains enqueueSynthesis and the `obsAdded > 0` guard\n- ANTHROPIC_API_KEY is SET in the process environment\n- The pushed observation reached the server: local and server observations.jsonl both 137 lines, and the new text greps on the server\n- The push happened at 15:56:26, after the 15:54:18 deploy, so the new code was live\n\nWHAT DID NOT HAPPEN:\n- No synthesis-status.json at /data/.zug/users/default/.zug/ (the tenant path where observations.jsonl lives)\n- No synthesis-status.json at /data/.zug/ either (the flat non-tenant fallback), so this is not a tenancy path mismatch\n- No \"[zug] synthesis task failed\" line in the logs\n- Server PERSONA.md unchanged\n\nSince ISS-047 made EVERY exit path of synthesize() record an outcome — including no-api-key, malformed, truncated, timeout and error — the total absence of a status file means synthesize() was never invoked at all, rather than invoked and failed. The failure is upstream of synthesis, in whatever decides to enqueue it.\n\nLEADING HYPOTHESIS: `addObservations(payload.observations)` returned 0 because the observation had already been delivered by the earlier 15:49 push, so the `obsAdded > 0` guard in handleSyncPush was false. If so the guard is too strict: it ties synthesis to whether THIS push added rows, not to whether there is unsynthesized input. A client that pushes twice in quick succession — which the CLI and the session-end hook both do — would deliver observations on the first push and then never synthesize them.\n\nNEXT STEPS: instrument handleSyncPush to log obsAdded and meaningful.length, push a freshly-created observation, and confirm which branch is taken. If the hypothesis holds, gate synthesis on whether unsynthesized observations exist (comparing against the last recorded synthesis timestamp) rather than on what a single push happened to add.\n\nRELATED: ISS-049 (synthesis status never reaches a synced client) — together these mean the user has no signal at all that this is happening.",
+  "location": [
+    "src/sync-server.ts:13",
+    "src/sync-server.ts:38",
+    "src/sync-server.ts:49"
+  ],
+  "phase": null,
+  "relatedTickets": [],
+  "resolution": null,
+  "resolvedDate": null,
+  "severity": "high",
+  "status": "open",
+  "title": "Synthesis does not fire on sync push after deploy — no outcome recorded on any path"
+}
