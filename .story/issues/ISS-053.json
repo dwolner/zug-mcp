@@ -1,0 +1,18 @@
+{
+  "components": [],
+  "createdBy": "independent review agent (ISS-052 pre-publish)",
+  "discoveredDate": "2026-08-31",
+  "id": "ISS-053",
+  "impact": "ask() in src/onboard.ts:22 returns a promise that never resolves if readline emits 'close' before the answer arrives. On Ctrl-D (EOF) mid-question the event loop drains and the process exits 0 with no message and no PERSONA.md — a success-looking exit for an abandoned run. Pre-existing since T-009, but it only became user-facing in 1.3.1 when `zug onboard` became a real dispatched command (ISS-052). Fix needs runOnboard() to reject/return on readline close and print \"[zug] Onboarding cancelled — no changes made.\" Testing it properly wants input/output stream injection into runOnboard() so a PassThrough can simulate EOF, rather than a child-process pty harness. Found by the independent review of the ISS-052 diff.",
+  "location": [
+    "src/onboard.ts:22",
+    "src/onboard.ts:95"
+  ],
+  "phase": null,
+  "relatedTickets": [],
+  "resolution": null,
+  "resolvedDate": null,
+  "severity": "low",
+  "status": "open",
+  "title": "zug onboard exits 0 with no PERSONA.md when the user backs out with Ctrl-D"
+}

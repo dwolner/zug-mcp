@@ -70,17 +70,17 @@ ${answersBlock}`,
   }
 }
 
-async function main() {
+export async function runOnboard(): Promise<void> {
   if (!process.stdin.isTTY) {
     console.log("[zug] Non-interactive environment — skipping onboarding.");
-    process.exit(0);
+    return;
   }
 
   const existing = readPersona();
   if (existing && !existing.includes("[Write here]")) {
     console.log("\n[zug] PERSONA.md already has content. Skipping onboarding.");
-    console.log("      Run `pnpm onboard` manually if you want to re-seed it.");
-    process.exit(0);
+    console.log("      Run `zug onboard` manually if you want to re-seed it.");
+    return;
   }
 
   console.log("\n[zug] Welcome. Zug is a learning companion that builds a cognitive fingerprint");
@@ -102,7 +102,7 @@ async function main() {
   const hasAnswers = answers.some((a) => a.length > 0);
   if (!hasAnswers) {
     console.log("\n[zug] No answers provided — skipping PERSONA.md creation.");
-    process.exit(0);
+    return;
   }
 
   console.log("\n[zug] Writing your cognitive fingerprint...");
@@ -119,8 +119,3 @@ async function main() {
   console.log(`[zug] PERSONA.md created (${method}).`);
   console.log("      Zug will refine it as sessions accumulate.");
 }
-
-main().catch((err) => {
-  console.error("[zug] Onboarding error:", err);
-  process.exit(1);
-});

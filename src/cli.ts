@@ -98,10 +98,23 @@ function cmdTail(limitArg?: string) {
 function cmdPersona() {
   const content = readPersona();
   if (!content) {
-    console.log("No PERSONA.md found. Run 'pnpm onboard' to create one.");
+    console.log("No PERSONA.md found. Run 'zug onboard' to create one.");
     return;
   }
   console.log(content);
+}
+
+async function cmdOnboard(): Promise<void> {
+  try {
+    // Loaded on demand: onboard pulls in the Anthropic SDK, which no other command
+    // needs. Inside the try because a missing dist/onboard.js — the exact packaging
+    // failure this command was added to fix — must not surface as a raw stack trace.
+    const { runOnboard } = await import("./onboard.js");
+    await runOnboard();
+  } catch (err) {
+    console.error("[zug] Onboarding error:", err);
+    process.exit(1);
+  }
 }
 
 async function cmdResume(): Promise<void> {
@@ -258,6 +271,7 @@ function printUsage() {
   zug status          Show sessions, observations, config status, and data dir size
   zug tail [n]        Show recent observations (default: 10)
   zug persona         Print full PERSONA.md
+  zug onboard         Seed your cognitive fingerprint (ANTHROPIC_API_KEY optional, improves output)
   zug compact         Durability push before context compaction (used by PreCompact hook)
   zug archive         Move sessions older than 90 days to sessions/archive/
   zug setup           Auto-detect agents and write MCP configs
@@ -278,7 +292,9 @@ const [, , cmd, ...rest] = process.argv;
 // Commands that already surface the update check themselves (pull/resume, via the
 // SessionStart-injected stdout channel) or where it would be noise (update itself,
 // version, unrecognized commands) are excluded from the generic stderr notifier below.
-const SKIP_UPDATE_NOTIFIER = new Set(["pull", "resume", "update", "version", "--version", undefined]);
+// `onboard` is excluded too: it is a first-run interactive flow, and a cold-cache
+// update check would add up to 1.5s of dead air plus a stderr notice right after it.
+const SKIP_UPDATE_NOTIFIER = new Set(["pull", "resume", "update", "version", "--version", "onboard", undefined]);
 
 async function main(): Promise<void> {
   switch (cmd) {
@@ -290,6 +306,9 @@ async function main(): Promise<void> {
       break;
     case "persona":
       cmdPersona();
+      break;
+    case "onboard":
+      await cmdOnboard();
       break;
     case "compact":
       await cmdCompact();

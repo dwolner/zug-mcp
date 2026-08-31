@@ -13,6 +13,7 @@
     "dist/http.js",
     "dist/merge-core.js",
     "dist/oauth-provider.js",
+    "dist/onboard.js",
     "dist/rate-limit.js",
     "dist/server.js",
     "dist/setup.js",
@@ -34,7 +35,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "prepublishOnly": "pnpm build",
+    "prepublishOnly": "pnpm build && pnpm test",
     "dev": "tsx src/stdio.ts",
     "start:http": "node dist/http.js",
     "typecheck": "tsc --noEmit",
@@ -43,7 +44,7 @@
     "migrate": "bash scripts/migrate.sh",
     "test": "vitest run",
     "test:watch": "vitest",
-    "onboard": "tsx src/onboard.ts",
+    "onboard": "tsx src/cli.ts onboard",
     "cli": "tsx src/cli.ts"
   },
   "packageManager": "pnpm@10.31.0",

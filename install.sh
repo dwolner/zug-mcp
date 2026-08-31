@@ -155,10 +155,13 @@ mkdir -p "$ZUG_DIR/sessions"
 # ── Seed PERSONA.md if missing ────────────────────────────────────────────────
 if [[ ! -f "$ZUG_DIR/PERSONA.md" ]]; then
   info "Running onboarding to seed your cognitive fingerprint..."
-  npx tsx "$SERVER_DIR/src/onboard.ts" || {
+  npx tsx "$SERVER_DIR/src/cli.ts" onboard || true
+  # Check the outcome, not the exit code: onboarding exits 0 when it skips
+  # (non-interactive shell, no answers given) and leaves no PERSONA.md behind.
+  if [[ ! -f "$ZUG_DIR/PERSONA.md" ]]; then
     cp "$SERVER_DIR/templates/PERSONA.template.md" "$ZUG_DIR/PERSONA.md"
     success "Created $ZUG_DIR/PERSONA.md — edit this to customize your fingerprint"
-  }
+  fi
 fi
 
 # ── Seed PLAYBOOK.md if missing ───────────────────────────────────────────────
