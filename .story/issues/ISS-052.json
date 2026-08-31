@@ -1,0 +1,22 @@
+{
+  "components": [
+    "cli",
+    "setup"
+  ],
+  "createdBy": "claude-opus-5",
+  "dedupeKey": "zug-onboard-command-missing-2026-08-31",
+  "discoveredDate": "2026-08-31",
+  "id": "ISS-052",
+  "impact": "Found during pre-publish verification of the packaged tarball.\n\nTwo user-facing messages in the published package tell people to run a command that is not reachable from a global install:\n\n1. setup.ts prints \"✓ Zug: created PERSONA.md — run 'zug onboard' to seed your cognitive fingerprint\". The CLI's command dispatch has no `onboard` case. Its full command set is: --version, archive, backup, compact, persona, pull, push, resume, setup, status, sync, tail, update, version.\n\n2. cli.ts prints \"No PERSONA.md found. Run 'pnpm onboard' to create one.\" — a repo-local pnpm script surfacing in a globally installed binary, where there is no repo and no pnpm workspace.\n\nSo a new user completing `zug setup` is told to run a command that exits with an unknown-command path, on the very first thing they are asked to do after install. This is the first-run experience for the OSS package and, later, for paying users.\n\nCONTRIBUTING FACT: dist/onboard.js exists in the build but is deliberately NOT in package.json's `files` allowlist, and nothing in the published require graph reaches it — so the onboarding flow those messages point at is not shipped at all.\n\nFIX DIRECTION: decide whether onboarding is part of the published product. If yes, add an `onboard` command to the CLI dispatch and add dist/onboard.js to `files`. If no, rewrite both messages to name something that exists (or fold the seeding step into `zug setup`). Either way the two messages should agree with each other and with the shipped command set.\n\nRelated: the sibling packaging defect where dist/version-check.js was required by cli.js but omitted from `files` (fixed in e3983ec) — both come from the `files` allowlist being maintained by hand with nothing checking it against the actual require graph. A test that resolves the published entrypoints' imports against the allowlist would catch this whole class.",
+  "location": [
+    "src/setup.ts (~line 212)",
+    "src/cli.ts (~line 83)"
+  ],
+  "phase": null,
+  "relatedTickets": [],
+  "resolution": null,
+  "resolvedDate": null,
+  "severity": "low",
+  "status": "open",
+  "title": "Published CLI points users at a `zug onboard` command that does not exist"
+}

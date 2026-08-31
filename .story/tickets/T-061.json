@@ -1,0 +1,12 @@
+{
+  "blockedBy": [],
+  "completedDate": null,
+  "createdDate": "2026-08-31",
+  "description": "T-060 set the observation matcher to overlap coefficient 0.50 with sharedCount 3, replacing Jaccard 0.40/2. Measured precision is 86%, not 100% — roughly 1 merge in 7 is expected to be wrong. That is tolerable only because getLessonCandidates surfaces candidates for human review rather than creating lessons directly.\n\nWHY THIS IS PROVISIONAL: the threshold was derived from hand-authored phrasings, because at the time there were ZERO real canonical `pattern` keys in production. ISS-048 introduced short canonical pattern keys and autoReinforceSession, but both run CLIENT-SIDE, so neither did anything until the npm package carrying them was published. That happened in v1.3.0 (2026-08-31). Real pattern keys only start accumulating from that release forward.\n\nTRIGGER: revisit once a few dozen real pattern keys exist in production reinforcements.jsonl. Until then there is nothing to re-derive against and this ticket should stay closed-in-spirit — it is waiting on data, not on effort.\n\nHOW: the T-058 dashboard's Recurrence slider already runs the threshold sweep interactively over the real corpus (web/lib/zug-cluster.ts, sharing the wordSimilarity/overlapSimilarity fixture with src/storage.ts). Sweep against actual pattern keys rather than observation prose, confirm or move the 0.50/3 pair, and re-measure precision. If precision stays well under 100%, keep the human-review gate in getLessonCandidates rather than promoting automatically — that gate is what makes an imperfect matcher safe.\n\nCHECK FIRST: confirm the shared similarity fixture between src/storage.ts and web/lib/zug-cluster.ts has not drifted, or the dashboard sweep will not describe the matcher that actually runs.\n\nRelated: T-060 (set the threshold), ISS-048 (introduced pattern keys + autoReinforceSession), T-058 (the sweep UI).",
+  "id": "T-061",
+  "order": 180,
+  "phase": null,
+  "status": "open",
+  "title": "Re-derive the T-060 recurrence threshold against real pattern keys",
+  "type": "task"
+}

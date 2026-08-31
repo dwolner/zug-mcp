@@ -1,6 +1,6 @@
 {
   "name": "zug-mcp",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Zug — persistent memory MCP server for a havruta learning companion",
   "main": "dist/stdio.js",
   "bin": {
