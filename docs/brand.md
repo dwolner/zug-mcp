@@ -69,44 +69,47 @@ GitHub · Docs · MIT License
 
 ## Visual identity
 
-**Direction:** Earthy & Type-Led. The warm/earthy family the founder actually loves
-(orange/clay/terracotta), executed so it reads as a *deliberate choice* rather than the
-AI default. Approachable but crafted; type carries the page, not decoration.
+**Direction:** Dark Instrument. Superseded the original "Earthy & Type-Led" cream
+direction on 2026-09-16 (founder call, after seeing the palette side by side against the
+cream build). Same hue family — the accent is Jade pushed up in lightness and saturation —
+but rendered as a near-black instrument panel rather than a warm paper page. Reads as
+simple, monochrome and easy to read; the product is a memory layer for people who live in
+terminals, and the ground now matches that world.
 
-> The AI-slop tell is the specific triple **warm cream + single terracotta accent + serif
-> display** — NOT warm colors per se. We keep the warmth and break the tell two ways:
-> (1) drop the serif entirely for a characterful grotesk (the serif is the loudest part of
-> the tell); (2) use a richer multi-hue earthy system — sea salt, jade, cornflower
-> alongside the clay — so it reads as a considered natural palette, not cream-plus-one-
-> terracotta. Distinctiveness comes from type execution + one signature moment.
+> The retired cream direction is kept below in **Superseded** for the reasoning, which
+> still holds: the AI-slop tell was *warm cream + single terracotta accent + serif display*.
+> The dark system avoids it by a different route — a single accent hue doing semantic work
+> on a neutral with a deliberate blue-green bias, not decoration.
 
-**Palette** (founder-chosen earthy system; Ink derived to harmonize with Jade)
+**Palette** (dark instrument system; accent is Jade lifted to hold on a near-black ground)
 
 | Name | Hex | Role |
 |---|---|---|
-| Cream | `#EDE5D8` | Page background |
-| Sea Salt | `#B8C9C0` | Paired surface / cards — the "pair" rendered as a second tone |
-| Ink | `#22302B` | Primary text — a deep green-black (not pure black), high contrast on Cream |
-| Jade | `#596D69` | Secondary text, deep sections, mono log lines, small links |
-| Clay | `#B5603A` | Primary accent — emphasis phrase, CTA, the synthesized line |
-| Cornflower | `#7AA5BF` | Secondary accent — large/decorative, surfaces |
+| Ground | `#0E1518` | Page background — a blue-black, never pure black |
+| Surface | `#141D21` | Raised cards, the hero sidebar |
+| Sunk | `#111A1D` | Recessed bands — pricing, the signature block |
+| Ink | `#E9EFEF` | Primary text — headings and anything load-bearing |
+| Muted | `#94A4A9` | Body copy and running text |
+| Faint | `#6D7E83` | Captions, mono labels, footer |
+| Line | `#243237` | Hairlines, card borders |
+| Accent | `#5FBFB2` | The one bright thing — emphasis phrase, CTA, synthesized line |
 
-> Contrast: Ink-on-Cream is body-safe. Clay is headline/CTA strength (Clay bg + Cream text
-> for primary buttons). **Cornflower is low-contrast on Cream** — large/decorative only;
-> use Jade for small links and small text, never Cornflower.
+> Contrast: Ink on Ground is ~15:1. Muted on Ground is body-safe. **Faint is for 10–12px
+> utility only** — never running text. Accent carries CTA (Accent bg + Ground text) and the
+> single emphasis phrase per screen; it is the only chromatic colour on the page.
 
 **Typography** — type carries the page (founder pull: type-led, no decoration).
 
 | Role | Font | Notes |
 |---|---|---|
-| Display | A characterful grotesk — Söhne / Neue Haas Grotesk / GT America register. **Not a serif** (the AI tell), **not Inter** (generic). | Emphasis via weight + Clay color, optionally a grotesk italic |
-| Body / UI | Clean grotesk (same or complementary family) | — |
-| Utility / Mono | A characterful mono | Labels, origin line זוּג, and the hero observation log lines — honors "your data is plain files" |
+| Display | **Instrument Sans** | Headings, nav, buttons, labels. Semibold with `-0.03em` tracking at display sizes. Resolves the old "characterful grotesk, not Inter, not Space Grotesk" open item |
+| Body | **Newsreader** | Running text at 16.5–19px. A serif body against a grotesk display is the pair that carries the page — the serif is safe here because it is *not* paired with cream + terracotta |
+| Utility / Mono | **JetBrains Mono** | Observation log lines, file paths, numbered eyebrows, the origin line. Mono means *data* — never nav or footer chrome |
+| Hebrew | **Noto Sans Hebrew** | The mark זוג only. Set ~1.35× the adjacent Latin px — Hebrew has no ascenders and sits optically small. Written **without niqqud**: the shuruk dot reads as dirt below ~20px |
 
-The move: "AI that remembers " in the display grotesk, "how you think." in **Clay** (weight +
-color, or grotesk italic). This replaces the original Lora serif-italic — the serif was the
-AI-default tell. (Exact grotesk + mono faces still to pick — open item.)
-
+The move: "AI that remembers " in Instrument Sans Semibold, "how you think." in **Accent**.
+The English wordmark **ZUG** carries the nav (tracked `0.2em`); Hebrew appears exactly twice,
+in the hero origin line and the footer.
 **Signature** — the hero *demonstrates* "earned, not configured" instead of asserting it:
 two or three raw session observations in mono (Jade) on a Sea Salt surface resolve, on
 load/scroll, into one Clay-accented synthesized persona sentence in the display grotesk on
@@ -149,3 +152,30 @@ flash; review live for its motion/micro-interactions.
 - Mobile layout — not designed
 - Favicon / OG image — not started
 - Pricing — resolved: $5/mo or $50/yr
+
+## Superseded — Earthy & Type-Led (retired 2026-09-16)
+
+The original cream direction, kept for the reasoning rather than the values. Replaced by
+**Dark Instrument** above after the founder saw the two palettes side by side.
+
+| Name | Hex | Role |
+|---|---|---|
+| Cream | `#EDE5D8` | Page background |
+| Sea Salt | `#B8C9C0` | Paired surface / cards |
+| Ink | `#22302B` | Primary text — a deep green-black |
+| Jade | `#596D69` | Secondary text, deep sections, mono log lines |
+| Clay | `#B5603A` | Primary accent |
+| Cornflower | `#7AA5BF` | Secondary accent — large/decorative only |
+
+Display was Space Grotesk, body the same, mono JetBrains Mono.
+
+**What still holds from it.** The AI-slop tell is the specific triple *warm cream + single
+terracotta accent + serif display* — not warm colours per se, and not serifs per se. The
+new direction keeps the same defence by a different route. Two findings from the audit that
+killed this version in practice, both independent of palette: nothing on the page had a
+max-width, and body copy was set in the secondary tone (Jade) rather than Ink, so the whole
+page whispered. Those were layout and hierarchy failures wearing a colour problem's clothes.
+
+**What was wrong with it as a system.** Six colours with two accents, one of which
+(Cornflower) its own spec restricted to "large/decorative only" — a colour that existed to
+look designed. The replacement carries one accent doing semantic work.

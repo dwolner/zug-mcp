@@ -47,20 +47,15 @@ describe('SignatureMoment', () => {
     mockMatchMedia(true);
     render(<SignatureMoment />);
 
-    const synthesizedLine = screen.getByText(
-      'You diagnose before you report. Lead me to the cause.'
-    ).parentElement;
-    expect(synthesizedLine).not.toHaveClass('transition-opacity');
+    expect(screen.getByTestId('synthesized-line')).not.toHaveClass('transition-opacity');
   });
 
   it('applies transition class when reduced motion is not preferred', () => {
     mockMatchMedia(false);
     render(<SignatureMoment />);
 
-    const synthesizedLine = screen.getByText(
-      'You diagnose before you report. Lead me to the cause.'
-    ).parentElement;
+    const synthesizedLine = screen.getByTestId('synthesized-line');
     expect(synthesizedLine).toHaveClass('transition-opacity');
-    expect(synthesizedLine).toHaveClass('duration-500');
+    expect(synthesizedLine).toHaveClass('duration-700');
   });
 });

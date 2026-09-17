@@ -16,11 +16,11 @@ describe('Hero', () => {
     mockMatchMedia(false);
   });
 
-  it('renders the headline split into prefix and clay-accented span', () => {
+  it('renders the headline split into prefix and accent-coloured span', () => {
     render(<Hero />);
     const heading = screen.getByRole('heading', { level: 1 });
     expect(heading).toHaveTextContent('AI that remembers how you think.');
-    expect(screen.getByText('how you think.')).toHaveClass('text-clay');
+    expect(screen.getByText('how you think.')).toHaveClass('text-accent');
   });
 
   it('renders both CTA links with correct hrefs', () => {
@@ -35,10 +35,16 @@ describe('Hero', () => {
     );
   });
 
-  it('renders all 3 sidebar cards', () => {
+  it('is a single column — the sidebar cards moved out to dedicated sections', () => {
     render(<Hero />);
-    expect(screen.getByText('Cognitive fingerprint')).toBeInTheDocument();
-    expect(screen.getByText('Cross-agent sync')).toBeInTheDocument();
-    expect(screen.getByText('Your data')).toBeInTheDocument();
+    expect(screen.queryByText('Cognitive fingerprint')).not.toBeInTheDocument();
+    expect(screen.queryByText('Cross-agent sync')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('signature-moment')).not.toBeInTheDocument();
+  });
+
+  it('shows the Hebrew mark without niqqud, beside the English gloss', () => {
+    render(<Hero />);
+    expect(screen.getByText('זוג')).toBeInTheDocument();
+    expect(screen.getByText('Hebrew for "pair"')).toBeInTheDocument();
   });
 });

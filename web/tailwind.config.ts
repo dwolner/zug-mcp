@@ -6,16 +6,23 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        cream: '#EDE5D8',
-        seasalt: '#B8C9C0',
-        ink: '#22302B',
-        jade: '#596D69',
-        clay: '#B5603A',
-        cornflower: '#7AA5BF',
+        // Dark instrument palette. The accent is Jade pushed up in lightness and
+        // saturation — same hue family as the original earthy system, legible on
+        // a near-black ground.
+        ground: '#0E1518',
+        surface: '#141D21',
+        sunk: '#111A1D',
+        ink: '#E9EFEF',
+        muted: '#94A4A9',
+        faint: '#6D7E83',
+        line: '#243237',
+        'line-soft': '#1C282C',
+        accent: '#5FBFB2',
       },
       fontFamily: {
         sans: ['var(--font-display)', ...defaultTheme.fontFamily.sans],
         display: ['var(--font-display)'],
+        body: ['var(--font-body)', ...defaultTheme.fontFamily.serif],
         mono: ['var(--font-mono)'],
       },
     },

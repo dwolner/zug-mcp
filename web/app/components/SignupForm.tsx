@@ -38,22 +38,22 @@ export function SignupForm({
         name="email"
         required
         placeholder={signup.placeholder}
-        className="border border-jade/40 bg-cream px-3 py-2 text-ink"
+        className="rounded-sm border border-line bg-ground px-4 py-3 font-display text-[15px] text-ink placeholder:text-faint focus-visible:border-accent focus-visible:outline-none"
       />
       <button
         type="submit"
         disabled={pending}
-        className="bg-clay px-4 py-2 font-display text-[11px] uppercase tracking-[0.16em] text-cream hover:bg-ink"
+        className="rounded-sm bg-accent px-6 py-3 font-display text-[15px] font-semibold text-ground transition-opacity hover:opacity-90 disabled:opacity-60"
       >
         {signup.buttonLabel}
       </button>
       {state?.ok === true && (
-        <p className="text-jade" role="status">
+        <p className="font-display text-[15px] text-accent" role="status">
           {signup.successMessage}
         </p>
       )}
       {state?.ok === false && (
-        <p className="text-clay" role="alert">
+        <p className="font-display text-[15px] text-[#E3796C]" role="alert">
           {state.error}
         </p>
       )}

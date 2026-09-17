@@ -3,5 +3,25 @@
 @tailwind utilities;
 
 body {
-  font-family: var(--font-display), sans-serif;
+  font-family: var(--font-body), Georgia, serif;
+  font-size: 17.5px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  /* The well: content sits in a lifted pool of light that falls off toward the
+     edges, so a wide viewport frames the column instead of stretching it. */
+  background-color: #0e1518;
+  background-image: radial-gradient(
+    ellipse 1100px 800px at 50% 18%,
+    #182327 0%,
+    #131D21 42%,
+    #0e1518 74%,
+    #080d0f 100%
+  );
+  background-attachment: fixed;
+}
+
+/* Hebrew needs a face that actually has the glyphs — the mono has none, which is
+   why זוג rendered as a fallback jumble. */
+.hebrew {
+  font-family: var(--font-hebrew), 'Noto Sans Hebrew', 'Arial Hebrew', sans-serif;
 }
