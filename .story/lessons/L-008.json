@@ -1,0 +1,17 @@
+{
+  "content": "A serializing queue only protects the work inside the closure. If the inputs are gathered before enqueue, the read half of every read-modify-write still races, and the code reads as if it were safe because the queue is right there. Gather state inside the task, not at the call site. Symptom to watch for: a logged value that is impossible given the current on-disk state — that is a stale snapshot, not a mystery.",
+  "context": "ISS-055. The per-user synthesis queue exists to prevent PERSONA read-modify-write races and does serialize execution correctly. But both call sites built the synthesis input with readPersona()/readPlaybook() BEFORE calling enqueueSynthesis, so a task queued behind another carried a snapshot taken before that task rewrote the files. Caught by a contradiction in production data — a run reporting a corpus size four minutes after the files on disk were 16k tokens smaller — not by reading the code.",
+  "createdDate": "2026-09-20",
+  "id": "L-008",
+  "lastValidated": "2026-09-20",
+  "reinforcements": 0,
+  "source": "postmortem",
+  "status": "active",
+  "supersedes": null,
+  "tags": [
+    "architecture",
+    "concurrency"
+  ],
+  "title": "Serializing a queue does not serialize the reads that feed it",
+  "updatedDate": "2026-09-20"
+}

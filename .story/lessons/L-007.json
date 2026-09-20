@@ -1,0 +1,18 @@
+{
+  "content": "For anything whose output is generated rather than computed, the tests check the plumbing and the status flag checks that plumbing ran. Neither inspects the artifact. Run it once against real data in a sandboxed data dir, then diff the output against the input on properties you can state: section headings preserved, counts unchanged, no prompt scaffolding present. Budget this as a required step, not as extra diligence — both defects here were invisible to a suite that was entirely green.",
+  "context": "ISS-054's fix passed 307 tests and reported outcome=ok. Running it against the real 44KB PERSONA and READING the generated document showed two defects nothing else could see: the prompt's own '## Session Summary' heading came back as a PERSONA section, and the [Nx] reinforcement counts were rewritten upward ([1x] 17 to 1, [2x] 6 to 15) — fabricated evidence of recurrence feeding straight back into what the system treats as load-bearing.",
+  "createdDate": "2026-09-20",
+  "id": "L-007",
+  "lastValidated": "2026-09-20",
+  "reinforcements": 0,
+  "source": "postmortem",
+  "status": "active",
+  "supersedes": null,
+  "tags": [
+    "process",
+    "testing",
+    "verification"
+  ],
+  "title": "A green suite and an ok status can both be true while the output is wrong",
+  "updatedDate": "2026-09-20"
+}

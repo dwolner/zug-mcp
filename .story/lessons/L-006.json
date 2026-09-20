@@ -1,0 +1,17 @@
+{
+  "content": "When you ask a model to bound something (shorten, summarize, stay under N), the instruction is a hope until something measures the result and reacts. Make it a separate call with one job, measure its output against the threshold, and record a distinct failure outcome when it did not work. An unverified instruction fails silently for as long as the system happens to stay inside its limits — which is exactly the window in which you would still have time to fix it.",
+  "context": "ISS-046 addressed unbounded PERSONA growth by adding 'Summarize the oldest dated sections' to the synthesis prompt above a size trigger. It sat in every prompt for roughly two months while the corpus grew 39KB to 73KB and synthesis kept SUCCEEDING, so nothing looked wrong. It then crossed the output ceiling and every synthesis truncated (ISS-054). Nothing had ever checked whether the instruction did anything.",
+  "createdDate": "2026-09-20",
+  "id": "L-006",
+  "lastValidated": "2026-09-20",
+  "reinforcements": 0,
+  "source": "postmortem",
+  "status": "active",
+  "supersedes": null,
+  "tags": [
+    "process",
+    "architecture"
+  ],
+  "title": "A prompt instruction is not a control loop — measure its effect",
+  "updatedDate": "2026-09-20"
+}
