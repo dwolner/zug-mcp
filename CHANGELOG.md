@@ -5,7 +5,7 @@ All notable changes to zug-mcp are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.4.0] — 2026-09-19
 
 Synthesis broke again on 2026-09-20 — and this time the constant that would normally be raised had
 nowhere left to go. The shape is what changed, not the number: one call re-emitting both documents
