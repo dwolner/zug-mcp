@@ -38,6 +38,7 @@ import {
   stampSessionContext,
   getSynthesisWarning,
   getFrozenPersonaWarning,
+  getCorpusBudgetWarning,
   readSynthesisStatus,
   archiveObservations,
   archiveSessions,
@@ -45,7 +46,7 @@ import {
   type Lesson,
   type SocraticThread,
 } from "./storage.js";
-import { synthesize } from "./synthesize.js";
+import { synthesize, COMPACTION_TRIGGER_TOKENS } from "./synthesize.js";
 import { getSyncMode } from "./sync-state.js";
 import { pull, push } from "./sync.js";
 import { getCurrentUserId } from "./tenancy.js";
@@ -254,7 +255,9 @@ export async function runEndSession(args: {
           writePersona(result.persona);
           writePlaybook(result.playbook);
           if (result.active) writeActive(result.active);
-          archiveObservations();
+          // Archiving moves observations out of the working set, so it waits for a complete run:
+          // a partial synthesis has not absorbed the half it failed to regenerate.
+          if (result.complete) archiveObservations();
         }
       });
     }
@@ -455,7 +458,7 @@ export function createServer(): McpServer {
     "zug_status",
     "Returns Zug stats — session count, observation count, persona size, last session date, excerpt, weekly trend, active patterns, and a stale-growth warning if no new observations have been recorded recently.",
     async () => {
-      const { sessions, observations, personaLines } = getStats();
+      const { sessions, observations, personaLines, personaBytes, playbookBytes } = getStats();
       const lastDate = getLastSessionDate();
       const excerpt = getPersonaExcerpt(2);
       const trend = getObservationTrend(4);
@@ -466,16 +469,20 @@ export function createServer(): McpServer {
       // only in a server log line nobody reads.
       const synthesisWarning = getSynthesisWarning();
       const frozenPersonaWarning = getFrozenPersonaWarning();
+      // ISS-054: line count is blind to the growth that actually breaks synthesis. Watch bytes
+      // against the same trigger compaction uses, so the wall is visible before it is hit.
+      const budgetWarning = getCorpusBudgetWarning(COMPACTION_TRIGGER_TOKENS);
 
       const lines = [
         `- Sessions: ${sessions}${lastDate ? ` | Last: ${lastDate}` : ""}`,
         `- Observations: ${observations} (avg ${obsRate}/session)`,
-        `- Persona lines: ${personaLines}`,
+        `- Persona: ${personaLines} lines, ~${Math.ceil(personaBytes / 4)} tokens | Playbook: ~${Math.ceil(playbookBytes / 4)} tokens`,
         excerpt ? `- Excerpt: ${excerpt}` : null,
         `- Trend (obs/week, last 4): ${trend.join(" → ")}`,
         staleWarning ? `- Warning: ${staleWarning}` : null,
         synthesisWarning ? `- Warning: ${synthesisWarning}` : null,
         frozenPersonaWarning ? `- Warning: ${frozenPersonaWarning}` : null,
+        budgetWarning ? `- Warning: ${budgetWarning}` : null,
       ].filter(Boolean).join("\n");
 
       const parts = [

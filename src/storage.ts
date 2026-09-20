@@ -222,9 +222,15 @@ export function getRecentSessions(limit: number, context?: string): string[] {
   return results;
 }
 
-export function getStats(): { sessions: number; observations: number; personaLines: number } {
+export function getStats(): {
+  sessions: number;
+  observations: number;
+  personaLines: number;
+  personaBytes: number;
+  playbookBytes: number;
+} {
   ensureDirs();
-  const { sessionsDir, observationsFile, personaFile } = getPaths();
+  const { sessionsDir, observationsFile, personaFile, playbookFile } = getPaths();
   const sessions = fs.existsSync(sessionsDir)
     ? fs.readdirSync(sessionsDir).filter((f) => f.endsWith(".md")).length
     : 0;
@@ -234,7 +240,12 @@ export function getStats(): { sessions: number; observations: number; personaLin
   const personaLines = fs.existsSync(personaFile)
     ? fs.readFileSync(personaFile, "utf-8").split("\n").length
     : 0;
-  return { sessions, observations, personaLines };
+  // ISS-054: lines are the metric that hid the failure. PERSONA went 31 -> 224 lines (7x) while
+  // it went 1,497 -> 44,750 bytes (30x) -- the model integrates into existing lines, so line count
+  // flatlines exactly as the thing that drives the token budget runs away. Report bytes too.
+  const personaBytes = fs.existsSync(personaFile) ? fs.statSync(personaFile).size : 0;
+  const playbookBytes = fs.existsSync(playbookFile) ? fs.statSync(playbookFile).size : 0;
+  return { sessions, observations, personaLines, personaBytes, playbookBytes };
 }
 
 export function getLastSessionDate(): string | null {
@@ -752,7 +763,17 @@ export function getStaleGrowthWarning(n = 3): string | null {
 // hid ran for three months. The outcome is therefore persisted per-tenant so it survives the
 // process and can be surfaced to the user who is actually affected by it.
 
-export type SynthesisOutcome = "ok" | "timeout" | "truncated" | "malformed" | "no-api-key" | "error";
+export type SynthesisOutcome =
+  | "ok"
+  | "timeout"
+  | "truncated"
+  | "malformed"
+  | "no-api-key"
+  | "error"
+  /** One document was regenerated, the other was not (ISS-054). The corpus is half-absorbed. */
+  | "partial"
+  /** A document is over the compaction trigger and the compaction pass did not shrink it (ISS-054). */
+  | "compaction-failed";
 
 export interface SynthesisStatus {
   outcome: SynthesisOutcome;
@@ -850,6 +871,40 @@ export function getSynthesisWarning(): string | null {
   if (!status || status.outcome === "ok") return null;
   const detail = status.detail ? ` — ${status.detail}` : "";
   return `Last synthesis failed (${status.outcome}) at ${status.timestamp}${detail}. PERSONA is not being updated.`;
+}
+
+/**
+ * Append a document to its archive before it is replaced by a compacted version (ISS-054).
+ *
+ * Compaction deletes detail on purpose. This is what makes that reversible: the pre-compaction
+ * text is kept verbatim, so "PERSONA got shorter" is always recoverable rather than a guess.
+ */
+export function archiveDocument(kind: "persona" | "playbook", content: string): void {
+  try {
+    ensureDirs();
+    const { zugDir } = getPaths();
+    const file = path.join(zugDir, kind === "persona" ? "PERSONA.archive.md" : "PLAYBOOK.archive.md");
+    const header = `\n\n<!-- archived ${new Date().toISOString()} (${content.length} bytes) -->\n`;
+    fs.appendFileSync(file, header + content, "utf-8");
+  } catch { /* best-effort: archiving must never break the synthesis it protects */ }
+}
+
+/**
+ * Warn when a document is close enough to the output budget that synthesis is at risk (ISS-054).
+ *
+ * `triggerTokens` is passed in rather than imported so storage.ts does not depend on synthesize.ts,
+ * which depends on it. Callers pass COMPACTION_TRIGGER_TOKENS.
+ */
+export function getCorpusBudgetWarning(triggerTokens: number): string | null {
+  const { personaBytes, playbookBytes } = getStats();
+  const over = [
+    { label: "PERSONA.md", tokens: Math.ceil(personaBytes / 4) },
+    { label: "PLAYBOOK.md", tokens: Math.ceil(playbookBytes / 4) },
+  ].filter((d) => d.tokens > triggerTokens);
+  if (over.length === 0) return null;
+  return over
+    .map((d) => `${d.label} is ~${d.tokens} tokens, over the ${triggerTokens}-token compaction trigger`)
+    .join("; ") + ".";
 }
 
 /**

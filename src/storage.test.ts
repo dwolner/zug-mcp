@@ -207,7 +207,7 @@ describe("writeSession / getRecentSessions", () => {
 
 describe("getStats", () => {
   it("returns zeros when nothing exists", () => {
-    expect(getStats()).toEqual({ sessions: 0, observations: 0, personaLines: 0 });
+    expect(getStats()).toEqual({ sessions: 0, observations: 0, personaLines: 0, personaBytes: 0, playbookBytes: 0 });
   });
 
   it("counts sessions, observations, and persona lines", () => {

@@ -75,8 +75,10 @@ export async function handleSyncPush(payload: SyncPayload): Promise<PushResult> 
         writePersonaAtomic(result.persona);
         writePlaybookAtomic(result.playbook);
         if (result.active) writeActiveAtomic(result.active);
-        // Only now is the batch genuinely absorbed. Advancing earlier would reintroduce the bug.
-        advanceSynthesisHighWater(batchHighWater);
+        // Only a COMPLETE synthesis has genuinely absorbed the batch. On a partial run the failed
+        // document is the current text handed back unchanged, so advancing here would strand the
+        // observations it never saw — ISS-050 through the ISS-054 partial path.
+        if (result.complete) advanceSynthesisHighWater(batchHighWater);
       }
     });
   }

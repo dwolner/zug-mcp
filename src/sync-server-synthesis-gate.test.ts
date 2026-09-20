@@ -30,7 +30,9 @@ const obs = (observation: string, timestamp: string, confidence: "low" | "medium
   timestamp, type: "breakthrough" as const, observation, session_id: "s", confidence,
 });
 
-const ok = { persona: "P", playbook: "PB", active: "A" };
+const ok = { persona: "P", playbook: "PB", active: "A", complete: true };
+/** ISS-054: one document regenerated, the other handed back unchanged. */
+const partial = { persona: "P", playbook: "PB", active: "", complete: false };
 
 /** Observation texts passed to the Nth synthesize call. */
 const fedTo = (call: number): string[] =>
@@ -70,6 +72,19 @@ describe("ISS-050 — synthesis gates on unsynthesized input, not on one push's 
     await handleSyncPush(payload({ observations: [obs("second", "2026-03-02T00:00:00Z")] }));
     await drainSynthesis();
     expect(fedTo(1)).toEqual(["second"]);
+  });
+
+  // ISS-054: a partial result is non-null, so a `if (result)` gate would advance the cursor and
+  // strand every observation the failed document never absorbed — ISS-050 through a new door.
+  it("re-feeds observations after a partial synthesis", async () => {
+    vi.mocked(synthesize).mockResolvedValueOnce(partial);
+    await handleSyncPush(payload({ observations: [obs("first", "2026-03-01T00:00:00Z")] }));
+    await drainSynthesis();
+    expect(fedTo(0)).toEqual(["first"]);
+
+    await handleSyncPush(payload({ observations: [obs("second", "2026-03-02T00:00:00Z")] }));
+    await drainSynthesis();
+    expect(fedTo(1)).toEqual(["first", "second"]);
   });
 
   it("does not synthesize when nothing is pending", async () => {

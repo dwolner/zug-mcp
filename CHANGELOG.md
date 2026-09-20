@@ -5,6 +5,42 @@ All notable changes to zug-mcp are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+Synthesis broke again on 2026-09-20 — and this time the constant that would normally be raised had
+nowhere left to go. The shape is what changed, not the number: one call re-emitting both documents
+becomes one call per document, and the growth that outran the ceiling is now bounded by a compaction
+pass that measures its own effect.
+
+### Fixed
+- **Synthesis truncated on every run (ISS-054).** `synthesize()` asked the model to re-emit PERSONA +
+  PLAYBOOK verbatim in a single call, so required output tracked total corpus size rather than the
+  size of the change. At 18,438 tokens against a 16,384 ceiling, every synthesis truncated, returned
+  null, and wrote nothing — while still spending a full generation. Each document now gets its own
+  call, so the ceiling applies per document instead of to their sum.
+- **Compaction is now a control loop, not a sentence (ISS-054).** ISS-046's "summarize the oldest
+  dated sections" instruction sat in every prompt from roughly July while the corpus grew 39 KB → 73 KB
+  and synthesis kept succeeding — nothing ever measured whether it worked. A document over
+  `COMPACTION_TRIGGER_TOKENS` now gets a dedicated compaction call, its result is checked against the
+  trigger, and `outcome: compaction-failed` is recorded when it did not shrink. The pre-compaction
+  text is appended to `PERSONA.archive.md` / `PLAYBOOK.archive.md` first, so nothing is lost.
+- **Session evidence no longer leaks into the documents (ISS-054).** A live run returned the prompt's
+  own `## Session Summary` heading as a PERSONA section. Inputs are now fenced and explicitly marked
+  as not part of the document.
+- **Reinforcement counts are data again (ISS-054).** The same run rewrote them upward — `[1x]` 17 → 1,
+  `[2x]` 6 → 15 — manufacturing evidence of recurrence for patterns seen once. The counts come from
+  `reinforcements.jsonl` and must now be copied exactly.
+
+### Added
+- **Partial synthesis is representable (ISS-054).** One document failing used to discard the other's
+  work, because both came from the same call. `SynthesisResult.complete` distinguishes a full absorb
+  from a half one, and `advanceSynthesisHighWater` / `archiveObservations` gate on it — a partial run
+  re-feeds its observations rather than stranding them (ISS-050 through a new door).
+- **`zug_status` watches bytes, not lines (ISS-054).** Line count is what hid this: PERSONA went
+  31 → 224 lines (7x) while going 1,497 → 44,750 bytes (30x), because the model integrates into
+  existing lines exactly as instructed. Status now reports token estimates for both documents and
+  warns when either is over the compaction trigger.
+
 ## [1.3.1] — 2026-08-31
 
 A first-run repair. 1.3.0 shipped a `zug onboard` that three surfaces promised and the CLI never

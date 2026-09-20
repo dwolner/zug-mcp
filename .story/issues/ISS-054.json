@@ -1,0 +1,26 @@
+{
+ "components": [
+  "synthesize",
+  "storage",
+  "sync-server",
+  "server"
+ ],
+ "createdBy": "claude-opus-5 (root-cause investigation, 2026-09-19)",
+ "dedupeKey": "synthesis-truncated-corpus-exceeds-output-budget-2026-09-19",
+ "discoveredDate": "2026-09-19",
+ "displayId": "ISS-054",
+ "id": "ISS-054",
+ "impact": "CONFIRMED 2026-09-19, deterministic (not intermittent).\n\nsynthesis-status.json: outcome=truncated, \"needed ~18438 tokens, budget 16384\", frozen since 2026-09-20T01:10:20Z. The corpus has not changed since, so estimateReEmitTokens(PERSONA, PLAYBOOK) reproduces 18,438 exactly on demand: EVERY subsequent synthesis truncates, returns null, and writes nothing. Each session-end still burns a full 16,384-token Haiku generation and discards it.\n\nMECHANISM: synthesize() asked the model to re-emit PERSONA + PLAYBOOK verbatim in ONE call, so required output tracked total corpus size rather than the size of the change. PERSONA 44,750 B + PLAYBOOK 28,277 B = 73,027 B = 18,438 tokens, against MAX_OUTPUT_TOKENS = 16,384.\n\nWHY NOT JUST RAISE THE CEILING (third recurrence of this shape): c8204a0 lowered 8192->4096, ISS-046 raised 4096->16384, this is the next one. The ceiling is capped by the timeout invariant asserted in synthesize.test.ts: SYNTHESIS_TIMEOUT_MS * OBSERVED_OUTPUT_TOKENS_PER_SEC = 21,600 tokens. Measured corpus growth off the PERSONA backups is ~454 B/day (~113 tok/day) over the last 121 days and accelerating, so raising to the wall buys ~28 days.\n\nWHY THE GUARDRAIL DIDN'T FIRE: ISS-046's TRIM_TRIGGER_RATIO puts a \"summarize the oldest sections\" sentence in the prompt above 9,830 tokens (~39 KB). It has been in every prompt since roughly July while the corpus grew 39 KB -> 73 KB and synthesis was SUCCEEDING. A prompt instruction whose effect nothing measures is not a control loop.\n\nWHY IT WAS INVISIBLE: zug_status reports \"Persona lines\". PERSONA went 31 -> 224 lines (7x) while going 1,497 -> 44,750 bytes (30x) — avg line length 48 -> 199 B. The model integrates into existing lines exactly as instructed, so the visible metric flatlines while the quantity that drives the token budget runs away. This is also why the line-based PERSONA_LINE_LIMIT deleted in ISS-046 could never have caught it.",
+ "location": [
+  "src/synthesize.ts (single combined call, MAX_OUTPUT_TOKENS, TRIM_TRIGGER_RATIO)",
+  "src/storage.ts (getStats personaLines)",
+  "~/.zug/synthesis-status.json"
+ ],
+ "phase": null,
+ "relatedTickets": [],
+ "resolution": "FIX (three parts, all verified against the live 73 KB corpus):\n\n1. PER-DOCUMENT CALLS. synthesize() now issues one call per document (PERSONA+ACTIVE, PLAYBOOK), run concurrently. MAX_OUTPUT_TOKENS is unchanged at 16,384 but now applies to one document rather than the sum: 11,116 and 7,023 tokens both fit. This unblocks the live corpus without moving any constant. Failures are now independent — partial success is representable, and SynthesisResult.complete gates advanceSynthesisHighWater and archiveObservations so a half-absorbed run cannot strand observations (ISS-050 through a new door).\n\n2. COMPACTION AS A VERIFIED CONTROL LOOP. Above COMPACTION_TRIGGER_TOKENS (9,830) a document gets a dedicated compaction call targeting COMPACTION_TARGET_TOKENS (6,553); the gap stops it re-firing every session. Unlike ISS-046's prompt sentence, the result is MEASURED: if it did not come in under the trigger the original is kept and outcome=compaction-failed is recorded. The pre-compaction document is appended to PERSONA.archive.md / PLAYBOOK.archive.md first, so compaction is reversible.\n\n3. WATCH BYTES, NOT LINES. getStats reports personaBytes/playbookBytes; zug_status shows token estimates for both documents and warns via getCorpusBudgetWarning when either is over the trigger.\n\nTwo defects found by inspecting a live run's output and fixed in the prompts: the prompt's own \"## Session Summary\" heading came back as a PERSONA section (inputs are now fenced off and explicitly marked not part of the document), and the [Nx] reinforcement counts were rewritten upward ([1x] 17->1, [2x] 6->15) — fabricated recurrence evidence, now frozen as data the model must copy exactly.\n\nVERIFIED: live run against the real 73 KB corpus in a sandboxed ZUG_DATA_DIR — complete=true, outcome=ok, 174s (within the 300s timeout), PERSONA 11,116 -> 5,758 tokens, archive written, section headings identical, reinforcement counts preserved. 306 server tests + 132 web tests pass.",
+ "resolvedDate": "2026-09-19",
+ "severity": "high",
+ "status": "resolved",
+ "title": "Synthesis re-emits the whole corpus in one call, so output scales with corpus size and truncates past 16,384 tokens"
+}

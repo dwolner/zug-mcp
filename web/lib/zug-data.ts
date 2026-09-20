@@ -41,7 +41,7 @@ export interface ReinforcedPattern {
 }
 
 export interface SynthesisStatus {
-  outcome: 'ok' | 'timeout' | 'truncated' | 'malformed' | 'no-api-key' | 'error';
+  outcome: 'ok' | 'timeout' | 'truncated' | 'malformed' | 'no-api-key' | 'error' | 'partial' | 'compaction-failed';
   timestamp: string;
   detail?: string;
   /**
