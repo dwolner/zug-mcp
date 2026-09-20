@@ -213,8 +213,19 @@ function cmdBackup(): void {
   }
 
   const date = new Date().toISOString().slice(0, 10);
-  const backupDir = path.join(os.homedir(), ".zug-backup", date);
-  fs.mkdirSync(backupDir, { recursive: true });
+  const backupRoot = path.join(os.homedir(), ".zug-backup");
+  fs.mkdirSync(backupRoot, { recursive: true });
+
+  // ISS-056: `fly sftp get -R` creates the destination itself and refuses to write to a path that
+  // already exists ("doesn't override existing files for safety"). Pre-creating backupDir — or
+  // running a second backup on the same day — therefore failed EVERY time, and the failure left
+  // an empty dated directory behind that made the next attempt fail identically. Only the parent
+  // is created here; the dated leaf is claimed by whichever branch actually writes it.
+  let backupDir = path.join(backupRoot, date);
+  if (zugUrl && fs.existsSync(backupDir)) {
+    const time = new Date().toISOString().slice(11, 19).replace(/:/g, "");
+    backupDir = `${backupDir}-${time}`;
+  }
 
   if (zugUrl) {
     // Extract app name from https://<app>.fly.dev
@@ -225,12 +236,16 @@ function cmdBackup(): void {
       execSync(`fly sftp get -a "${app}" -R /data/.zug "${backupDir}"`, { stdio: "inherit" });
       console.log(`Backup complete: ${backupDir}`);
     } catch {
+      // Do not leave a partial/empty dated directory behind: it would make the next run look
+      // like an already-completed backup and fail the same way.
+      try { if (fs.existsSync(backupDir)) fs.rmSync(backupDir, { recursive: true, force: true }); } catch { /* best-effort */ }
       console.error("Backup failed. Make sure flyctl is installed and you are logged in.");
       process.exit(1);
     }
   } else {
-    // No Fly config — back up local data dir
+    // No Fly config — back up local data dir. `cp -r src/. dest` needs dest to exist.
     console.log(`No Fly config found. Backing up local ${ZUG_DIR} → ${backupDir}`);
+    fs.mkdirSync(backupDir, { recursive: true });
     execSync(`cp -r "${ZUG_DIR}/." "${backupDir}"`, { stdio: "inherit" });
     console.log(`Backup complete: ${backupDir}`);
   }

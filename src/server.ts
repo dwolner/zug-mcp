@@ -242,15 +242,19 @@ export async function runEndSession(args: {
     // scope; the queue re-enters that scope when the task runs (undefined userId → flat/local).
     if (meaningful.length > 0) {
       const userId = getCurrentUserId();
-      const synthInput = {
-        currentPersona: persona,
-        currentPlaybook: readPlaybook(),
-        sessionSummary: summary,
-        observations: meaningful.map((o) => ({ type: o.type, observation: o.observation, confidence: o.confidence })),
-        reinforcedPatterns: getTopPatterns(10),
-      };
       void enqueueSynthesis(userId, async () => {
-        const result = await synthesize(synthInput);
+        // ISS-055: read the documents inside the task, not at enqueue time. `persona` here was
+        // read before the raw-observation append above, so the synthesis input did not even
+        // contain this session's own entries; and a task queued behind another one carried a
+        // snapshot taken before that task rewrote the files. The queue serializes synthesis
+        // precisely to avoid that read-modify-write race — reading before it defeats the point.
+        const result = await synthesize({
+          currentPersona: readPersona(),
+          currentPlaybook: readPlaybook(),
+          sessionSummary: summary,
+          observations: meaningful.map((o) => ({ type: o.type, observation: o.observation, confidence: o.confidence })),
+          reinforcedPatterns: getTopPatterns(10),
+        });
         if (result) {
           writePersona(result.persona);
           writePlaybook(result.playbook);

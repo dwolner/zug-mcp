@@ -87,6 +87,31 @@ describe("ISS-050 — synthesis gates on unsynthesized input, not on one push's 
     expect(fedTo(1)).toEqual(["first", "second"]);
   });
 
+  // ISS-055: the per-user queue serializes synthesis to prevent PERSONA read-modify-write races,
+  // but the documents were read BEFORE enqueue, so a task queued while the corpus was one size
+  // carried that snapshot into a run that happened after another task had rewritten the files.
+  // Observed in production 2026-09-20: a run reported "needed ~18438 tokens" four minutes after
+  // the files on disk were already 16k tokens smaller. A stale task that SUCCEEDS overwrites the
+  // newer document with one derived from pre-write state — the race the queue exists to prevent.
+  it("reads the documents when the task runs, not when it is enqueued", async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((r) => { release = r; });
+    vi.mocked(synthesize)
+      .mockImplementationOnce(async () => {
+        await gate;
+        return { persona: "WRITTEN-BY-FIRST-TASK", playbook: "PB", active: "", complete: true };
+      })
+      .mockImplementationOnce(async () => null);
+
+    await handleSyncPush(payload({ observations: [obs("first", "2026-03-01T00:00:00Z")] }));
+    // Enqueued while task 1 is still blocked, so both were queued against the same on-disk state.
+    await handleSyncPush(payload({ observations: [obs("second", "2026-03-02T00:00:00Z")] }));
+    release();
+    await drainSynthesis();
+
+    expect(vi.mocked(synthesize).mock.calls[1][0].currentPersona).toBe("WRITTEN-BY-FIRST-TASK");
+  });
+
   it("does not synthesize when nothing is pending", async () => {
     vi.mocked(synthesize).mockResolvedValueOnce(ok);
     await handleSyncPush(payload({ observations: [obs("first", "2026-03-01T00:00:00Z")] }));

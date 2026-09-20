@@ -62,15 +62,19 @@ export async function handleSyncPush(payload: SyncPayload): Promise<PushResult> 
     const batch = pending.slice(0, SYNTHESIS_BATCH_LIMIT);
     const batchHighWater = batch[batch.length - 1].timestamp;
     const userId = getCurrentUserId();
-    const synthInput = {
-      currentPersona: readPersona(),
-      currentPlaybook: readPlaybook(),
-      sessionSummary: `Sync push from source ${payload.sourceId}: ${batch.length} unsynthesized observation(s).`,
-      observations: batch.map((o) => ({ type: o.type, observation: o.observation, confidence: o.confidence })),
-      reinforcedPatterns: getTopPatterns(10),
-    };
     void enqueueSynthesis(userId, async () => {
-      const result = await synthesize(synthInput);
+      // ISS-055: read the documents HERE, inside the task, not at enqueue time. The queue
+      // serializes synthesis so that PERSONA is never read-modify-written concurrently, but
+      // capturing the inputs before the queue defeated that: a task queued behind another one
+      // carried a snapshot taken before the earlier task rewrote the files. A stale task that
+      // succeeds overwrites the newer document with one derived from pre-write state.
+      const result = await synthesize({
+        currentPersona: readPersona(),
+        currentPlaybook: readPlaybook(),
+        sessionSummary: `Sync push from source ${payload.sourceId}: ${batch.length} unsynthesized observation(s).`,
+        observations: batch.map((o) => ({ type: o.type, observation: o.observation, confidence: o.confidence })),
+        reinforcedPatterns: getTopPatterns(10),
+      });
       if (result) {
         writePersonaAtomic(result.persona);
         writePlaybookAtomic(result.playbook);

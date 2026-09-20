@@ -31,6 +31,19 @@ pass that measures its own effect.
   `[2x]` 6 → 15 — manufacturing evidence of recurrence for patterns seen once. The counts come from
   `reinforcements.jsonl` and must now be copied exactly.
 
+- **Synthesis inputs captured before the queue (ISS-055).** `handleSyncPush` and `handleEndSession`
+  read PERSONA and PLAYBOOK before calling `enqueueSynthesis`, so a task queued behind another one
+  carried a snapshot taken before that task rewrote the files. The queue serializes synthesis
+  precisely to prevent PERSONA read-modify-write races; reading outside it defeated the point.
+  Caught in production: a run reported "needed ~18438 tokens" four minutes after the files on disk
+  were already 16k tokens smaller. A stale task that *succeeds* overwrites the newer document with
+  one derived from pre-write state. Both call sites now read inside the task.
+- **`zug backup` never worked against a Fly install (ISS-056).** It created the destination
+  directory and then ran `fly sftp get`, which creates the destination itself and refuses to write
+  into an existing path — so every run failed, and the empty directory it left behind made the next
+  run fail identically. Only the parent is created now, same-day repeats get a `-HHMMSS` suffix, and
+  a failed run cleans up after itself.
+
 ### Added
 - **Partial synthesis is representable (ISS-054).** One document failing used to discard the other's
   work, because both came from the same call. `SynthesisResult.complete` distinguishes a full absorb

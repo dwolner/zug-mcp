@@ -1,0 +1,21 @@
+{
+ "components": [
+  "cli"
+ ],
+ "createdBy": "claude-opus-5 (2026-09-19)",
+ "dedupeKey": "zug-backup-precreates-destination-2026-09-19",
+ "discoveredDate": "2026-09-19",
+ "displayId": "ISS-056",
+ "id": "ISS-056",
+ "impact": "`zug backup` failed on every invocation against a Fly-backed install, so the documented way to snapshot the volume did not work at all.\n\nMECHANISM: cmdBackup did fs.mkdirSync(backupDir) and then ran `fly sftp get -R /data/.zug <backupDir>`. fly sftp creates the destination itself and refuses to write to a path that already exists (\"doesn't override existing files for safety\"), so the pre-created directory guaranteed the failure. The failed run then left the empty dated directory behind, which made every subsequent attempt fail identically — including after a manual rmdir, since the next run recreated it.\n\nA second backup on the same day would have failed for the same reason even without the bug.",
+ "location": [
+  "src/cli.ts (cmdBackup)"
+ ],
+ "phase": null,
+ "relatedTickets": [],
+ "resolution": "Only the ~/.zug-backup parent is created up front. The Fly branch leaves the dated leaf for fly sftp to create, appends a -HHMMSS suffix when the dated directory already exists so same-day backups work, and removes the directory on failure so a failed run cannot poison the next one. The local-copy branch still creates its destination, which `cp -r src/. dest` requires.\n\nVerified by running it: 373 files, 1.9 MB extracted to ~/.zug-backup/2026-09-20-051934.",
+ "resolvedDate": "2026-09-19",
+ "severity": "medium",
+ "status": "resolved",
+ "title": "zug backup pre-creates its destination, which fly sftp refuses to write into — backup never worked"
+}

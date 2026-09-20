@@ -1,0 +1,24 @@
+{
+ "components": [
+  "sync-server",
+  "server",
+  "synthesis-queue"
+ ],
+ "createdBy": "claude-opus-5 (found while verifying ISS-054 in production, 2026-09-19)",
+ "dedupeKey": "synthesis-inputs-captured-before-queue-2026-09-19",
+ "discoveredDate": "2026-09-19",
+ "displayId": "ISS-055",
+ "id": "ISS-055",
+ "impact": "Found by a contradiction in production data, not by reading code. At 2026-09-20T04:38:45Z the server recorded outcome=truncated with \"needed ~18438 tokens\" — four minutes AFTER PERSONA.md and PLAYBOOK.md on disk had already been rewritten 16k tokens smaller (mtime 04:34).\n\nMECHANISM: sync-server.ts and server.ts both built synthInput with readPersona()/readPlaybook() BEFORE calling enqueueSynthesis(). The queue serializes synthesis per user specifically to prevent PERSONA read-modify-write races between concurrent device pushes (synthesis-queue.ts:9) — but the reads happened outside it, so a task queued behind another one carried a snapshot taken before the earlier task rewrote the files. The serialization was real; the race survived it.\n\nWHY IT MATTERS: the observed case merely wasted a generation, because a truncated run writes nothing. A stale task that SUCCEEDS is the real hazard: it writes a PERSONA derived from pre-write state, silently discarding the newer document — exactly the corruption the queue exists to prevent.\n\nserver.ts carried a second form of the same bug: `currentPersona: persona` used a value read before the handler's own raw-observation append, so the synthesis input did not contain this session's own entries.",
+ "location": [
+  "src/sync-server.ts (handleSyncPush)",
+  "src/server.ts (handleEndSession)"
+ ],
+ "phase": null,
+ "relatedTickets": [],
+ "resolution": "Both call sites now read the documents INSIDE the enqueued task, so every synthesis sees the state left by the task before it. Regression test in sync-server-synthesis-gate.test.ts holds task 1 on a gate, enqueues task 2 behind it, then releases — task 2 must observe what task 1 wrote. The test fails against the old code (sees an empty persona) and passes against the fix.",
+ "resolvedDate": "2026-09-19",
+ "severity": "high",
+ "status": "resolved",
+ "title": "Synthesis inputs captured before the queue, so a serialized task can run on a stale document snapshot"
+}
