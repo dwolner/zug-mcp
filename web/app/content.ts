@@ -179,7 +179,7 @@ export const content: Content = {
     },
     spec: [
       { label: "Installs as", value: "An MCP server, plus three hooks on Claude Code" },
-      { label: "Works with", value: "Claude Code. Cursor and Windsurf via MCP." },
+      { label: "Works with", value: "Anything that speaks MCP. Hooks on Claude Code." },
       { label: "Lives in", value: "~/.zug, plain markdown, yours to delete" },
       { label: "Costs", value: "Nothing" },
     ],
