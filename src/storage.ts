@@ -143,10 +143,56 @@ export function writeActive(content: string): void {
   fs.writeFileSync(activeFile, content, "utf-8");
 }
 
-export function appendObservation(obs: Observation): void {
+/**
+ * ISS-057: five records in a 180-record corpus had the remainder of the
+ * caller's tool-call block serialised into the observation string. Every
+ * affected call also passed `pattern`, so the argument boundary is what leaked.
+ *
+ * Truncates at the first marker rather than deleting matches, because the leak
+ * is always a tail: everything past the boundary belongs to the harness, not to
+ * the observation. Caught here rather than in the MCP handler so it covers the
+ * sync merge path too, and because synthesis reads these strings straight into
+ * the PERSONA prompt.
+ */
+const TOOL_CALL_MARKERS = [
+  "</observation>",
+  "<parameter name=",
+  "</parameter>",
+  "</invoke>",
+  "<invoke",
+  "</function_calls>",
+];
+
+export function stripToolCallMarkup(text: string): { text: string; stripped: boolean } {
+  let cut = -1;
+  for (const marker of TOOL_CALL_MARKERS) {
+    const i = text.indexOf(marker);
+    if (i !== -1 && (cut === -1 || i < cut)) cut = i;
+  }
+  if (cut === -1) return { text, stripped: false };
+
+  const kept = text.slice(0, cut).trim();
+  // A record that is nothing but markup cannot be repaired by truncation.
+  // Keep it intact and visible rather than silently writing an empty string.
+  if (kept.length === 0) return { text, stripped: false };
+
+  return { text: kept, stripped: true };
+}
+
+/** Applies the strip to the two free-text fields a caller can leak into. */
+export function sanitizeObservation(obs: Observation): { obs: Observation; stripped: boolean } {
+  const o = stripToolCallMarkup(obs.observation);
+  const p = obs.pattern ? stripToolCallMarkup(obs.pattern) : { text: undefined, stripped: false };
+  if (!o.stripped && !p.stripped) return { obs, stripped: false };
+  return { obs: { ...obs, observation: o.text, pattern: p.text }, stripped: true };
+}
+
+export function appendObservation(obs: Observation): boolean {
   ensureDirs();
   const { observationsFile } = getPaths();
-  fs.appendFileSync(observationsFile, JSON.stringify(obs) + "\n", "utf-8");
+  const { obs: clean, stripped } = sanitizeObservation(obs);
+  fs.appendFileSync(observationsFile, JSON.stringify(clean) + "\n", "utf-8");
+  return stripped;
 }
 
 export function archiveSessions(ageDays = 90): { archived: number } {
@@ -959,7 +1005,8 @@ export function addObservations(incoming: Observation[]): number {
   const { observationsFile } = getPaths();
   const seen = new Set(getAllObservations().map((o) => `${o.timestamp}|${o.observation}`));
   let added = 0;
-  for (const o of incoming) {
+  for (const raw of incoming) {
+    const o = sanitizeObservation(raw).obs;
     const k = `${o.timestamp}|${o.observation}`;
     if (seen.has(k)) continue;
     fs.appendFileSync(observationsFile, JSON.stringify(o) + "\n", "utf-8");
@@ -1023,4 +1070,38 @@ export function addSessionFile(filename: string, content: string): boolean {
   if (fs.existsSync(dest)) return false;
   fs.writeFileSync(dest, content, "utf-8");
   return true;
+}
+
+/**
+ * ISS-057 repair. Rewrites observations.jsonl in place, truncating records
+ * whose text ran past a tool-call boundary. Idempotent.
+ *
+ * Must run wherever the canonical store lives. On a synced install the server
+ * holds the authoritative log, and repairing only the local mirror would be
+ * undone by the next pull. Worse, the sync merge dedupes on
+ * `timestamp|observation`, so a locally repaired record no longer matches its
+ * corrupt twin and would be pushed as an additional row rather than replacing
+ * it.
+ */
+export function repairObservations(opts?: { dryRun?: boolean }): {
+  scanned: number;
+  repaired: { timestamp: string; before: string; after: string }[];
+} {
+  ensureDirs();
+  const { observationsFile } = getPaths();
+  const all = getAllObservations();
+  const repaired: { timestamp: string; before: string; after: string }[] = [];
+
+  const next = all.map((o) => {
+    const { obs, stripped } = sanitizeObservation(o);
+    if (stripped) {
+      repaired.push({ timestamp: o.timestamp, before: o.observation, after: obs.observation });
+    }
+    return obs;
+  });
+
+  if (!opts?.dryRun && repaired.length > 0) {
+    fs.writeFileSync(observationsFile, next.map((o) => JSON.stringify(o)).join("\n") + "\n", "utf-8");
+  }
+  return { scanned: all.length, repaired };
 }

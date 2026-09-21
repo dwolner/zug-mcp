@@ -411,7 +411,7 @@ export function createServer(): McpServer {
       ),
     },
     async ({ observation, type, sessionId, confidence, context, pattern }) => {
-      appendObservation({
+      const stripped = appendObservation({
         timestamp: new Date().toISOString(),
         type: type as ObservationType,
         observation,
@@ -422,7 +422,12 @@ export function createServer(): McpServer {
       });
       const contextLabel = context ? ` [${context}]` : "";
       const patternLabel = pattern ? ` (pattern: ${pattern})` : "";
-      return { content: [{ type: "text" as const, text: `Saved: [${type}/${confidence}]${contextLabel} ${observation}${patternLabel}` }] };
+      // ISS-057: say so rather than quietly cleaning up after a malformed call,
+      // otherwise the caller keeps leaking and nobody finds out.
+      const strippedNote = stripped
+        ? " WARNING: tool-call markup was found in your arguments and truncated. The observation text ran past its own closing tag, which means the call was malformed."
+        : "";
+      return { content: [{ type: "text" as const, text: `Saved: [${type}/${confidence}]${contextLabel} ${observation}${patternLabel}${strippedNote}` }] };
     }
   );
 

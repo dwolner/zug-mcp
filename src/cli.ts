@@ -13,6 +13,7 @@ import {
   readActive,
   getDataDir,
   archiveSessions,
+  repairObservations,
 } from "./storage.js";
 import { runSetup } from "./setup.js";
 import { sync as runSync, pull as runPull, push as runPush } from "./sync.js";
@@ -298,6 +299,8 @@ function printUsage() {
   zug onboard         Seed your cognitive fingerprint (ANTHROPIC_API_KEY optional, improves output)
   zug compact         Durability push before context compaction (used by PreCompact hook)
   zug archive         Move sessions older than 90 days to sessions/archive/
+  zug repair          Repair observations corrupted by leaked tool-call markup (ISS-057)
+    --dry-run         Report what would change without writing
   zug setup           Auto-detect agents and write MCP configs
     --claude-code     Configure Claude Code only
     --cursor          Configure Cursor only
@@ -347,6 +350,19 @@ async function main(): Promise<void> {
     case "update":
       await cmdUpdate();
       break;
+    case "repair": {
+      const dry = process.argv.includes("--dry-run");
+      const { scanned, repaired } = repairObservations({ dryRun: dry });
+      console.log(`Scanned ${scanned} observations, ${repaired.length} corrupted.`);
+      for (const r of repaired) {
+        console.log(`  ${r.timestamp}`);
+        console.log(`    trimmed ${r.before.length - r.after.length} chars of tool-call markup`);
+      }
+      if (dry) console.log("Dry run, nothing written. Re-run without --dry-run to apply.");
+      else if (repaired.length > 0) console.log("Rewrote observations.jsonl.");
+      break;
+    }
+
     case "archive":
       cmdArchive();
       break;

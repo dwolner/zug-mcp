@@ -108,6 +108,7 @@ zug push            Push local observations/sessions/lessons to the server
 zug resume          Reload context after a compaction (SessionStart compaction hook)
 zug compact         Durability push before compaction (PreCompact hook)
 zug archive         Move sessions older than 90 days to sessions/archive (local-only)
+zug repair          Repair observations corrupted by leaked tool-call markup (--dry-run to preview)
 zug backup          Back up your data directory
 ```
 

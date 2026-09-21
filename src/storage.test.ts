@@ -49,6 +49,9 @@ import {
   type Observation,
   type Lesson,
   type GrowthSnapshot,
+  stripToolCallMarkup,
+  sanitizeObservation
+
 } from "./storage";
 
 let tmpDir: string;
@@ -1353,5 +1356,104 @@ describe("reinforcePattern matching gate", () => {
     reinforcePattern("frames problems by root cause");
     reinforcePattern("expects tools to run without babysitting");
     expect(getTopPatterns(10)).toHaveLength(2);
+  });
+});
+
+describe("stripToolCallMarkup (ISS-057)", () => {
+  const CLOSE_OBS = "</" + "observation>";
+  const PARAM = "<" + "parameter name=\"pattern\">";
+  const CLOSE_INVOKE = "</" + "invoke>";
+
+  it("leaves clean text alone", () => {
+    const r = stripToolCallMarkup("verifies claims against primary sources");
+    expect(r.stripped).toBe(false);
+    expect(r.text).toBe("verifies claims against primary sources");
+  });
+
+  it("truncates the leaked tail, keeping the real observation", () => {
+    const r = stripToolCallMarkup(
+      "retained with the axis they failed on." + CLOSE_OBS + "\n" + PARAM + "converges by accumulating rejection criteria"
+    );
+    expect(r.stripped).toBe(true);
+    expect(r.text).toBe("retained with the axis they failed on.");
+  });
+
+  it("handles the other observed shape, a stray closing invoke", () => {
+    const r = stripToolCallMarkup("swapping the power supply simultaneously)." + CLOSE_OBS + "\n" + CLOSE_INVOKE);
+    expect(r.stripped).toBe(true);
+    expect(r.text).toBe("swapping the power supply simultaneously).");
+  });
+
+  it("cuts at the earliest marker when several are present", () => {
+    const r = stripToolCallMarkup("real text" + PARAM + "x" + CLOSE_OBS);
+    expect(r.text).toBe("real text");
+  });
+
+  it("refuses to empty a record that is nothing but markup", () => {
+    // Truncation cannot repair this, so keep it intact and visible rather than
+    // silently writing an empty observation.
+    const r = stripToolCallMarkup(CLOSE_OBS + "\n" + CLOSE_INVOKE);
+    expect(r.stripped).toBe(false);
+    expect(r.text).toContain("observation");
+  });
+
+  it("sanitizes the pattern field too, not just the observation", () => {
+    const { obs, stripped } = sanitizeObservation({
+      timestamp: "2026-09-21T00:00:00.000Z",
+      type: "cognitive_pattern",
+      observation: "clean",
+      session_id: "s",
+      confidence: "high",
+      pattern: "converges by rejecting" + CLOSE_OBS + "junk",
+    });
+    expect(stripped).toBe(true);
+    expect(obs.pattern).toBe("converges by rejecting");
+  });
+
+  it("appendObservation reports the strip so the caller can be told", () => {
+    const stripped = appendObservation({
+      timestamp: new Date().toISOString(),
+      type: "cognitive_pattern",
+      observation: "a real observation" + CLOSE_OBS + PARAM + "leak",
+      session_id: "iss057",
+      confidence: "high",
+    });
+    expect(stripped).toBe(true);
+
+    const written = getAllObservations().filter((o) => o.session_id === "iss057");
+    expect(written).toHaveLength(1);
+    expect(written[0].observation).toBe("a real observation");
+  });
+});
+
+describe("sync merge sanitizes too (ISS-057)", () => {
+  const CLOSE_OBS = "</" + "observation>";
+
+  it("cleans incoming records so a pull cannot reintroduce the corrupt twin", () => {
+    // The repaired local copy and the server's corrupt copy share a timestamp.
+    // Sanitizing on ingest makes them compare equal, so dedupe drops the bad one
+    // instead of appending it alongside. Without this, repairing locally on a
+    // synced install would duplicate every record it fixed.
+    const ts = "2026-09-20T19:14:29.611Z";
+    appendObservation({
+      timestamp: ts,
+      type: "cognitive_pattern",
+      observation: "the repaired text",
+      session_id: "merge",
+      confidence: "high",
+    });
+
+    const added = addObservations([
+      {
+        timestamp: ts,
+        type: "cognitive_pattern",
+        observation: "the repaired text" + CLOSE_OBS + "leaked tail",
+        session_id: "merge",
+        confidence: "high",
+      },
+    ]);
+
+    expect(added).toBe(0);
+    expect(getAllObservations().filter((o) => o.timestamp === ts)).toHaveLength(1);
   });
 });
