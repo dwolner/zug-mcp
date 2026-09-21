@@ -1,15 +1,16 @@
 import { content } from '../content';
+import { BeatHead } from './BeatHead';
 import { Container } from './Container';
-import { SectionHead } from './SectionHead';
 
-export function Recaps() {
+/** Beat two of the compound section: the record each session leaves behind. */
+export function RecapsBlock() {
   const { recaps } = content;
 
   return (
-    <section id="recaps" className="border-t border-line bg-sunk/60 py-24">
-      <SectionHead eyebrow={recaps.eyebrow} headline={recaps.headline} body={recaps.body} />
+    <Container>
+      <BeatHead title={recaps.headline} body={recaps.body} />
 
-      <Container className="mt-14 grid grid-cols-1 gap-12 lg:grid-cols-[1.15fr_0.85fr]">
+      <div className="mt-10 grid grid-cols-1 gap-12 lg:grid-cols-[1.15fr_0.85fr]">
         <div className="min-w-0">
           {/* Phone: the third column is where the argument lands, and at 390px a
               three-column table pushes it off-screen. Restack instead of scroll. */}
@@ -45,46 +46,46 @@ export function Recaps() {
             })}
           </ul>
 
-          {/* min-w-0: a grid item defaults to min-width:auto, so the table's 520px
-              min-width would widen the whole page instead of scrolling in here. */}
+          {/* min-w-0 above: a grid item defaults to min-width:auto, so the table's
+              520px floor would widen the page instead of scrolling in here. */}
           <div className="hidden min-w-0 overflow-x-auto rounded-sm border border-line md:block">
-          <table className="w-full min-w-[520px] border-collapse bg-surface text-left">
-            <thead>
-              <tr className="bg-sunk">
-                {['Source', 'Answers', "Doesn't"].map((h) => (
-                  <th
-                    key={h}
-                    scope="col"
-                    className="border-b border-line px-5 py-3 font-display text-[11px] font-semibold uppercase tracking-[0.14em] text-faint"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {recaps.sources.map((source, i) => {
-                const isZug = i === recaps.sources.length - 1;
-                return (
-                  <tr key={source.name} className={isZug ? 'bg-accent/[0.05]' : undefined}>
+            <table className="w-full min-w-[520px] border-collapse bg-surface text-left">
+              <thead>
+                <tr className="bg-sunk">
+                  {['Source', 'Answers', "Doesn't"].map((h) => (
                     <th
-                      scope="row"
-                      className={`border-b border-line-soft px-5 py-4 align-top font-display text-[15.5px] font-semibold ${
-                        isZug ? 'text-accent' : 'text-ink'
-                      }`}
+                      key={h}
+                      scope="col"
+                      className="border-b border-line px-5 py-3 font-display text-[11px] font-semibold uppercase tracking-[0.14em] text-faint"
                     >
-                      {source.name}
+                      {h}
                     </th>
-                    <td className="border-b border-line-soft px-5 py-4 align-top text-[15.5px] leading-snug text-muted">
-                      {source.answers}
-                    </td>
-                    <td className="border-b border-line-soft px-5 py-4 align-top text-[15.5px] leading-snug text-faint">
-                      {source.misses}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {recaps.sources.map((source, i) => {
+                  const isZug = i === recaps.sources.length - 1;
+                  return (
+                    <tr key={source.name} className={isZug ? 'bg-accent/[0.05]' : undefined}>
+                      <th
+                        scope="row"
+                        className={`border-b border-line-soft px-5 py-4 align-top font-display text-[15.5px] font-semibold ${
+                          isZug ? 'text-accent' : 'text-ink'
+                        }`}
+                      >
+                        {source.name}
+                      </th>
+                      <td className="border-b border-line-soft px-5 py-4 align-top text-[15.5px] leading-snug text-muted">
+                        {source.answers}
+                      </td>
+                      <td className="border-b border-line-soft px-5 py-4 align-top text-[15.5px] leading-snug text-faint">
+                        {source.misses}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
             </table>
           </div>
         </div>
@@ -102,7 +103,7 @@ export function Recaps() {
             ))}
           </ul>
         </div>
-      </Container>
-    </section>
+      </div>
+    </Container>
   );
 }

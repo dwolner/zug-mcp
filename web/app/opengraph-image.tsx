@@ -1,8 +1,11 @@
 import { ImageResponse } from 'next/og';
+import { content } from './content';
 
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
-export const alt = 'zug — AI that remembers how you think.';
+// Derived from the hero so it cannot drift again. The palette below still
+// predates Dark Instrument and is T-063 item 6.
+export const alt = `zug: ${content.hero.headlinePrefix}${content.hero.headlineAccent}`;
 
 export default function OgImage() {
   return new ImageResponse(
@@ -22,7 +25,8 @@ export default function OgImage() {
           זוּג · Hebrew for &quot;pair&quot;
         </span>
         <span style={{ fontSize: 64, fontWeight: 600, color: '#22302B', marginTop: 24 }}>
-          AI that remembers <span style={{ color: '#B5603A' }}>how you think.</span>
+          {content.hero.headlinePrefix}
+          <span style={{ color: '#B5603A' }}>{content.hero.headlineAccent}</span>
         </span>
       </div>
     ),

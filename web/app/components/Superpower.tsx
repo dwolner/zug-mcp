@@ -1,8 +1,7 @@
 import { content } from '../content';
+import { BeatHead } from './BeatHead';
 import { Callout } from './Callout';
 import { Container } from './Container';
-import { DataCard } from './DataCard';
-import { SectionHead } from './SectionHead';
 
 function FanOut({ root, leaves }: { root: string; leaves: string[] }) {
   // Four leaves, evenly spaced across the 480-unit viewBox.
@@ -104,37 +103,22 @@ function FanOut({ root, leaves }: { root: string; leaves: string[] }) {
   );
 }
 
-export function Superpower() {
+/** Beat three of the compound section: the persona reaches whatever you spawn. */
+export function FanOutBlock() {
   const { superpower } = content;
 
   return (
-    <section id="why" className="border-t border-line bg-sunk/60 py-24">
-      <SectionHead
-        eyebrow={superpower.eyebrow}
-        headline={superpower.headline}
-        body={superpower.body}
-      />
-
-      <Container className="mt-14">
-        <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2">
-          <DataCard label={superpower.without.label} lines={superpower.without.lines} />
-          <DataCard label={superpower.withZug.label} lines={superpower.withZug.lines} tone="accent" />
+    <Container>
+      <div className="grid grid-cols-1 items-center gap-12 md:grid-cols-[0.85fr_1.15fr]">
+        <div>
+          <BeatHead title={superpower.fanout.headline} body={superpower.fanout.body} />
         </div>
+        <FanOut root={superpower.fanout.root} leaves={superpower.fanout.children} />
+      </div>
 
-        <div className="mt-20 grid grid-cols-1 items-center gap-12 md:grid-cols-[0.85fr_1.15fr]">
-          <div>
-            <h3 className="font-display text-[26px] font-semibold leading-tight tracking-[-0.025em] text-ink text-balance">
-              {superpower.fanout.headline}
-            </h3>
-            <p className="mt-4 text-[17.5px] text-muted">{superpower.fanout.body}</p>
-          </div>
-          <FanOut root={superpower.fanout.root} leaves={superpower.fanout.children} />
-        </div>
-
-        <div className="mt-16">
-          <Callout label={superpower.callout.label}>{superpower.callout.body}</Callout>
-        </div>
-      </Container>
-    </section>
+      <div className="mt-16">
+        <Callout label={superpower.callout.label}>{superpower.callout.body}</Callout>
+      </div>
+    </Container>
   );
 }

@@ -12,7 +12,7 @@ describe('Home page composition', () => {
 
     expect(screen.getByRole('link', { name: 'Pricing' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
-      'Every agent already knows how you work.'
+      'You explain yourself to the same AI every single session.'
     );
     expect(screen.getByText('$5 / month')).toBeInTheDocument();
     expect(screen.getByText(/best thinking happens with a partner/)).toBeInTheDocument();
@@ -25,10 +25,13 @@ describe('Home page composition', () => {
       .getAllByRole('heading', { level: 2 })
       .map((h) => h.textContent?.trim());
 
-    expect(order.slice(0, 3)).toEqual([
-      'You already wrote an operating system for your agent.',
-      'Your persona is now infrastructure.',
-      'You do none of this.',
+    // Four sections, in this order. Was seven; the last three made the same
+    // argument and are now beats inside one.
+    expect(order).toEqual([
+      'Your setup configures the agent. None of it describes you.',
+      'You have more than one computer.',
+      'Install it once, then forget it exists.',
+      'Every session starts from zero. By design.',
     ]);
   });
 
@@ -44,11 +47,13 @@ describe('Home page composition', () => {
   it('renders the flow section and the compound-effect section', () => {
     render(<Home />);
 
-    expect(screen.getByRole('heading', { name: 'You do none of this.' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Install it once, then forget it exists.' })
+    ).toBeInTheDocument();
     expect(screen.getByText('Observe')).toBeInTheDocument();
     expect(screen.getByText('Inject')).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { name: 'The tax you stop paying.' })
+      screen.getByRole('heading', { name: 'Every session starts from zero. By design.' })
     ).toBeInTheDocument();
     // Two variants share the caption: the svg at md+, the stacked boxes below it.
     expect(screen.getAllByRole('img', { name: /One persona feeding/ })).toHaveLength(2);
@@ -68,10 +73,13 @@ describe('Home page composition', () => {
 
   it('renders the work-context and recap sections', () => {
     render(<Home />);
+    // Both are beats inside the compound section now, not sections of their own.
     expect(
-      screen.getByRole('heading', { name: 'It knows the shape of what you work on.' })
+      screen.getByRole('heading', { level: 3, name: 'It learns your system, not just your style.' })
     ).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Proof of what you actually did.' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 3, name: 'Every session builds on the last one.' })
+    ).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Source' })).toBeInTheDocument();
     expect(screen.getByRole('rowheader', { name: 'Zug recaps' })).toBeInTheDocument();
   });

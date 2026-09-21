@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Instrument_Sans, Newsreader, JetBrains_Mono, Noto_Sans_Hebrew } from 'next/font/google';
+import { content } from './content';
 import './globals.css';
 
 const display = Instrument_Sans({
@@ -32,8 +33,10 @@ export const metadata: Metadata = {
   // Placeholder domain until a real one is chosen — needed so Next resolves the
   // file-convention OG image URL to a public host instead of localhost.
   metadataBase: new URL(process.env.SITE_URL ?? 'https://zug.dev'),
-  title: 'zug — Every agent already knows how you work.',
-  description: 'Earned, not configured. Every session builds on the last.',
+  // Derived from the hero, not copied. This drifted twice: the title and the OG
+  // image each kept shipping a headline the page had already stopped using.
+  title: `zug: ${content.hero.headlinePrefix}${content.hero.headlineAccent}`,
+  description: content.hero.subhead,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

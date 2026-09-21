@@ -16,7 +16,9 @@ describe('UpgradeSection', () => {
     render(<UpgradeSection />);
     expect(screen.getByText('$5 / month')).toBeInTheDocument();
     expect(screen.getByText('$50 / year')).toBeInTheDocument();
-    expect(screen.getByText(/Priority support/)).toBeInTheDocument();
+    expect(screen.getByText(/Cloud backup/)).toBeInTheDocument();
+    // The dashboard is the sweetener that makes Pro a product, not a tip jar.
+    expect(screen.getByText(/dashboard showing what Zug has worked out/)).toBeInTheDocument();
   });
 
   it('includes the signup form CTA', () => {

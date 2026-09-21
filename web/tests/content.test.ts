@@ -7,9 +7,9 @@ describe('content.ts', () => {
   });
 
   it('has the approved hero headline and subhead', () => {
-    expect(content.hero.headlinePrefix).toBe('Every agent already knows ');
-    expect(content.hero.headlineAccent).toBe('how you work.');
-    expect(content.hero.subhead).toBe('Earned, not configured. Every session builds on the last.');
+    expect(content.hero.headlinePrefix).toBe('You explain yourself to the same AI ');
+    expect(content.hero.headlineAccent).toBe('every single session.');
+    expect(content.hero.subhead).toMatch(/^Zug watches how you work/);
   });
 
   it('marks exactly one agent layer as the one Zug writes through', () => {
@@ -53,11 +53,16 @@ describe('content.ts', () => {
     }
   });
 
-  it('pairs the without/with comparison line for line', () => {
-    const { without, withZug } = content.superpower;
-    expect(without.lines).toHaveLength(withZug.lines.length);
-    expect(without.lines.filter((l) => l.startsWith('Subagent'))).toHaveLength(2);
-    expect(withZug.lines.filter((l) => l.includes('inherits'))).toHaveLength(2);
+  it('keeps the page free of em dashes, which do not survive the house voice', () => {
+    const walk = (v: unknown): string[] =>
+      typeof v === 'string'
+        ? [v]
+        : Array.isArray(v)
+          ? v.flatMap(walk)
+          : v && typeof v === 'object'
+            ? Object.values(v).flatMap(walk)
+            : [];
+    expect(walk(content).filter((s) => s.includes('—'))).toEqual([]);
   });
 
   it('fans out to more than one agent', () => {

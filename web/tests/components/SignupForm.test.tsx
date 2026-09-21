@@ -14,7 +14,7 @@ describe('SignupForm', () => {
 
     await waitFor(() =>
       expect(
-        screen.getByText("You're on the list — we'll email you when Pro ships.")
+        screen.getByText("You're on the list. We'll email you when Pro ships.")
       ).toBeInTheDocument()
     );
   });

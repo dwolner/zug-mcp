@@ -42,8 +42,8 @@ export interface Content {
       footnote: string;
     };
   };
+  compound: { eyebrow: string; headline: string; body: string };
   workContext: {
-    eyebrow: string;
     headline: string;
     body: string;
     knows: { label: string; value: string }[];
@@ -52,18 +52,12 @@ export interface Content {
     callout: { label: string; body: string };
   };
   recaps: {
-    eyebrow: string;
     headline: string;
     body: string;
     sources: { name: string; answers: string; misses: string }[];
     sample: { title: string; sections: { heading: string; line: string }[] };
   };
   superpower: {
-    eyebrow: string;
-    headline: string;
-    body: string;
-    without: { label: string; lines: string[] };
-    withZug: { label: string; lines: string[] };
     fanout: { headline: string; body: string; root: string; children: string[] };
     callout: { label: string; body: string };
   };
@@ -96,9 +90,9 @@ export const content: Content = {
   hero: {
     originMark: 'זוג',
     originLine: 'Hebrew for "pair"',
-    headlinePrefix: 'Every agent already knows ',
-    headlineAccent: 'how you work.',
-    subhead: 'Earned, not configured. Every session builds on the last.',
+    headlinePrefix: 'You explain yourself to the same AI ',
+    headlineAccent: 'every single session.',
+    subhead: 'Zug watches how you work and hands the result to every agent you open. Earned while you work, not configured.',
     ctas: [
       { label: 'Install Free', href: `${REPO_URL}#readme` },
       { label: 'View on GitHub →', href: REPO_URL },
@@ -106,8 +100,8 @@ export const content: Content = {
   },
   agentStack: {
     eyebrow: 'What it is',
-    headline: 'You already wrote an operating system for your agent.',
-    body: 'Rules files tell it how to behave. Skills give it capabilities. Hooks run real code around every turn. You assembled all of it, layer by layer, and every layer configures the agent. None of them carry you.',
+    headline: 'Your setup configures the agent. None of it describes you.',
+    body: 'Rules files, skills, hooks, MCP servers. You have been stacking these up for months and every one of them tells the agent how to behave. Not one tells it who it is working with. Zug is that layer.',
     columns: {
       layer: 'Layer',
       carries: 'What it carries',
@@ -135,25 +129,25 @@ export const content: Content = {
       },
     ],
     callout: {
-      label: 'Why this one is different',
-      body: "Every other way to make an agent remember you is an instruction — a prompt, a rules file, a system message asking it to. All of those route through the model's judgment, and it can deprioritise them or reason its way past them. Zug writes through the hook, which is code the harness runs whether the agent cooperates or not. Observation is not something it can skip, and MCP makes what was written readable from any session, including every subagent.",
+      label: 'Why a hook and not a prompt',
+      body: 'Every other way to make an agent remember you is a polite request. A prompt, a rules file, a line in a system message. The model can skip all of those, and it does. A hook is code your harness runs whether the model feels like cooperating or not. That is the whole trick.',
     },
     spec: [
       { label: 'Installs as', value: 'An MCP server and two hooks' },
       { label: 'Works with', value: 'Claude Code, Cursor, Windsurf' },
-      { label: 'Lives in', value: '~/.zug — plain markdown, yours, deletable' },
+      { label: 'Lives in', value: '~/.zug, plain markdown, yours to delete' },
       { label: 'Costs', value: 'Nothing' },
     ],
   },
   howItWorks: {
     eyebrow: 'How it works',
-    headline: 'You do none of this.',
-    body: 'There is no profile to fill out and no settings page. The loop runs while you work, and the only part you ever see is the last one.',
+    headline: 'Install it once, then forget it exists.',
+    body: 'No profile to fill out, no settings page. The loop runs while you work and the only part you ever see is the last one.',
     steps: [
       {
         number: '01',
         title: 'Observe',
-        body: 'Zug watches the session for how you reason — not the code you shipped, the move you made. A correction, a scope call, a question you asked before anyone else would have. Each one is appended to observations.jsonl, one line, never rewritten.',
+        body: 'Zug watches how you work, not what you ship. You correct something, you cut scope, you kill an approach. One line, written down, never rewritten.',
         sample: [
           'observations.jsonl                                    +1 line',
           'observed: separates direction checkpoints from verification duty',
@@ -162,7 +156,7 @@ export const content: Content = {
       {
         number: '02',
         title: 'Record',
-        body: 'Seeing the same thing twice is not a new fact, it is evidence. Repeats land in reinforcements.jsonl against the pattern they confirm, and the session itself is written to sessions/ as a dated recap.',
+        body: 'Seeing it once is a guess. Seeing it three times is a fact. Repeats get logged against the pattern they confirm, and the session gets its own dated recap.',
         sample: [
           'reinforcements.jsonl          pattern confirmed  ×3',
           'sessions/2026-09-16-workflow-emulation.md         written',
@@ -171,7 +165,7 @@ export const content: Content = {
       {
         number: '03',
         title: 'Synthesize',
-        body: 'Periodically Zug rereads the raw log and rewrites the persona: PERSONA.md, who you are as a thinker, and PLAYBOOK.md, how to work with you. A pattern reinforced often enough is promoted into lessons.jsonl — a standing instruction your agent follows without being told.',
+        body: 'Every so often Zug rereads the pile and rewrites your persona: who you are as a thinker, and how to work with you. Anything it has seen enough times becomes a standing instruction your agent follows without being asked.',
         sample: [
           'PERSONA.md · PLAYBOOK.md                      rewritten',
           'L-8483ea-1  Diagnose from the live system, never a local mirror',
@@ -180,21 +174,21 @@ export const content: Content = {
       {
         number: '04',
         title: 'Inject',
-        body: 'Only ACTIVE.md is injected — a short brief of the patterns that matter right now. Not the transcript, not the whole persona. Everything deeper stays on disk and is one question away when the agent actually needs it.',
+        body: 'Your agent gets a short brief at the start of every session. Not the transcript, not the whole persona. The rest stays on disk, one question away, for when it actually needs it.',
         sample: [
           'ACTIVE.md         1.6 KB        injected at session start',
           'PERSONA.md · PLAYBOOK.md · 267 recaps      on request only',
         ],
       },
     ],
-    loopNote: 'Then step 01 again, against a sharper baseline. That is the whole product.',
+    loopNote: 'Then back to step one, against a sharper baseline. That is the whole product.',
     funnel: {
-      headline: 'It compresses, then it holds the rest back.',
-      body: 'The reason this does not eat your context window is that almost none of it is injected. Raw history accumulates, synthesis compresses it, and only the short brief rides along into every session. Below is a real persona after 267 sessions.',
+      headline: 'It will not eat your context window.',
+      body: 'Almost none of this gets loaded. History piles up, synthesis boils it down, and only the short brief rides along into every session. Here is a real persona after 267 sessions.',
       tiers: [
         {
           label: 'Accumulated',
-          note: 'Append-only, and it grows with every session. Never edited, never summarised away.',
+          note: 'Append only. It grows every session and nothing gets edited away.',
           files: [
             { name: 'observations.jsonl', size: '113 KB' },
             { name: 'reinforcements.jsonl', size: '5.7 KB' },
@@ -203,7 +197,7 @@ export const content: Content = {
         },
         {
           label: 'Synthesized',
-          note: 'Rewritten from the raw log, then compacted — this tier gets smaller as it gets sharper.',
+          note: 'Rewritten from the raw log, then compacted. This tier can get smaller as it gets sharper.',
           files: [
             { name: 'PERSONA.md', size: '30 KB' },
             { name: 'PLAYBOOK.md', size: '18 KB' },
@@ -212,22 +206,26 @@ export const content: Content = {
         },
         {
           label: 'Injected',
-          note: 'Three to five patterns, rewritten every synthesis. This tier does not grow.',
+          note: 'Three to five patterns, rewritten every synthesis. This one never grows.',
           files: [{ name: 'ACTIVE.md', size: '1.6 KB' }],
         },
       ],
-      footnote: 'Roughly 170 KB of accumulated context, 1.6 KB of it loaded by default. The other 169 KB is not gone — it is indexed, and the agent can pull the exact piece it needs. Measured 2026-09-20.',
+      footnote: 'Roughly 170 KB on disk, 1.6 KB of it loaded by default. The other 169 KB is indexed, and your agent pulls the exact piece it needs. Measured 2026-09-20.',
     },
   },
+  compound: {
+    eyebrow: 'The compound effect',
+    headline: 'Every session starts from zero. By design.',
+    body: 'Sometimes that helps. Mostly it is just you explaining yourself again to the billion dollar AI machine.',
+  },
   workContext: {
-    eyebrow: 'Not just how you think',
-    headline: 'It knows the shape of what you work on.',
-    body: 'A persona is not only style. Over enough sessions Zug learns your company, your role, your stack, and which part of the system owns which problem — so a question about a broken thing does not start with fifteen greps and a request for you to explain the architecture again.',
+    headline: 'It learns your system, not just your style.',
+    body: 'Your stack, which service owns which problem, and what you decided last time it broke. So when something breaks again, your agent does not open with fifteen greps and a request that you explain the architecture.',
     knows: [
-      { label: 'Who you are', value: 'Role, team, what you are accountable for' },
-      { label: 'What you run', value: 'Stack, infrastructure, deploy targets' },
-      { label: 'How it is laid out', value: 'Which repo owns which part of the system' },
-      { label: 'What you are mid-way through', value: 'Open threads, current phase, what is parked' },
+      { label: 'Your stack', value: 'Languages, services, where it all deploys' },
+      { label: 'Your layout', value: 'Which repo owns which part of the system' },
+      { label: 'Your decisions', value: 'What you picked last time, and what you rejected' },
+      { label: 'Your open threads', value: 'What is in flight and what is parked' },
     ],
     without: [
       'you: why is synthesis truncating?',
@@ -246,13 +244,12 @@ export const content: Content = {
     ],
     callout: {
       label: 'Clues, not the whole file',
-      body: 'ACTIVE.md carries pointers, not contents — enough for the agent to know that something is known and where to find it. When it needs the detail it asks for the specific memory. You get the benefit of the whole persona without paying for it in every prompt.',
+      body: 'The brief carries pointers, not contents. Enough for your agent to know that something is known and where to go for it. When it wants the detail it asks. You get the benefit of the whole persona without paying for it in every prompt.',
     },
   },
   recaps: {
-    eyebrow: 'A second use',
-    headline: 'Proof of what you actually did.',
-    body: 'Zug writes a recap of every session to disk. That turns out to be useful for something other than the agent: it is a record of your work that neither your commit history nor your ticket queue can produce on its own.',
+    headline: 'Every session builds on the last one.',
+    body: 'Zug writes a recap of each session to disk. Git tells you what changed. Tickets tell you what was planned. Neither tells you why you picked this shape and threw the other one out, which is the part you need six weeks later when it comes up again.',
     sources: [
       {
         name: 'Git history',
@@ -281,40 +278,15 @@ export const content: Content = {
     },
   },
   superpower: {
-    eyebrow: 'The compound effect',
-    headline: 'The tax you stop paying.',
-    body: 'Re-explaining yourself is a tax you pay per session. Most people never notice it, because it is spread thin — two minutes here, a wrong assumption corrected there, the same preference stated for the ninth time.',
-    without: {
-      label: 'Without Zug',
-      lines: [
-        'Session 1    you explain how you like to work',
-        'Session 2    you explain it again',
-        'Session 3    agent guesses wrong, you correct it',
-        'Session 4    you explain it again',
-        'Subagent A   knows nothing, starts from zero',
-        'Subagent B   knows nothing, starts from zero',
-      ],
-    },
-    withZug: {
-      label: 'With Zug',
-      lines: [
-        'Session 1    you explain how you like to work',
-        'Session 2    already loaded',
-        'Session 3    already loaded, plus what it learned in 2',
-        'Session 4    already loaded, sharper',
-        'Subagent A   inherits the same persona',
-        'Subagent B   inherits the same persona',
-      ],
-    },
     fanout: {
-      headline: 'It survives the fan-out.',
-      body: 'This is the part that is hard to get any other way. When you spawn subagents, each one normally starts blind — you are delegating to a stranger who happens to share your codebase. They inherit your persona instead, so the agent you hand work to already knows what you would have told it.',
+      headline: 'It goes wherever you spawn.',
+      body: 'Spawn a subagent and it starts blind. You are handing work to a stranger who happens to share your codebase. Your persona is one call away from any session, so the thing you delegate to can find out what you would have told it.',
       root: 'your persona',
       children: ['main session', 'subagent', 'subagent', 'subagent'],
     },
     callout: {
       label: 'The actual claim',
-      body: 'Not that Zug remembers your conversations — transcripts are cheap, and nobody wants to re-read them. Zug remembers the conclusions you and your agent already reached about how you work, and spends about 400 tokens putting them back in front of it.',
+      body: 'Not that Zug remembers your conversations. Transcripts are cheap and nobody wants to reread them. Zug remembers the conclusions you and your agent already reached about how you work, and spends about 400 tokens putting them back in front of it.',
     },
   },
   features: [
@@ -322,7 +294,7 @@ export const content: Content = {
     {
       number: '02',
       title: 'One identity, every agent',
-      body: 'Claude, Cursor, Windsurf — and every subagent underneath them.',
+      body: 'Claude, Cursor, Windsurf, and anything else that speaks MCP.',
     },
     {
       number: '03',
@@ -337,22 +309,22 @@ export const content: Content = {
   ],
   upgrade: {
     eyebrow: 'Zug Pro',
-    headline: 'Your persona is now infrastructure.',
-    body: 'Local Zug is the whole product. It does not expire, nothing leaves your machine, and the files stay yours. Pro is for when one machine stops being enough.',
+    headline: 'You have more than one computer.',
+    body: 'Local Zug is the whole product and it stays free. Pro is for the second laptop and the work machine: one persona everywhere, synthesis that runs on our servers instead of your battery, and a dashboard showing what Zug has actually worked out about you.',
     priceMonthly: '$5 / month',
     priceYearly: '$50 / year',
     proFeatures: [
-      'Remote sync (every machine, always current)',
-      'claude.ai web support via OAuth',
-      'Server-side synthesis (runs on our infra, not yours)',
-      'Persistent cloud backup',
-      'Priority support',
+      'Sync, so the same persona is on every machine',
+      'A dashboard showing what Zug has worked out about you',
+      'Synthesis on our servers, not your laptop',
+      'claude.ai in the browser, via OAuth',
+      'Cloud backup',
     ],
     signup: {
       placeholder: 'you@example.com',
       buttonLabel: 'Join the waitlist',
-      successMessage: "You're on the list — we'll email you when Pro ships.",
-      errorMessage: 'Something went wrong — try again in a moment.',
+      successMessage: "You're on the list. We'll email you when Pro ships.",
+      errorMessage: 'Something went wrong. Try again in a moment.',
     },
   },
   footer: {
