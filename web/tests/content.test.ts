@@ -52,6 +52,17 @@ describe('content.ts', () => {
     expect(commands).toEqual(['zug pull', 'zug compact']);
   });
 
+  it('keeps havruta on the page, which the README had and the page did not', () => {
+    expect(content.closing.body).toMatch(/havruta/i);
+    // The claim the page never made: the user changes too, not just the agent.
+    expect(content.closing.headline).toMatch(/you get better/i);
+  });
+
+  it('opens and closes on the same words', () => {
+    // T-063 item 2: the close restates the hero's own last sentence verbatim.
+    expect(content.hero.subhead.endsWith(content.closing.restatement)).toBe(true);
+  });
+
   it('carries no hero sidebar cards — they restated features 01-03 verbatim', () => {
     expect('sidebarCards' in content.hero).toBe(false);
   });

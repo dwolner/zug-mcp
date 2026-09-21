@@ -2,6 +2,8 @@ import { content } from '../content';
 import { Callout } from './Callout';
 import { Container } from './Container';
 import { SectionHead } from './SectionHead';
+import { Terminal, TerminalLines } from './Terminal';
+import { BeatHead } from './BeatHead';
 
 export function AgentStack() {
   const { agentStack } = content;
@@ -86,7 +88,19 @@ export function AgentStack() {
           <Callout label={agentStack.callout.label}>{agentStack.callout.body}</Callout>
         </div>
 
-        <dl className="mt-12 grid grid-cols-1 gap-x-12 gap-y-4 border-t border-line pt-8 sm:grid-cols-2">
+        <div className="mt-16 grid grid-cols-1 items-start gap-10 lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="min-w-0">
+            <BeatHead
+              title={agentStack.ownership.headline}
+              body={agentStack.ownership.body}
+            />
+          </div>
+          <Terminal title="~/.zug">
+            <TerminalLines lines={agentStack.ownership.sample} />
+          </Terminal>
+        </div>
+
+        <dl className="mt-16 grid grid-cols-1 gap-x-12 gap-y-4 border-t border-line pt-8 sm:grid-cols-2">
           {agentStack.spec.map((row) => (
             <div key={row.label} className="grid grid-cols-[minmax(0,7.5rem)_1fr] gap-x-4">
               <dt className="font-display text-[11px] font-semibold uppercase tracking-[0.14em] text-faint">

@@ -4,6 +4,7 @@ import { AgentStack } from './components/AgentStack';
 import { UpgradeSection } from './components/UpgradeSection';
 import { HowItWorks } from './components/HowItWorks';
 import { Compound } from './components/Compound';
+import { Closing } from './components/Closing';
 import { Footer } from './components/Footer';
 
 export default function Home() {
@@ -18,6 +19,7 @@ export default function Home() {
       <UpgradeSection />
       <HowItWorks />
       <Compound />
+      <Closing />
       <Footer />
     </>
   );

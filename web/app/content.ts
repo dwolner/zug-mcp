@@ -42,6 +42,13 @@ export interface Content {
     }[];
     callout: { label: string; body: string };
     spec: { label: string; value: string }[];
+    ownership: { headline: string; body: string; sample: string[] };
+  };
+  closing: {
+    eyebrow: string;
+    headline: string;
+    body: string;
+    restatement: string;
   };
   howItWorks: {
     eyebrow: string;
@@ -185,6 +192,21 @@ export const content: Content = {
       { label: "Lives in", value: "~/.zug, plain markdown, yours to delete" },
       { label: "Costs", value: "Nothing" },
     ],
+    // Item 1. The sharpest objection the product faces is that Zug watches how
+    // you think, so this answers it by showing the folder rather than promising.
+    ownership: {
+      headline: "It is a folder. You can delete it.",
+      body: "No database, no account, no export button to go hunting for. Your persona is a handful of markdown files. Read them, put them in git, back them up, or throw the whole directory away and Zug forgets you completely.",
+      sample: [
+        "$ ls ~/.zug",
+        "ACTIVE.md      PERSONA.md      lessons.jsonl",
+        "PLAYBOOK.md    sessions/       observations.jsonl",
+        "$ head -2 ~/.zug/PERSONA.md",
+        "Thinks in systems and relationships, top-down",
+        "from vision to implementation",
+        "$ rm -rf ~/.zug",
+      ],
+    },
   },
   howItWorks: {
     eyebrow: "How it works",
@@ -415,6 +437,14 @@ export const content: Content = {
       successMessage: "You're on the list. We'll email you when Pro ships.",
       errorMessage: "Something went wrong. Try again in a moment.",
     },
+  },
+  // Items 8 and 2 together: the ideal, then the thesis at full size with the
+  // CTA under it. The page opens and closes on the same words.
+  closing: {
+    eyebrow: "The point",
+    headline: "You get better at this too.",
+    body: "Havruta is the old practice of studying in pairs, two people arguing toward something neither reaches alone. That only works when both sides carry the context. An agent that already has yours lets you start further up the problem, because you are not spending the first ten minutes of every session being a human README. Every session opens attuned.",
+    restatement: "Earned while you work, not configured.",
   },
   footer: {
     mark: "זוג",

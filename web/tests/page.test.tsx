@@ -32,6 +32,7 @@ describe('Home page composition', () => {
       'You have more than one computer.',
       'Install it once, then forget it exists.',
       'Sessions usually start from zero, by design.',
+      'You get better at this too.',
     ]);
   });
 
@@ -47,6 +48,23 @@ describe('Home page composition', () => {
     expect(screen.getByText(/Hooks on Claude Code, Codex CLI/)).toBeInTheDocument();
     // The hook row is the one that does not route through the model's judgment.
     expect(screen.getByRole('rowheader', { name: 'Hooks' })).toBeInTheDocument();
+  });
+
+  it('answers the surveillance objection by showing the folder, not promising', () => {
+    render(<Home />);
+    expect(
+      screen.getByRole('heading', { level: 3, name: 'It is a folder. You can delete it.' })
+    ).toBeInTheDocument();
+    // t3.codes pattern: print the command rather than claim the property.
+    // The prompt is its own span, so match the command text itself.
+    expect(screen.getByText('rm -rf ~/.zug')).toBeInTheDocument();
+  });
+
+  it('closes on the thesis with the install command under it', () => {
+    render(<Home />);
+    expect(screen.getByText('Earned while you work, not configured.')).toBeInTheDocument();
+    // Hero and close share the CTA, so both offer it.
+    expect(screen.getAllByRole('button', { name: 'Copy install command' })).toHaveLength(2);
   });
 
   it('renders the flow section and the compound-effect section', () => {
