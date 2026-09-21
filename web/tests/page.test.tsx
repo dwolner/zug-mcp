@@ -18,6 +18,29 @@ describe('Home page composition', () => {
     expect(screen.getByText(/best thinking happens with a partner/)).toBeInTheDocument();
   });
 
+  it('answers what Zug is, then what it costs, before any of the mechanics', () => {
+    render(<Home />);
+
+    const order = screen
+      .getAllByRole('heading', { level: 2 })
+      .map((h) => h.textContent?.trim());
+
+    expect(order.slice(0, 3)).toEqual([
+      'You already wrote an operating system for your agent.',
+      'The understanding is now infrastructure.',
+      'You do none of this.',
+    ]);
+  });
+
+  it('tells a cold reader what they are installing', () => {
+    render(<Home />);
+
+    expect(screen.getByText('An MCP server and two hooks')).toBeInTheDocument();
+    expect(screen.getByText('Claude Code, Cursor, Windsurf')).toBeInTheDocument();
+    // The hook row is the one that does not route through the model's judgment.
+    expect(screen.getByRole('rowheader', { name: 'Hooks' })).toBeInTheDocument();
+  });
+
   it('renders the flow section and the compound-effect section', () => {
     render(<Home />);
 

@@ -20,6 +20,15 @@ export interface Content {
     subhead: string;
     ctas: NavLink[];
   };
+  agentStack: {
+    eyebrow: string;
+    headline: string;
+    body: string;
+    columns: { layer: string; carries: string; judgment: string; judgmentShort: string };
+    layers: { name: string; carries: string; judgment: string; isZug?: boolean }[];
+    callout: { label: string; body: string };
+    spec: { label: string; value: string }[];
+  };
   howItWorks: {
     eyebrow: string;
     headline: string;
@@ -93,6 +102,47 @@ export const content: Content = {
     ctas: [
       { label: 'Install Free', href: `${REPO_URL}#readme` },
       { label: 'View on GitHub →', href: REPO_URL },
+    ],
+  },
+  agentStack: {
+    eyebrow: 'What it is',
+    headline: 'You already wrote an operating system for your agent.',
+    body: 'Rules files tell it how to behave. Skills give it capabilities. Hooks run real code around every turn. You assembled all of it, layer by layer, and every layer configures the agent. None of them carry you.',
+    columns: {
+      layer: 'Layer',
+      carries: 'What it carries',
+      judgment: "Routes through the model's judgment?",
+      // Repeated once per card on phones, where the full question is noise.
+      judgmentShort: "Model's judgment",
+    },
+    layers: [
+      {
+        name: 'Injected rules',
+        carries: 'Your standing instructions, prepended every session',
+        judgment: 'yes',
+      },
+      { name: 'Skills', carries: 'Capabilities, loaded when a task matches', judgment: 'yes' },
+      {
+        name: 'Hooks',
+        carries: 'Code the harness runs around every turn',
+        judgment: 'no',
+        isZug: true,
+      },
+      {
+        name: 'System reminders',
+        carries: 'Mid-conversation nudges you never see',
+        judgment: 'yes',
+      },
+    ],
+    callout: {
+      label: 'Why this one is different',
+      body: "Every other way to make an agent remember you is an instruction — a prompt, a rules file, a system message asking it to. All of those route through the model's judgment, and it can deprioritise them or reason its way past them. Zug writes through the hook, which is code the harness runs whether the agent cooperates or not. Observation is not something it can skip, and MCP makes what was written readable from any session, including every subagent.",
+    },
+    spec: [
+      { label: 'Installs as', value: 'An MCP server and two hooks' },
+      { label: 'Works with', value: 'Claude Code, Cursor, Windsurf' },
+      { label: 'Lives in', value: '~/.zug — plain markdown, yours, deletable' },
+      { label: 'Costs', value: 'Nothing' },
     ],
   },
   howItWorks: {
@@ -288,7 +338,7 @@ export const content: Content = {
   upgrade: {
     eyebrow: 'Zug Pro',
     headline: 'The understanding is now infrastructure.',
-    body: "After 50 sessions, what you've built is worth protecting. Pro makes it permanent, portable, and always with you.",
+    body: 'Local Zug is the whole product. It does not expire, nothing leaves your machine, and the files stay yours. Pro is for when one machine stops being enough.',
     priceMonthly: '$5 / month',
     priceYearly: '$50 / year',
     proFeatures: [

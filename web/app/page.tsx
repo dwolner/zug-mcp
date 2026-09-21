@@ -1,5 +1,6 @@
 import { Nav } from './components/Nav';
 import { Hero } from './components/Hero';
+import { AgentStack } from './components/AgentStack';
 import { HowItWorks } from './components/HowItWorks';
 import { WorkContext } from './components/WorkContext';
 import { Superpower } from './components/Superpower';
@@ -12,11 +13,14 @@ export default function Home() {
     <>
       <Nav />
       <Hero />
+      {/* What it is, then the price, then the long explainers. A reader should
+          know what they are installing and what it costs before the mechanics. */}
+      <AgentStack />
+      <UpgradeSection />
       <HowItWorks />
       <WorkContext />
       <Superpower />
       <Recaps />
-      <UpgradeSection />
       <Footer />
     </>
   );

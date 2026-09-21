@@ -12,6 +12,29 @@ describe('content.ts', () => {
     expect(content.hero.subhead).toBe('Earned, not configured. Every session builds on the last.');
   });
 
+  it('marks exactly one agent layer as the one Zug writes through', () => {
+    const zug = content.agentStack.layers.filter((l) => l.isZug);
+    expect(zug).toHaveLength(1);
+    expect(zug[0].name).toBe('Hooks');
+  });
+
+  it('gives the hook layer the only "no" in the judgment column', () => {
+    const noes = content.agentStack.layers.filter((l) => l.judgment === 'no');
+    expect(noes.map((l) => l.name)).toEqual(['Hooks']);
+    // The graphic only argues if every other layer says yes.
+    expect(content.agentStack.layers.filter((l) => l.judgment === 'yes')).toHaveLength(3);
+  });
+
+  it('states the install shape a cold reader needs before the CTA', () => {
+    const labels = content.agentStack.spec.map((s) => s.label);
+    expect(labels).toEqual(['Installs as', 'Works with', 'Lives in', 'Costs']);
+  });
+
+  it('does not presume prior usage in the Pro copy, which now sits near the top', () => {
+    expect(content.upgrade.body).not.toMatch(/after \d+ sessions/i);
+    expect(content.upgrade.body).toMatch(/free|does not expire|whole product/i);
+  });
+
   it('carries no hero sidebar cards — they restated features 01-03 verbatim', () => {
     expect('sidebarCards' in content.hero).toBe(false);
   });
