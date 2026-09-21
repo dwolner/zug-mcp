@@ -37,11 +37,14 @@ describe('content.ts', () => {
 
   it('scripts the hero session out of real hooks, commands and tool names', () => {
     const byKind = (k: string) => content.hero.session.filter((l) => l.kind === k);
-    expect(byKind('hook').map((l) => l.text.split(/\s+/)[0])).toEqual([
+    expect(byKind('hook').map((l) => l.text.split(/[\s:[]/)[0])).toEqual([
       'SessionStart',
       'PreCompact',
     ]);
-    expect(byKind('tool').map((l) => l.text)).toEqual(['zug_get_context', 'zug_save_observation']);
+    expect(byKind('call').map((l) => l.text)).toEqual([
+      'zug_get_context()',
+      'zug_save_observation()',
+    ]);
     // Nothing invented: every command shown is one the CLI actually exposes.
     const commands = content.hero.session
       .filter((l) => l.kind === 'hook' || l.kind === 'command')

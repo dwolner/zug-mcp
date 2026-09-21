@@ -9,20 +9,22 @@ const STEP_MS = 150;
 const TONE: Record<string, string> = {
   command: 'text-ink',
   hook: 'text-accent',
-  tool: 'text-accent',
-  output: 'pl-4 text-faint',
-  you: 'text-ink',
-  agent: 'text-muted',
+  call: 'text-accent',
+  output: 'pl-3 text-faint',
+  prompt: 'text-ink',
+  text: 'text-muted',
 };
 
-/** The marker that precedes a line. Hooks and tools get a dot because they are
- *  the point: neither one was typed by the person in the transcript. */
+// A real session breathes between turns. Gap when the kind changes, except for
+// output, which belongs tight under the call that produced it.
+const GAP_KINDS = new Set(['prompt', 'hook', 'call', 'text']);
+const gapBefore = (kind: string, prev?: string) => prev !== undefined && kind !== prev && GAP_KINDS.has(kind);
+
+/** Only the two things a person actually types get a prompt. Hooks, tool calls
+ *  and their output carry no marker, because nobody typed them. */
 function Marker({ kind }: { kind: string }) {
   if (kind === 'command') return <span className="select-none text-accent">$ </span>;
-  if (kind === 'hook' || kind === 'tool')
-    return <span className="select-none text-accent">● </span>;
-  if (kind === 'you') return <span className="select-none text-faint">you: </span>;
-  if (kind === 'agent') return <span className="select-none text-faint">agent: </span>;
+  if (kind === 'prompt') return <span className="select-none text-accent">&gt; </span>;
   return null;
 }
 
@@ -71,7 +73,7 @@ export function HeroTerminal() {
           <p
             key={`${line.kind}-${i}`}
             className={`zug-line whitespace-pre font-mono text-[12.5px] leading-relaxed ${
-              i > 0 ? 'mt-0.5' : ''
+              gapBefore(line.kind, session[i - 1]?.kind) ? 'mt-3' : i > 0 ? 'mt-0.5' : ''
             } ${TONE[line.kind] ?? 'text-faint'}`}
             style={{ animationDelay: `${i * STEP_MS}ms` }}
           >

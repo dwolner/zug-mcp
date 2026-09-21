@@ -19,7 +19,7 @@ export interface Content {
     headlineAccent: string;
     subhead: string;
     install: { command: string; copyLabel: string; copiedLabel: string };
-    session: { kind: "command" | "hook" | "tool" | "output" | "you" | "agent"; text: string }[];
+    session: { kind: "command" | "hook" | "call" | "output" | "prompt" | "text"; text: string }[];
     ctas: NavLink[];
   };
   agentStack: {
@@ -119,20 +119,22 @@ export const content: Content = {
       copyLabel: "Copy install command",
       copiedLabel: "Copied",
     },
-    // A real session. Real hook names, real commands, real MCP tool names, and
-    // output in the shape those commands actually print.
+    // A real session, in the shape Claude Code actually prints it: hook lines
+    // with the command they ran, "> " for what the human typed, tool calls as
+    // calls, and their output indented underneath.
     session: [
       { kind: "command", text: "claude" },
-      { kind: "hook", text: "SessionStart      zug pull" },
+      { kind: "hook", text: "SessionStart:startup [zug pull] completed" },
       { kind: "output", text: 'zug pull: {"status":"ok"}' },
-      { kind: "tool", text: "zug_get_context" },
-      { kind: "output", text: "Sessions: 267 · Observations: 179 · 1.6 KB" },
-      { kind: "you", text: "why is synthesis truncating?" },
-      { kind: "agent", text: "src/synthesize.ts owns it, one call per document" },
-      { kind: "tool", text: "zug_save_observation" },
-      { kind: "output", text: "[cognitive_pattern/high] verifies claims" },
-      { kind: "output", text: "against primary sources" },
-      { kind: "hook", text: "PreCompact        zug compact" },
+      { kind: "prompt", text: "why is synthesis truncating?" },
+      { kind: "call", text: "zug_get_context()" },
+      { kind: "output", text: "267 sessions · 179 observations · 1.6 KB loaded" },
+      { kind: "text", text: "src/synthesize.ts owns it. One model call per" },
+      { kind: "text", text: "document, so the ceiling applies per document." },
+      { kind: "call", text: "zug_save_observation()" },
+      { kind: "output", text: "[cognitive_pattern/high] verifies claims against" },
+      { kind: "output", text: "primary sources" },
+      { kind: "hook", text: "PreCompact [zug compact] completed" },
       { kind: "output", text: 'zug compact: durability push → {"status":"ok"}' },
     ],
     ctas: [{ label: "View on GitHub →", href: REPO_URL }],
