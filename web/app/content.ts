@@ -178,8 +178,8 @@ export const content: Content = {
       body: "Every other way to make an agent remember you is a polite request. A prompt, a rules file, a line in a system message. The model can skip all of those, and it does. A hook is code your harness runs whether the model feels like cooperating or not. That is the whole trick.",
     },
     spec: [
-      { label: "Installs as", value: "An MCP server and two hooks" },
-      { label: "Works with", value: "Claude Code, Cursor, Windsurf" },
+      { label: "Installs as", value: "An MCP server, plus three hooks on Claude Code" },
+      { label: "Works with", value: "Claude Code. Cursor and Windsurf via MCP." },
       { label: "Lives in", value: "~/.zug, plain markdown, yours to delete" },
       { label: "Costs", value: "Nothing" },
     ],

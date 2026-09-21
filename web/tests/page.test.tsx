@@ -38,8 +38,10 @@ describe('Home page composition', () => {
   it('tells a cold reader what they are installing', () => {
     render(<Home />);
 
-    expect(screen.getByText('An MCP server and two hooks')).toBeInTheDocument();
-    expect(screen.getByText('Claude Code, Cursor, Windsurf')).toBeInTheDocument();
+    // Hooks are Claude Code only (src/setup.ts:251-267). Cursor and Windsurf
+    // get an MCP entry and nothing else, so the spec must not list them as equals.
+    expect(screen.getByText(/three hooks on Claude Code/)).toBeInTheDocument();
+    expect(screen.getByText(/Cursor and Windsurf via MCP/)).toBeInTheDocument();
     // The hook row is the one that does not route through the model's judgment.
     expect(screen.getByRole('rowheader', { name: 'Hooks' })).toBeInTheDocument();
   });
