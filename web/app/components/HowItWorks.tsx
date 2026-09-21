@@ -3,6 +3,7 @@ import { Container } from './Container';
 import { SectionHead } from './SectionHead';
 import { SignatureMoment } from './SignatureMoment';
 import { ContextFunnel } from './ContextFunnel';
+import { Terminal, TerminalLines } from './Terminal';
 
 export function HowItWorks() {
   const { howItWorks } = content;
@@ -41,19 +42,10 @@ export function HowItWorks() {
                       <SignatureMoment />
                     </div>
                   ) : (
-                    <div className="mt-5 overflow-x-auto rounded-sm border border-line bg-surface">
-                      <div className="min-w-[380px] px-5 py-4">
-                        {step.sample.map((line, j) => (
-                          <p
-                            key={line}
-                            className={`whitespace-pre font-mono text-[12.5px] leading-relaxed tabular-nums ${
-                              j === 0 ? 'text-faint' : 'mt-1 text-accent'
-                            }`}
-                          >
-                            {line}
-                          </p>
-                        ))}
-                      </div>
+                    <div className="mt-5">
+                      <Terminal>
+                        <TerminalLines lines={step.sample} />
+                      </Terminal>
                     </div>
                   )}
                 </div>
@@ -61,13 +53,6 @@ export function HowItWorks() {
             );
           })}
         </ol>
-
-        <p className="mt-12 flex items-center gap-3 font-display text-[16.5px] text-muted">
-          <span aria-hidden="true" className="font-mono text-accent">
-            ↻
-          </span>
-          {howItWorks.loopNote}
-        </p>
       </Container>
 
       <ContextFunnel />

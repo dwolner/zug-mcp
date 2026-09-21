@@ -6,6 +6,9 @@ export function ContextFunnel() {
 
   return (
     <Container className="mt-20">
+      {/* The step list ends at 05. Without a rule here the funnel reads as a
+          sixth step rather than a separate argument. */}
+      <hr className="mb-20 border-0 border-t border-line" />
       <h3 className="max-w-[24ch] font-display text-[26px] font-semibold leading-tight tracking-[-0.025em] text-ink text-balance">
         {funnel.headline}
       </h3>

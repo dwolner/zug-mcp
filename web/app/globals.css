@@ -25,3 +25,35 @@ body {
 .hebrew {
   font-family: var(--font-hebrew), 'Noto Sans Hebrew', 'Arial Hebrew', sans-serif;
 }
+
+/* Hero session lines land in sequence once, on load. This is the one
+   orchestrated motion moment (docs/brand.md); everything else is hover states. */
+@keyframes zug-line-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.zug-line {
+  animation: zug-line-in 340ms ease-out backwards;
+}
+
+.zug-tilt {
+  transition: transform 320ms ease-out;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zug-line {
+    animation: none;
+  }
+  .zug-tilt {
+    transition: none;
+    transform: none !important;
+  }
+}

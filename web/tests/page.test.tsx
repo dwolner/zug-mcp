@@ -28,10 +28,10 @@ describe('Home page composition', () => {
     // Four sections, in this order. Was seven; the last three made the same
     // argument and are now beats inside one.
     expect(order).toEqual([
-      'Your setup configures the agent. None of it describes you.',
+      'You configured the agent. Zug gets to know you.',
       'You have more than one computer.',
       'Install it once, then forget it exists.',
-      'Every session starts from zero. By design.',
+      'Sessions usually start from zero, by design.',
     ]);
   });
 
@@ -53,7 +53,7 @@ describe('Home page composition', () => {
     expect(screen.getByText('Observe')).toBeInTheDocument();
     expect(screen.getByText('Inject')).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { name: 'Every session starts from zero. By design.' })
+      screen.getByRole('heading', { name: 'Sessions usually start from zero, by design.' })
     ).toBeInTheDocument();
     // Two variants share the caption: the svg at md+, the stacked boxes below it.
     expect(screen.getAllByRole('img', { name: /One persona feeding/ })).toHaveLength(2);

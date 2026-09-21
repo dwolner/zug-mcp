@@ -9,7 +9,7 @@ describe('content.ts', () => {
   it('has the approved hero headline and subhead', () => {
     expect(content.hero.headlinePrefix).toBe('You explain yourself to the same AI ');
     expect(content.hero.headlineAccent).toBe('every single session.');
-    expect(content.hero.subhead).toMatch(/^Zug watches how you work/);
+    expect(content.hero.subhead).toMatch(/Zug will watch how you work/);
   });
 
   it('marks exactly one agent layer as the one Zug writes through', () => {
@@ -35,6 +35,20 @@ describe('content.ts', () => {
     expect(content.upgrade.body).toMatch(/free|does not expire|whole product/i);
   });
 
+  it('scripts the hero session out of real hooks, commands and tool names', () => {
+    const byKind = (k: string) => content.hero.session.filter((l) => l.kind === k);
+    expect(byKind('hook').map((l) => l.text.split(/\s+/)[0])).toEqual([
+      'SessionStart',
+      'PreCompact',
+    ]);
+    expect(byKind('tool').map((l) => l.text)).toEqual(['zug_get_context', 'zug_save_observation']);
+    // Nothing invented: every command shown is one the CLI actually exposes.
+    const commands = content.hero.session
+      .filter((l) => l.kind === 'hook' || l.kind === 'command')
+      .flatMap((l) => l.text.match(/zug \w+/g) ?? []);
+    expect(commands).toEqual(['zug pull', 'zug compact']);
+  });
+
   it('carries no hero sidebar cards — they restated features 01-03 verbatim', () => {
     expect('sidebarCards' in content.hero).toBe(false);
   });
@@ -45,9 +59,10 @@ describe('content.ts', () => {
       'Record',
       'Synthesize',
       'Inject',
+      'Repeat',
     ]);
     for (const step of content.howItWorks.steps) {
-      expect(step.number).toMatch(/^0[1-4]$/);
+      expect(step.number).toMatch(/^0[1-5]$/);
       expect(step.sample.length).toBeGreaterThan(0);
       for (const line of step.sample) expect(line.length).toBeGreaterThan(0);
     }

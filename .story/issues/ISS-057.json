@@ -1,0 +1,24 @@
+{
+  "components": [
+    "mcp-tools",
+    "storage",
+    "synthesis"
+  ],
+  "createdBy": "claude (found while sampling real zug tail output for landing copy)",
+  "dedupeKey": "obs-toolcall-markup-leak",
+  "discoveredDate": "2026-09-21",
+  "id": "ISS-057",
+  "impact": "Five of 180 records in observations.jsonl have the remainder of the caller's tool-call block serialised into the `observation` string value. Affected lines 176-180, all dated 2026-09-20 and 2026-09-21. Observed leaked fragments: `</observation>`, `<parameter name=\"pattern\">` followed by the pattern text, and in the newest record `</invoke>`.\n\nReproduce: `zug tail 2` renders the garbage inline, e.g. a record ending `...experimental discipline (...).</observation>\\n</invoke>` and another ending `...retained with the axis they failed on.</observation>\\n<parameter name=\"pattern\">converges by accumulating rejection criteria`.\n\nCorrelation worth checking first: every affected record is a call that also supplied the optional `pattern` argument, and all five are recent. That points at argument serialisation on the client side rather than at storage, but Zug is where the damage lands and where it can be caught.\n\nWhy it matters beyond cosmetics: observations.jsonl is the input to synthesis. src/synthesize.ts feeds these strings into the PERSONA and PLAYBOOK prompts, so the model is being shown XML-ish tool-call fragments as if they were content. That risks the model echoing markup back into PERSONA.md, and it inflates the token cost of every synthesis. It also corrupts recurrence matching if the trailing text lands in the value used for pattern comparison.\n\nSuggested fix: validate and strip in zug_save_observation before append. Reject or trim anything from the first `</observation>`, `<parameter`, `</invoke>` or `</` onward, and consider failing loudly rather than silently storing, so a malformed caller is visible instead of quietly polluting the corpus. A one-off repair pass over the five existing records is also needed; they are already in the synthesis input.",
+  "location": [
+    "src/storage.ts",
+    "src/synthesize.ts",
+    "~/.zug/observations.jsonl"
+  ],
+  "phase": null,
+  "relatedTickets": [],
+  "resolution": null,
+  "resolvedDate": null,
+  "severity": "medium",
+  "status": "open",
+  "title": "zug_save_observation stores trailing tool-call markup inside the observation text"
+}
