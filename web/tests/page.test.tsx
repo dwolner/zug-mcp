@@ -12,7 +12,7 @@ describe('Home page composition', () => {
 
     expect(screen.getByRole('link', { name: 'Pricing' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
-      'AI that remembers how you think.'
+      'Every agent already knows how you work.'
     );
     expect(screen.getByText('$5 / month')).toBeInTheDocument();
     expect(screen.getByText(/best thinking happens with a partner/)).toBeInTheDocument();
@@ -25,9 +25,10 @@ describe('Home page composition', () => {
     expect(screen.getByText('Observe')).toBeInTheDocument();
     expect(screen.getByText('Inject')).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { name: 'Every agent you spawn already knows you.' })
+      screen.getByRole('heading', { name: 'The tax you stop paying.' })
     ).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: /One fingerprint feeding/ })).toBeInTheDocument();
+    // Two variants share the caption: the svg at md+, the stacked boxes below it.
+    expect(screen.getAllByRole('img', { name: /One understanding feeding/ })).toHaveLength(2);
   });
 
   it('keeps the signature moment on the page, inside the Synthesize step', () => {

@@ -7,9 +7,9 @@ describe('content.ts', () => {
   });
 
   it('has the approved hero headline and subhead', () => {
-    expect(content.hero.headlinePrefix).toBe('AI that remembers ');
-    expect(content.hero.headlineAccent).toBe('how you think.');
-    expect(content.hero.subhead).toBe('The fingerprint is earned, not configured.');
+    expect(content.hero.headlinePrefix).toBe('Every agent already knows ');
+    expect(content.hero.headlineAccent).toBe('how you work.');
+    expect(content.hero.subhead).toBe('Earned, not configured. Every session builds on the last.');
   });
 
   it('carries no hero sidebar cards — they restated features 01-03 verbatim', () => {
@@ -61,7 +61,7 @@ describe('content.ts', () => {
     expect(injected.files.length).toBeLessThan(tiers[0].files.length);
   });
 
-  it('contrasts a cold agent against one carrying the fingerprint', () => {
+  it('contrasts a cold agent against one carrying the understanding', () => {
     const { without, withZug } = content.workContext;
     expect(without.join(' ')).toMatch(/grep/);
     expect(withZug.join(' ')).not.toMatch(/grep/);

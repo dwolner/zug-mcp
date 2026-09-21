@@ -19,8 +19,8 @@ describe('Hero', () => {
   it('renders the headline split into prefix and accent-coloured span', () => {
     render(<Hero />);
     const heading = screen.getByRole('heading', { level: 1 });
-    expect(heading).toHaveTextContent('AI that remembers how you think.');
-    expect(screen.getByText('how you think.')).toHaveClass('text-accent');
+    expect(heading).toHaveTextContent('Every agent already knows how you work.');
+    expect(screen.getByText('how you work.')).toHaveClass('text-accent');
   });
 
   it('renders both CTA links with correct hrefs', () => {

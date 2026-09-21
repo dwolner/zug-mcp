@@ -29,7 +29,7 @@ export function HowItWorks() {
                   {!last && <span aria-hidden="true" className="mt-2 w-px grow bg-line" />}
                 </div>
 
-                <div className={last ? 'pb-0' : 'pb-12'}>
+                <div className={`min-w-0 ${last ? 'pb-0' : 'pb-12'}`}>
                   <h3 className="font-display text-[23px] font-semibold leading-tight tracking-[-0.02em] text-ink">
                     {step.title}
                   </h3>

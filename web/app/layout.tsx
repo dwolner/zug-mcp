@@ -32,8 +32,8 @@ export const metadata: Metadata = {
   // Placeholder domain until a real one is chosen — needed so Next resolves the
   // file-convention OG image URL to a public host instead of localhost.
   metadataBase: new URL(process.env.SITE_URL ?? 'https://zug.dev'),
-  title: 'zug — AI that remembers how you think.',
-  description: 'The fingerprint is earned, not configured.',
+  title: 'zug — Every agent already knows how you work.',
+  description: 'Earned, not configured. Every session builds on the last.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

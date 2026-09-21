@@ -14,7 +14,9 @@ function Transcript({
 }) {
   const accent = tone === 'accent';
   return (
-    <div className={`overflow-hidden rounded-sm border ${accent ? 'border-accent/40' : 'border-line'}`}>
+    <div
+      className={`min-w-0 overflow-hidden rounded-sm border ${accent ? 'border-accent/40' : 'border-line'}`}
+    >
       <p
         className={`border-b px-5 py-3 font-display text-[11px] font-semibold uppercase tracking-[0.14em] ${
           accent ? 'border-accent/25 bg-accent/[0.07] text-accent' : 'border-line bg-sunk text-faint'
@@ -67,9 +69,9 @@ export function WorkContext() {
         </dl>
 
         <p className="mt-12 font-display text-[16.5px] text-faint">The first thirty seconds:</p>
-        <div className="mt-4 grid grid-cols-1 gap-5 md:grid-cols-2">
+        <div className="mt-4 grid grid-cols-1 items-start gap-5 md:grid-cols-2">
           <Transcript label="Cold agent" lines={workContext.without} tone="neutral" />
-          <Transcript label="With your fingerprint" lines={workContext.withZug} tone="accent" />
+          <Transcript label="With the understanding" lines={workContext.withZug} tone="accent" />
         </div>
 
         <div className="mt-14">
