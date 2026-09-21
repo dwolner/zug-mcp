@@ -180,7 +180,7 @@ export const content: Content = {
       body: "Every other way to give an agent memory asks it to go and get it, and asking is the part that fails. A hook is code your harness runs before the model has an opinion, so the persona is already loaded when the session opens. Writing back is a tool call, and how reliably that fires depends on the harness you are in.",
     },
     spec: [
-      { label: "Installs as", value: "An MCP server, plus three hooks on Claude Code" },
+      { label: "Installs as", value: "An MCP server, plus lifecycle hooks" },
       { label: "Works with", value: worksWith },
       { label: "Lives in", value: "~/.zug, plain markdown, yours to delete" },
       { label: "Costs", value: "Nothing" },

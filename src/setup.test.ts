@@ -2,7 +2,14 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { detectAgents, mergeMcpConfig, mergeClaudeHooks, runSetup } from "./setup";
+import {
+  detectAgents,
+  mergeMcpConfig,
+  mergeClaudeHooks,
+  mergeCodexMcpConfig,
+  mergeCodexHooks,
+  runSetup,
+} from "./setup";
 
 let tmpDir: string;
 
@@ -17,25 +24,25 @@ afterEach(() => {
 describe("detectAgents", () => {
   it("returns all false when no agent dirs exist", () => {
     const result = detectAgents({ home: tmpDir });
-    expect(result).toEqual({ claude: false, cursor: false, windsurf: false });
+    expect(result).toEqual({ claude: false, cursor: false, windsurf: false, codex: false });
   });
 
   it("detects claude when ~/.claude exists", () => {
     fs.mkdirSync(path.join(tmpDir, ".claude"));
     const result = detectAgents({ home: tmpDir });
-    expect(result).toEqual({ claude: true, cursor: false, windsurf: false });
+    expect(result).toEqual({ claude: true, cursor: false, windsurf: false, codex: false });
   });
 
   it("detects cursor when ~/.cursor exists", () => {
     fs.mkdirSync(path.join(tmpDir, ".cursor"));
     const result = detectAgents({ home: tmpDir });
-    expect(result).toEqual({ claude: false, cursor: true, windsurf: false });
+    expect(result).toEqual({ claude: false, cursor: true, windsurf: false, codex: false });
   });
 
   it("detects windsurf when ~/.codeium/windsurf exists", () => {
     fs.mkdirSync(path.join(tmpDir, ".codeium", "windsurf"), { recursive: true });
     const result = detectAgents({ home: tmpDir });
-    expect(result).toEqual({ claude: false, cursor: false, windsurf: true });
+    expect(result).toEqual({ claude: false, cursor: false, windsurf: true, codex: false });
   });
 });
 
@@ -207,5 +214,83 @@ describe("runSetup — Observation Gate rule content", () => {
     expect(rule).toMatch(/routing signal to reinforce, not a stop signal/i);
     // Guard against the old single-branch gate silently coming back.
     expect(rule).not.toContain("→ Otherwise: continue without saving");
+  });
+});
+
+describe("Codex CLI", () => {
+  it("detects ~/.codex", () => {
+    fs.mkdirSync(path.join(tmpDir, ".codex"), { recursive: true });
+    expect(detectAgents({ home: tmpDir })).toEqual({
+      claude: false,
+      cursor: false,
+      windsurf: false,
+      codex: true,
+    });
+  });
+
+  it("appends the mcp_servers table to a fresh config", () => {
+    const cfg = path.join(tmpDir, ".codex", "config.toml");
+    expect(mergeCodexMcpConfig(cfg)).toBe("added");
+    expect(fs.readFileSync(cfg, "utf-8")).toContain('[mcp_servers.zug]\ncommand = "zug-mcp"');
+  });
+
+  it("never rewrites a config that already has the table", () => {
+    const cfg = path.join(tmpDir, ".codex", "config.toml");
+    const hand = '[mcp_servers.zug]\ncommand = "/custom/path/zug-mcp"\nargs = ["--flag"]\n';
+    fs.mkdirSync(path.dirname(cfg), { recursive: true });
+    fs.writeFileSync(cfg, hand);
+
+    expect(mergeCodexMcpConfig(cfg)).toBe("exists");
+    // A hand-tuned entry survives: this writer only ever appends.
+    expect(fs.readFileSync(cfg, "utf-8")).toBe(hand);
+  });
+
+  it("preserves unrelated tables when appending", () => {
+    const cfg = path.join(tmpDir, ".codex", "config.toml");
+    fs.mkdirSync(path.dirname(cfg), { recursive: true });
+    fs.writeFileSync(cfg, '[mcp_servers.storybloq]\ncommand = "storybloq"\n');
+
+    mergeCodexMcpConfig(cfg);
+    const out = fs.readFileSync(cfg, "utf-8");
+    expect(out).toContain("[mcp_servers.storybloq]");
+    expect(out).toContain("[mcp_servers.zug]");
+  });
+
+  it("registers SessionStart and Stop, since Codex has no PreCompact", () => {
+    const hooks = path.join(tmpDir, ".codex", "hooks.json");
+    mergeCodexHooks(hooks, "/usr/local/bin/zug");
+    const parsed = JSON.parse(fs.readFileSync(hooks, "utf-8"));
+
+    expect(parsed.hooks.SessionStart.map((h: { matcher: string }) => h.matcher)).toEqual([
+      "startup",
+      "resume|clear|compact",
+    ]);
+    expect(parsed.hooks.Stop[0].hooks[0].command).toBe("/usr/local/bin/zug push");
+    expect(JSON.stringify(parsed)).not.toContain("PreCompact");
+  });
+
+  it("leaves another tool's hooks alone and does not duplicate its own", () => {
+    const hooks = path.join(tmpDir, ".codex", "hooks.json");
+    fs.mkdirSync(path.dirname(hooks), { recursive: true });
+    fs.writeFileSync(
+      hooks,
+      JSON.stringify({
+        hooks: {
+          SessionStart: [
+            { matcher: "startup", hooks: [{ type: "command", command: "storybloq resume" }] },
+          ],
+        },
+      })
+    );
+
+    mergeCodexHooks(hooks, "/usr/local/bin/zug");
+    mergeCodexHooks(hooks, "/usr/local/bin/zug");
+    const parsed = JSON.parse(fs.readFileSync(hooks, "utf-8"));
+
+    const commands = parsed.hooks.SessionStart.flatMap(
+      (h: { hooks: { command: string }[] }) => h.hooks.map((e) => e.command)
+    );
+    expect(commands.filter((c: string) => c.includes("storybloq"))).toHaveLength(1);
+    expect(commands.filter((c: string) => c.includes("zug pull"))).toHaveLength(1);
   });
 });

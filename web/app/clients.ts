@@ -60,11 +60,11 @@ export const clients: AgentClient[] = [
   },
   {
     name: 'Codex CLI',
-    status: 'planned',
+    status: 'supported',
     mcp: '~/.codex/config.toml, [mcp_servers]',
     hooks: '~/.codex/hooks.json',
     rules: null,
-    note: 'Has SessionStart and Stop hooks in a near-identical shape to Claude Code. Closest to full parity.',
+    note: 'SessionStart pulls and resumes, Stop pushes. No PreCompact: Codex delivers compaction as a SessionStart matcher.',
   },
   {
     name: 'OpenCode',

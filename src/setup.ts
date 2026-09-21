@@ -7,12 +7,14 @@ export interface DetectedAgents {
   claude: boolean;
   cursor: boolean;
   windsurf: boolean;
+  codex: boolean;
 }
 
 export interface SetupOptions {
   claude?: boolean;
   cursor?: boolean;
   windsurf?: boolean;
+  codex?: boolean;
   home?: string;
   dataDir?: string;
   quiet?: boolean;
@@ -149,12 +151,75 @@ const PERSONA_TEMPLATE_CONTENT = `# Cognitive Fingerprint
 [Write here]
 `;
 
+/**
+ * Codex keeps MCP servers in TOML, and there is no TOML library here. Rather
+ * than reformat someone's config, this only ever appends the table when it is
+ * missing and leaves an existing one untouched. Idempotent and non-destructive;
+ * a user who hand-tuned their entry keeps it.
+ */
+export function mergeCodexMcpConfig(configPath: string, command = "zug-mcp"): "added" | "exists" {
+  fs.mkdirSync(path.dirname(configPath), { recursive: true });
+
+  let raw = "";
+  try {
+    raw = fs.readFileSync(configPath, "utf-8");
+  } catch {
+    // ENOENT — a new config is fine
+  }
+
+  if (/^\s*\[mcp_servers\.zug\]\s*(?:#.*)?$/m.test(raw)) return "exists";
+
+  let next = raw;
+  if (next.length > 0 && !next.endsWith("\n")) next += "\n";
+  if (next.length > 0 && !next.endsWith("\n\n")) next += "\n";
+  next += `[mcp_servers.zug]\ncommand = "${command}"\nargs = []\n`;
+
+  fs.writeFileSync(configPath, next, "utf-8");
+  return "added";
+}
+
+/**
+ * Codex hooks live in their own file rather than in settings.json, and it has
+ * no PreCompact: compaction arrives as a SessionStart matcher instead. So the
+ * durability push rides on Stop, where Claude Code uses SessionEnd.
+ */
+export function mergeCodexHooks(hooksPath: string, zugBin: string): void {
+  fs.mkdirSync(path.dirname(hooksPath), { recursive: true });
+
+  let config: { hooks?: Record<string, HookEntry[]> } = {};
+  try {
+    config = JSON.parse(fs.readFileSync(hooksPath, "utf-8")) as typeof config;
+  } catch {
+    // ENOENT or malformed — start fresh
+  }
+  if (!config.hooks) config.hooks = {};
+
+  const dropZug = (arr: HookEntry[] = []) =>
+    arr.filter((h) => !h.hooks?.some((e) => e.command?.includes("zug ")));
+
+  config.hooks.SessionStart = dropZug(config.hooks.SessionStart);
+  config.hooks.SessionStart.push({
+    matcher: "startup",
+    hooks: [{ type: "command", command: `${zugBin} pull` }],
+  });
+  config.hooks.SessionStart.push({
+    matcher: "resume|clear|compact",
+    hooks: [{ type: "command", command: `${zugBin} resume` }],
+  });
+
+  config.hooks.Stop = dropZug(config.hooks.Stop);
+  config.hooks.Stop.push({ hooks: [{ type: "command", command: `${zugBin} push` }] });
+
+  fs.writeFileSync(hooksPath, JSON.stringify(config, null, 2) + "\n", "utf-8");
+}
+
 export function detectAgents(opts?: { home?: string }): DetectedAgents {
   const home = opts?.home ?? os.homedir();
   return {
     claude: fs.existsSync(path.join(home, ".claude")),
     cursor: fs.existsSync(path.join(home, ".cursor")),
     windsurf: fs.existsSync(path.join(home, ".codeium", "windsurf")),
+    codex: fs.existsSync(path.join(home, ".codex")),
   };
 }
 
@@ -181,7 +246,8 @@ export function mergeMcpConfig(
 }
 
 interface HookEntry {
-  matcher: string;
+  /** Optional: Codex omits it on Stop, Claude Code always writes one. */
+  matcher?: string;
   hooks: Array<{ type: string; command: string }>;
 }
 
@@ -235,9 +301,18 @@ export async function runSetup(opts?: SetupOptions): Promise<void> {
   const dataDir = opts?.dataDir ?? path.join(home, ".zug");
   const quiet = opts?.quiet ?? false;
 
-  const hasExplicit = opts?.claude !== undefined || opts?.cursor !== undefined || opts?.windsurf !== undefined;
+  const hasExplicit =
+    opts?.claude !== undefined ||
+    opts?.cursor !== undefined ||
+    opts?.windsurf !== undefined ||
+    opts?.codex !== undefined;
   const targets: DetectedAgents = hasExplicit
-    ? { claude: opts?.claude ?? false, cursor: opts?.cursor ?? false, windsurf: opts?.windsurf ?? false }
+    ? {
+        claude: opts?.claude ?? false,
+        cursor: opts?.cursor ?? false,
+        windsurf: opts?.windsurf ?? false,
+        codex: opts?.codex ?? false,
+      }
     : detectAgents({ home });
 
   fs.mkdirSync(dataDir, { recursive: true });
@@ -275,6 +350,23 @@ export async function runSetup(opts?: SetupOptions): Promise<void> {
   if (targets.windsurf) {
     mergeMcpConfig(path.join(home, ".codeium", "windsurf", "mcp_config.json"));
     if (!quiet) console.log("✓ Windsurf: updated ~/.codeium/windsurf/mcp_config.json");
+  }
+
+  if (targets.codex) {
+    const result = mergeCodexMcpConfig(path.join(home, ".codex", "config.toml"));
+    if (!quiet) {
+      console.log(
+        result === "added"
+          ? "✓ Codex CLI: added [mcp_servers.zug] to ~/.codex/config.toml"
+          : "✓ Codex CLI: [mcp_servers.zug] already present in ~/.codex/config.toml"
+      );
+    }
+    try {
+      mergeCodexHooks(path.join(home, ".codex", "hooks.json"), resolveZugBin());
+      if (!quiet) console.log("✓ Codex CLI: registered SessionStart and Stop hooks");
+    } catch {
+      if (!quiet) console.log("⚠ Codex CLI: could not register hooks — add manually to ~/.codex/hooks.json");
+    }
   }
 
   if (!process.env.ANTHROPIC_API_KEY) {

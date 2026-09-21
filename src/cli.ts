@@ -42,6 +42,7 @@ function cmdStatus() {
     { name: "Cursor",      path: path.join(home, ".cursor", "mcp.json") },
     { name: "Windsurf",    path: path.join(home, ".codeium", "windsurf", "mcp_config.json") },
   ];
+  const codexConfig = path.join(home, ".codex", "config.toml");
   for (const agent of agentConfigs) {
     let configured = false;
     try {
@@ -51,6 +52,13 @@ function cmdStatus() {
     } catch { /* file missing or malformed */ }
     lines.push(`${agent.name}: ${configured ? "configured" : "not configured"}`);
   }
+
+  // Codex is TOML, not JSON, so it cannot share the loop above.
+  let codexConfigured = false;
+  try {
+    codexConfigured = /^\s*\[mcp_servers\.zug\]\s*(?:#.*)?$/m.test(fs.readFileSync(codexConfig, "utf-8"));
+  } catch { /* file missing */ }
+  lines.push(`Codex CLI: ${codexConfigured ? "configured" : "not configured"}`);
 
   try {
     const size = execSync(`du -sh "${ZUG_DIR}" 2>/dev/null`, { encoding: "utf-8" }).trim().split(/\s/)[0];
@@ -180,6 +188,7 @@ async function cmdSetup(args: string[]): Promise<void> {
   if (all || args.includes("--claude-code")) opts!.claude = true;
   if (all || args.includes("--cursor")) opts!.cursor = true;
   if (all || args.includes("--windsurf")) opts!.windsurf = true;
+  if (all || args.includes("--codex")) opts!.codex = true;
   try {
     await runSetup(Object.keys(opts!).length > 0 ? opts : undefined);
   } catch (err) {
@@ -293,6 +302,7 @@ function printUsage() {
     --claude-code     Configure Claude Code only
     --cursor          Configure Cursor only
     --windsurf        Configure Windsurf only
+    --codex           Configure Codex CLI only
     --all             Configure all agents
   zug update          Update zug-mcp to latest (runs npm install -g)
   zug backup          Snapshot Fly volume (or local data) to ~/.zug-backup/YYYY-MM-DD/

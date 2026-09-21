@@ -37,12 +37,12 @@ Not a transcript archive. Transcripts are cheap and nobody rereads them. The per
 | **Cursor** | `zug setup` | `~/.cursor/mcp.json` | — | — | The IDE. cursor-agent, the CLI, is a separate surface Zug has not looked at. |
 | **Windsurf** | `zug setup` | `~/.codeium/windsurf/mcp_config.json` | — | — |  |
 | **Devin CLI** | Manual config | `hand-written MCP entry` | — | — | In daily production use. Model-agnostic, so this is also how Zug already works with GPT. |
-| **Codex CLI** | Planned | `~/.codex/config.toml, [mcp_servers]` | `~/.codex/hooks.json` | — | Has SessionStart and Stop hooks in a near-identical shape to Claude Code. Closest to full parity. |
+| **Codex CLI** | `zug setup` | `~/.codex/config.toml, [mcp_servers]` | `~/.codex/hooks.json` | — | SessionStart pulls and resumes, Stop pushes. No PreCompact: Codex delivers compaction as a SessionStart matcher. |
 | **OpenCode** | Planned | `unverified` | — | — |  |
 | **Grok CLI** | Planned | `unverified` | — | — |  |
 | **Antigravity** | Planned | `unverified` | — | — |  |
 
-**What hooks buy you.** A hook is code your harness runs whether the model cooperates or not, so the persona is loaded and synced without the agent choosing to do it. Today that is Claude Code.
+**What hooks buy you.** A hook is code your harness runs whether the model cooperates or not, so the persona is loaded and synced without the agent choosing to do it. Today that is Claude Code, Codex CLI.
 
 **What no client guarantees.** Capture is always a `zug_save_observation` tool call, prompted by a rules file at best. No hook writes observations; they only pull, push and checkpoint. So how much gets captured depends on the harness and the model, not on this table.
 

@@ -42,8 +42,9 @@ describe('Home page composition', () => {
     // works without them: Devin CLI is used daily that way. The spec has to say
     // both things, since naming three clients undersells it and hiding the hook
     // gap oversells it.
-    expect(screen.getByText(/three hooks on Claude Code/)).toBeInTheDocument();
-    expect(screen.getByText(/Anything that speaks MCP/)).toBeInTheDocument();
+    expect(screen.getByText(/plus lifecycle hooks/)).toBeInTheDocument();
+    // Derived from web/app/clients.ts, so adding a hooked client updates the page.
+    expect(screen.getByText(/Hooks on Claude Code, Codex CLI/)).toBeInTheDocument();
     // The hook row is the one that does not route through the model's judgment.
     expect(screen.getByRole('rowheader', { name: 'Hooks' })).toBeInTheDocument();
   });
