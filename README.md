@@ -50,57 +50,9 @@ Zug is model-agnostic. It attaches to the harness, so any MCP client works regar
 
 <!-- clients:end -->
 
-## Deploy a remote server (claude.ai web + multi-machine sync)
-
-A deployed HTTPS server does two jobs: it lets **claude.ai web** connect over OAuth, and it acts as the **canonical sync hub** so every machine you use shares one persona (see [Multi-machine sync](#multi-machine-sync)). Zug ships a ready-to-deploy `fly.toml` and `Dockerfile` — the fastest path is [fly.io](https://fly.io).
-
-**Prerequisites:** [flyctl](https://fly.io/docs/flyctl/install/) installed, a fly.io account.
-
-```bash
-# 1. Clone the repo (or use your npm-installed copy)
-git clone https://github.com/dwolner/zug-mcp && cd zug-mcp
-
-# 2. Create the app (picks up fly.toml — do not deploy yet)
-fly launch --no-deploy
-
-# 3. Create a persistent volume for your data
-fly volumes create zug_data --size 1
-
-# 4. Set secrets
-fly secrets set \
-  ANTHROPIC_API_KEY=sk-ant-... \
-  ZUG_URL=https://<your-app-name>.fly.dev \
-  ZUG_TOKEN=$(openssl rand -hex 32)
-
-# 5. Deploy
-fly deploy
-```
-
-- `ANTHROPIC_API_KEY` — server-side synthesis of PERSONA/PLAYBOOK.
-- `ZUG_URL` — your public base URL, also the OAuth issuer.
-- `ZUG_TOKEN` — the bearer token your CLI machines sync with. **Save it** — each machine needs the same value.
-
-Your server is now live at `https://<your-app-name>.fly.dev`.
-
-The shipped `fly.toml` sets `ZUG_CANONICAL=1` and runs **always-on** (`auto_stop_machines = 'off'`, `min_machines_running = 1`). That makes the server the durable canonical store: it holds the merged logs and runs synthesis, so a client losing connectivity degrades to "sync paused" rather than failing. If you only use claude.ai web and don't need always-on durability, you can switch to scale-to-zero (`min_machines_running = 0`, `auto_stop_machines = 'stop'`) to cut idle cost — the first request after idle then pays a ~2s cold start.
-
-**Connect claude.ai:**
-
-1. Open [claude.ai](https://claude.ai) → Settings → Integrations
-2. Add MCP server URL: `https://<your-app-name>.fly.dev`
-3. Authorize — Zug handles the OAuth flow automatically
-
-**Persistence:** All data is written to the `/data/.zug` volume mount and survives restarts and redeploys.
-
-**Update:**
-
-```bash
-fly deploy  # redeploy after pulling latest changes
-```
-
 ## Multi-machine sync
 
-Run Zug on more than one machine (e.g. two laptops) and keep a single, unified persona across all of them. A fs-capable client (Claude Code CLI, desktop) writes locally on the hot path and syncs to the canonical server in the background.
+Run Zug on more than one machine (e.g. two laptops) and keep a single, unified persona across all of them. This needs a canonical server: either [run one yourself](./docs/self-hosting.md) or use Zug Pro, which is the hosted version of the same thing. A fs-capable client (Claude Code CLI, desktop) writes locally on the hot path and syncs to the canonical server in the background.
 
 **Three modes**, chosen automatically:
 
@@ -110,7 +62,7 @@ Run Zug on more than one machine (e.g. two laptops) and keep a single, unified p
 | `synced` | `ZUG_URL` + `ZUG_TOKEN` resolvable on an fs client | Writes locally, pushes raw logs to the canonical server, pulls the one authoritative PERSONA/PLAYBOOK/ACTIVE. |
 | `canonical` | `ZUG_CANONICAL=1` (the deployed server) | Holds the merged append-only logs and runs synthesis for everyone. |
 
-**Add a machine to your sync** (after [deploying a server](#deploy-a-remote-server-claudeai-web--multi-machine-sync)):
+**Add a machine to your sync** (after [setting up a server](./docs/self-hosting.md)):
 
 ```bash
 # 1. Install
@@ -226,7 +178,7 @@ All data lives in `~/.zug/` (or `$ZUG_DATA_DIR`):
   sync-state.json     Sync cursors + status (synced mode; auto-generated)
 ```
 
-No database. Plain files you can read, back up, or delete. In [synced mode](#multi-machine-sync) the canonical persona lives on a persistent Fly volume and is shared across all your machines; the local copy is a working mirror.
+No database. Plain files you can read, back up, or delete. In [synced mode](#multi-machine-sync) the canonical persona lives on the server and is shared across all your machines; the local copy is a working mirror.
 
 ## Configuration
 
