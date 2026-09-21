@@ -1,12 +1,12 @@
 # zug-mcp
 
-**The memory and reflection layer for people who work with AI.**
+**You explain yourself to the same AI every single session.**
 
-Observations. Patterns. Lessons. Growth — across every session, every agent.
+Zug watches how you work and hands the result to every agent you open. Earned while you work, not configured.
 
 ---
 
-Zug (Hebrew: "pair") is an MCP server that gives your AI a persistent cognitive fingerprint of you — how you think, what you care about, where you get stuck, and how you grow. Built around the Jewish concept of *havruta*: learning alongside a partner produces something neither could reach alone.
+Zug (Hebrew: "pair") is an MCP server that gives your agent a persistent **persona** of you: how you think, what you care about, where you get stuck, and how you grow. Built around the Jewish concept of *havruta*: learning alongside a partner produces something neither could reach alone.
 
 ## Install
 
@@ -19,24 +19,40 @@ zug setup
 
 ## What It Does
 
-Every session, Zug builds a richer picture of who you are as a thinker. It stores observations about your reasoning patterns, cognitive preferences, and growth moments. At the start of each session, it surfaces the most relevant context so your AI partner can calibrate — without you having to re-explain yourself.
+Zug watches how you work, not what you ship. A correction, a scope call, an approach you killed. Each one is appended to a log that is never rewritten. Periodically it rereads the log and rewrites your persona: who you are as a thinker, and how to work with you.
 
-Over time: a cognitive fingerprint that makes every session smarter than the last.
+At the start of a session your agent gets a short brief, roughly 1.6 KB, not the whole thing. Everything deeper stays on disk and is one question away.
+
+Not a transcript archive. Transcripts are cheap and nobody rereads them. The persona is the set of conclusions you and your agent already reached about how you work.
 
 ## Agent Support
 
-| Agent | Support tier | Notes |
-|-------|-------------|-------|
-| Claude Code | First-class | Full rule injection via `~/.claude/rules/zug.md`. Hooks auto-run context at session start. |
-| claude.ai web | Via HTTP | Requires a deployed HTTP server. OAuth handled automatically by the server. |
-| Cursor | Best-effort | MCP config written. No automatic rule injection — add the rule manually if needed. |
-| Windsurf | Best-effort | MCP config written. Manual rule setup required. |
+<!-- clients:start -->
 
-Claude Code is the primary target. Other agents receive MCP connectivity but lack the automatic session gate behavior.
+<!-- Generated from web/app/clients.ts by scripts/sync-readme-clients.ts. Do not edit by hand. -->
+
+| Client | Configured by | MCP config | Hooks | Rules file | Notes |
+|---|---|---|---|---|---|
+| **Claude Code** | `zug setup` | `~/.claude.json` | `~/.claude/settings.json` | `~/.claude/rules/zug.md` | SessionStart pulls, SessionEnd pushes, PreCompact checkpoints. |
+| **Cursor** | `zug setup` | `~/.cursor/mcp.json` | — | — | The IDE. cursor-agent, the CLI, is a separate surface Zug has not looked at. |
+| **Windsurf** | `zug setup` | `~/.codeium/windsurf/mcp_config.json` | — | — |  |
+| **Devin CLI** | Manual config | `hand-written MCP entry` | — | — | In daily production use. Model-agnostic, so this is also how Zug already works with GPT. |
+| **Codex CLI** | Planned | `~/.codex/config.toml, [mcp_servers]` | `~/.codex/hooks.json` | — | Has SessionStart and Stop hooks in a near-identical shape to Claude Code. Closest to full parity. |
+| **OpenCode** | Planned | `unverified` | — | — |  |
+| **Grok CLI** | Planned | `unverified` | — | — |  |
+| **Antigravity** | Planned | `unverified` | — | — |  |
+
+**What hooks buy you.** A hook is code your harness runs whether the model cooperates or not, so the persona is loaded and synced without the agent choosing to do it. Today that is Claude Code.
+
+**What no client guarantees.** Capture is always a `zug_save_observation` tool call, prompted by a rules file at best. No hook writes observations; they only pull, push and checkpoint. So how much gets captured depends on the harness and the model, not on this table.
+
+Zug is model-agnostic. It attaches to the harness, so any MCP client works regardless of which model is behind it.
+
+<!-- clients:end -->
 
 ## Deploy a remote server (claude.ai web + multi-machine sync)
 
-A deployed HTTPS server does two jobs: it lets **claude.ai web** connect over OAuth, and it acts as the **canonical sync hub** so every machine you use shares one fingerprint (see [Multi-machine sync](#multi-machine-sync)). Zug ships a ready-to-deploy `fly.toml` and `Dockerfile` — the fastest path is [fly.io](https://fly.io).
+A deployed HTTPS server does two jobs: it lets **claude.ai web** connect over OAuth, and it acts as the **canonical sync hub** so every machine you use shares one persona (see [Multi-machine sync](#multi-machine-sync)). Zug ships a ready-to-deploy `fly.toml` and `Dockerfile` — the fastest path is [fly.io](https://fly.io).
 
 **Prerequisites:** [flyctl](https://fly.io/docs/flyctl/install/) installed, a fly.io account.
 
@@ -84,7 +100,7 @@ fly deploy  # redeploy after pulling latest changes
 
 ## Multi-machine sync
 
-Run Zug on more than one machine (e.g. two laptops) and keep a single, unified cognitive fingerprint across all of them. A fs-capable client (Claude Code CLI, desktop) writes locally on the hot path and syncs to the canonical server in the background.
+Run Zug on more than one machine (e.g. two laptops) and keep a single, unified persona across all of them. A fs-capable client (Claude Code CLI, desktop) writes locally on the hot path and syncs to the canonical server in the background.
 
 **Three modes**, chosen automatically:
 
@@ -113,7 +129,7 @@ zug setup
 zug pull        # → {"status":"ok"} and your canonical PERSONA.md appears
 ```
 
-**What syncs:** observations, sessions, growth, lessons, and reinforcements push to the server, which merges them and re-synthesizes. PERSONA/PLAYBOOK/ACTIVE are **pulled only, never pushed** — they're regenerated server-side from the merged log so there's exactly one authoritative fingerprint. Synthesis happens on the server (on push), so a synced client does **not** need its own `ANTHROPIC_API_KEY`.
+**What syncs:** observations, sessions, growth, lessons, and reinforcements push to the server, which merges them and re-synthesizes. PERSONA/PLAYBOOK/ACTIVE are **pulled only, never pushed** — they're regenerated server-side from the merged log so there's exactly one authoritative persona. Synthesis happens on the server (on push), so a synced client does **not** need its own `ANTHROPIC_API_KEY`.
 
 **How it's driven (Claude Code):** `zug setup` registers hooks — `SessionStart` pulls on cold start (and reloads on compaction), `SessionEnd` pushes. You can also run `zug sync` / `zug pull` / `zug push` manually.
 
@@ -133,7 +149,7 @@ zug setup           Auto-detect agents and write MCP configs
 zug update          Update zug-mcp to latest (runs npm install -g)
 zug tail [n]        Show recent observations (default: 10)
 zug persona         Print full PERSONA.md
-zug onboard         Seed your cognitive fingerprint (ANTHROPIC_API_KEY optional, improves output)
+zug onboard         Seed your persona (ANTHROPIC_API_KEY optional, improves output)
 zug sync            Pull then push against the canonical server (synced mode)
 zug pull            Pull canonical PERSONA/PLAYBOOK/ACTIVE + merged logs from the server
 zug push            Push local observations/sessions/lessons to the server
@@ -151,7 +167,7 @@ Your AI calls these automatically. You can also call them manually.
 
 | Tool | What it does |
 |------|-------------|
-| `zug_get_context` | Load cognitive fingerprint, playbook, and active patterns. Call at session start. |
+| `zug_get_context` | Load persona, playbook, and active patterns. Call at session start. |
 | `zug_status` | Stats snapshot: sessions, observations, weekly trend. |
 | `zug_get_recent_sessions` | Re-establish context after a gap or compaction. |
 
@@ -198,7 +214,7 @@ All data lives in `~/.zug/` (or `$ZUG_DATA_DIR`):
 
 ```
 ~/.zug/
-  PERSONA.md          Cognitive fingerprint — how you think, what excites you
+  PERSONA.md          Who you are as a thinker
   PLAYBOOK.md         Universal session patterns — what works
   ACTIVE.md           Current behavioral frame (active patterns)
   observations.jsonl  Append-only observation log
@@ -210,7 +226,7 @@ All data lives in `~/.zug/` (or `$ZUG_DATA_DIR`):
   sync-state.json     Sync cursors + status (synced mode; auto-generated)
 ```
 
-No database. Plain files you can read, back up, or delete. In [synced mode](#multi-machine-sync) the canonical fingerprint lives on a persistent Fly volume and is shared across all your machines; the local copy is a working mirror.
+No database. Plain files you can read, back up, or delete. In [synced mode](#multi-machine-sync) the canonical persona lives on a persistent Fly volume and is shared across all your machines; the local copy is a working mirror.
 
 ## Configuration
 

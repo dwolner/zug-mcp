@@ -1,7 +1,7 @@
 {
   "name": "zug-mcp",
   "version": "1.4.0",
-  "description": "Zug — persistent memory MCP server for a havruta learning companion",
+  "description": "Zug \u2014 persistent memory MCP server for a havruta learning companion",
   "main": "dist/stdio.js",
   "bin": {
     "zug": "dist/cli.js",
@@ -45,7 +45,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "onboard": "tsx src/cli.ts onboard",
-    "cli": "tsx src/cli.ts"
+    "cli": "tsx src/cli.ts",
+    "sync:readme": "tsx scripts/sync-readme-clients.ts"
   },
   "packageManager": "pnpm@10.31.0",
   "dependencies": {

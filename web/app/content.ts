@@ -1,3 +1,5 @@
+import { worksWith } from './clients';
+
 export interface NavLink {
   label: string;
   href: string;
@@ -174,12 +176,12 @@ export const content: Content = {
       },
     ],
     callout: {
-      label: "Why a hook and not a prompt",
-      body: "Every other way to make an agent remember you is a polite request. A prompt, a rules file, a line in a system message. The model can skip all of those, and it does. A hook is code your harness runs whether the model feels like cooperating or not. That is the whole trick.",
+      label: "What the hook actually guarantees",
+      body: "Every other way to give an agent memory asks it to go and get it, and asking is the part that fails. A hook is code your harness runs before the model has an opinion, so the persona is already loaded when the session opens. Writing back is a tool call, and how reliably that fires depends on the harness you are in.",
     },
     spec: [
       { label: "Installs as", value: "An MCP server, plus three hooks on Claude Code" },
-      { label: "Works with", value: "Anything that speaks MCP. Hooks on Claude Code." },
+      { label: "Works with", value: worksWith },
       { label: "Lives in", value: "~/.zug, plain markdown, yours to delete" },
       { label: "Costs", value: "Nothing" },
     ],
