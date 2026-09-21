@@ -9,7 +9,7 @@ function FanOut({ root, leaves }: { root: string; leaves: string[] }) {
   const leafX = leaves.map((_, i) => 60 + i * 120);
   const barLeft = Math.min(240, ...leafX);
   const barRight = Math.max(240, ...leafX);
-  const caption = `One understanding feeding ${leaves.join(', ')}`;
+  const caption = `One persona feeding ${leaves.join(', ')}`;
 
   return (
     // min-w-0: as a grid item this would otherwise inherit the svg's 520px

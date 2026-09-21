@@ -71,7 +71,7 @@ export function WorkContext() {
         <p className="mt-12 font-display text-[16.5px] text-faint">The first thirty seconds:</p>
         <div className="mt-4 grid grid-cols-1 items-start gap-5 md:grid-cols-2">
           <Transcript label="Cold agent" lines={workContext.without} tone="neutral" />
-          <Transcript label="With the understanding" lines={workContext.withZug} tone="accent" />
+          <Transcript label="With your persona" lines={workContext.withZug} tone="accent" />
         </div>
 
         <div className="mt-14">

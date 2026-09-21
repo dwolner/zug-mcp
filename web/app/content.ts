@@ -171,7 +171,7 @@ export const content: Content = {
       {
         number: '03',
         title: 'Synthesize',
-        body: 'Periodically Zug rereads the raw log and rewrites two documents: PERSONA.md, who you are as a thinker, and PLAYBOOK.md, how to work with you. A pattern reinforced often enough is promoted into lessons.jsonl — a standing instruction your agent follows without being told.',
+        body: 'Periodically Zug rereads the raw log and rewrites the persona: PERSONA.md, who you are as a thinker, and PLAYBOOK.md, how to work with you. A pattern reinforced often enough is promoted into lessons.jsonl — a standing instruction your agent follows without being told.',
         sample: [
           'PERSONA.md · PLAYBOOK.md                      rewritten',
           'L-8483ea-1  Diagnose from the live system, never a local mirror',
@@ -190,7 +190,7 @@ export const content: Content = {
     loopNote: 'Then step 01 again, against a sharper baseline. That is the whole product.',
     funnel: {
       headline: 'It compresses, then it holds the rest back.',
-      body: 'The reason this does not eat your context window is that almost none of it is injected. Raw history accumulates, synthesis compresses it, and only the short brief rides along into every session. Below is a real understanding after 267 sessions.',
+      body: 'The reason this does not eat your context window is that almost none of it is injected. Raw history accumulates, synthesis compresses it, and only the short brief rides along into every session. Below is a real persona after 267 sessions.',
       tiers: [
         {
           label: 'Accumulated',
@@ -222,7 +222,7 @@ export const content: Content = {
   workContext: {
     eyebrow: 'Not just how you think',
     headline: 'It knows the shape of what you work on.',
-    body: 'An understanding is not only style. Over enough sessions Zug learns your company, your role, your stack, and which part of the system owns which problem — so a question about a broken thing does not start with fifteen greps and a request for you to explain the architecture again.',
+    body: 'A persona is not only style. Over enough sessions Zug learns your company, your role, your stack, and which part of the system owns which problem — so a question about a broken thing does not start with fifteen greps and a request for you to explain the architecture again.',
     knows: [
       { label: 'Who you are', value: 'Role, team, what you are accountable for' },
       { label: 'What you run', value: 'Stack, infrastructure, deploy targets' },
@@ -246,7 +246,7 @@ export const content: Content = {
     ],
     callout: {
       label: 'Clues, not the whole file',
-      body: 'ACTIVE.md carries pointers, not contents — enough for the agent to know that something is known and where to find it. When it needs the detail it asks for the specific memory. You get the benefit of a deep understanding without paying for it in every prompt.',
+      body: 'ACTIVE.md carries pointers, not contents — enough for the agent to know that something is known and where to find it. When it needs the detail it asks for the specific memory. You get the benefit of the whole persona without paying for it in every prompt.',
     },
   },
   recaps: {
@@ -302,14 +302,14 @@ export const content: Content = {
         'Session 2    already loaded',
         'Session 3    already loaded, plus what it learned in 2',
         'Session 4    already loaded, sharper',
-        'Subagent A   inherits the same understanding',
-        'Subagent B   inherits the same understanding',
+        'Subagent A   inherits the same persona',
+        'Subagent B   inherits the same persona',
       ],
     },
     fanout: {
       headline: 'It survives the fan-out.',
-      body: 'This is the part that is hard to get any other way. When you spawn subagents, each one normally starts blind — you are delegating to a stranger who happens to share your codebase. They inherit the understanding instead, so the agent you hand work to already knows what you would have told it.',
-      root: 'the understanding',
+      body: 'This is the part that is hard to get any other way. When you spawn subagents, each one normally starts blind — you are delegating to a stranger who happens to share your codebase. They inherit your persona instead, so the agent you hand work to already knows what you would have told it.',
+      root: 'your persona',
       children: ['main session', 'subagent', 'subagent', 'subagent'],
     },
     callout: {
@@ -337,7 +337,7 @@ export const content: Content = {
   ],
   upgrade: {
     eyebrow: 'Zug Pro',
-    headline: 'The understanding is now infrastructure.',
+    headline: 'Your persona is now infrastructure.',
     body: 'Local Zug is the whole product. It does not expire, nothing leaves your machine, and the files stay yours. Pro is for when one machine stops being enough.',
     priceMonthly: '$5 / month',
     priceYearly: '$50 / year',

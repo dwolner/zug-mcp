@@ -84,7 +84,7 @@ describe('content.ts', () => {
     expect(injected.files.length).toBeLessThan(tiers[0].files.length);
   });
 
-  it('contrasts a cold agent against one carrying the understanding', () => {
+  it('contrasts a cold agent against one carrying the persona', () => {
     const { without, withZug } = content.workContext;
     expect(without.join(' ')).toMatch(/grep/);
     expect(withZug.join(' ')).not.toMatch(/grep/);

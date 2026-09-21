@@ -27,7 +27,7 @@ describe('Home page composition', () => {
 
     expect(order.slice(0, 3)).toEqual([
       'You already wrote an operating system for your agent.',
-      'The understanding is now infrastructure.',
+      'Your persona is now infrastructure.',
       'You do none of this.',
     ]);
   });
@@ -51,7 +51,7 @@ describe('Home page composition', () => {
       screen.getByRole('heading', { name: 'The tax you stop paying.' })
     ).toBeInTheDocument();
     // Two variants share the caption: the svg at md+, the stacked boxes below it.
-    expect(screen.getAllByRole('img', { name: /One understanding feeding/ })).toHaveLength(2);
+    expect(screen.getAllByRole('img', { name: /One persona feeding/ })).toHaveLength(2);
   });
 
   it('keeps the signature moment on the page, inside the Synthesize step', () => {
